@@ -294,6 +294,9 @@ margin-top:14px;font-size:11.5px;color:var(--soft);line-height:1.65}
   /* โหมดแบบคำขอกู้ (แท็บ 6) */
   body.aprint section:not(#tab6){display:none!important}
   body.aprint #tab6 .tbl{display:none!important}
+  /* โหมดคำสั่งแต่งตั้ง (แท็บ 8) */
+  body.bprint section:not(#tab8){display:none!important}
+  body.bprint #tab8 .tbl,body.bprint #tab8 .bar{display:none!important}
   /* กระดาษ */
   .kpage{width:auto!important;min-height:auto!important;margin:0!important;padding:0!important;
     box-shadow:none!important;border:0!important;page-break-after:always}
@@ -744,7 +747,8 @@ function save(){
   clearTimeout(_saveT); setStatus("กำลังจะบันทึก…");
   _saveT = setTimeout(doSave, 1200);
 }
-function pack(){ return {contracts:S.contracts, tx:S.tx, acct:S.acct, assign:S.assign,
+function pack(){ return {members:DB.members, anames:DB.anames, wd:DB.wd,
+  contracts:S.contracts, tx:S.tx, acct:S.acct, assign:S.assign,
   profile:S.profile, per:S.per, rule:S.rule, cut:S.cut}; }
 async function doSave(){
   if(_saving){ _again = true; return; }
@@ -962,10 +966,8 @@ function warnHTML(c, kind, no, d, days){
       และส่งโดยไปรษณีย์ลงทะเบียน/อีเมล/LINE Official ตามข้อ 6.6 การส่งไปยังที่อยู่หรือช่องทางล่าสุดที่ท่านแจ้งไว้ ให้ถือว่าได้แจ้งโดยชอบแล้ว</p>
     <p style="text-align:center;margin-top:14px">ขอแสดงความนับถือ</p>
     <div class="ksigs" style="grid-template-columns:1fr 1fr;max-width:420px;margin:10px auto 0">
-      <div class="ksig"><div class="sp"></div><div class="ln">ลงชื่อ ..............................................</div>
-        <div>( ..............................................)</div><div class="rl">ประธานกลุ่มบุคคล</div></div>
-      <div class="ksig"><div class="sp"></div><div class="ln">ลงชื่อ ..............................................</div>
-        <div>( ..............................................)</div><div class="rl">กรรมการฝ่ายติดตามหนี้</div></div>
+      ${sigOf("ประธานกลุ่มบุคคล", CHAIR())}
+      ${sigOf("กรรมการฝ่ายติดตามหนี้", DEBT())}
     </div>
     <p class="kh" style="margin-top:12px">สำเนาเรียน: ${kind==="guar"?`ผู้กู้ (${esc(m.name)})`:gs.map(g=>`ผู้ค้ำประกัน (${esc(g.name)})`).join(" · ")||"—"}
       · แฟ้มสัญญาเลขที่ ${esc(c.code)||"…………"}</p>
@@ -1226,10 +1228,11 @@ function drawT1(){
     <p class="hint" id="f_note" style="margin-top:10px"></p>
   </div>
 
+  <div id="atbox"></div>
   <div class="tbl"><table>
     <thead><tr><th class="l">ผู้กู้ / สัญญา</th><th class="l">ผลิตภัณฑ์</th><th class="l">วันที่</th>
       <th>วงเงิน</th><th>งวด</th><th>งวดละ</th><th>หุ้นประจำ</th><th class="l">วิธีคิดหุ้น</th>
-      <th>ชำระแล้ว</th><th>ยกมา 1/69</th><th>คงเหลือ</th><th class="l">สถานะ</th><th></th></tr></thead><tbody>
+      <th>ชำระแล้ว</th><th>ยกมา 1/69</th><th>คงเหลือ</th><th class="l">สถานะ</th><th class="l">ตารางเดิม</th><th></th></tr></thead><tbody>
     ${R.map(({c,r})=>{
       const m = DB.members.find(z=>z.no===c.no);
       const miss = f => (!c[f] ? ' class="bad"' : "");
@@ -1251,6 +1254,10 @@ function drawT1(){
         <td class="amt">${c.legacy?B(c.open):"—"}</td>
         <td class="amt" style="font-weight:600">${B(r.bal)}</td>
         <td class="l"><span class="pill ${st}">${r.status}</span></td>
+        <td class="l">${c.ref
+          ? `<span class="pill grn" title="${esc(c.ref.file)}">แนบแล้ว</span>
+             <button class="ghost sm" data-at="${c.id}" style="padding:1px 6px;font-size:10.5px">ดู/แก้</button>`
+          : `<button class="ghost sm" data-at="${c.id}" style="padding:1px 6px;font-size:10.5px">แนบ PDF</button>`}</td>
         <td><button class="del" data-del="${c.id}">×</button></td></tr>`;
     }).join("")}
     </tbody></table></div>
@@ -1287,6 +1294,77 @@ function drawT1(){
   document.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
     if(!confirm("ลบสัญญาฉบับนี้?")) return;
     S.contracts = S.contracts.filter(x=>x.id!==b.dataset.del); all(); });
+}
+
+
+/* ============ แนบตารางผ่อนเดิม (PDF) เป็นหลักฐานอ้างอิงของสัญญาย้อนหลัง ============ */
+// อ่านตัวเลขจาก PDF แล้วเดา "งวดละ" จากยอดที่ซ้ำมากที่สุด — แต่ไม่ยัดให้เอง ต้องกดยืนยัน
+function pdfGuess(txt){
+  const nums = (txt.match(/\d{1,3}(?:,\d{3})*\.\d{2}/g) || []).map(x=>+x.replace(/,/g,""));
+  const cnt = {};
+  nums.forEach(n=>{ if(n>=200 && n<=200000) cnt[n.toFixed(2)] = (cnt[n.toFixed(2)]||0)+1; });
+  const rep = Object.keys(cnt).filter(k=>cnt[k]>=3).sort((a,b)=>cnt[b]-cnt[a]);
+  const big = nums.filter(n=>n>=5000).sort((a,b)=>b-a);
+  // จำนวนงวด: หาเลขลำดับ 1..N ที่เรียงต่อกัน
+  const seq = (txt.match(/(?:^|\s)(\d{1,2})(?=\s)/gm)||[]).map(x=>+x);
+  let terms = 0; for(let i=1;i<=72;i++) if(seq.includes(i)) terms=i; else if(i>1) break;
+  return {
+    inst: rep.length ? {v:+rep[0], n:cnt[rep[0]]} : null,     // ยอดที่ซ้ำบ่อยสุด = น่าจะเป็นงวดละ
+    alts: rep.slice(1,5).map(k=>({v:+k, n:cnt[k]})),
+    amt: big.length ? big[0] : 0,                             // ยอดใหญ่สุด = น่าจะเป็นวงเงิน
+    terms, count: nums.length
+  };
+}
+
+function attachPanel(cid){
+  const c = S.contracts.find(x=>x.id===cid); if(!c) return;
+  const m = DB.members.find(z=>z.no===c.no) || {name:""};
+  const g = S.pdfg && S.pdfg[cid];
+  $("atbox").innerHTML = `<div class="card" style="border-left:3px solid var(--gold)">
+    <div class="eyebrow">แนบตารางผ่อนเดิมของ ${esc(m.name)} — สัญญา${c.prod}
+      <button class="ghost sm" id="at_x" style="margin-left:auto">ปิด</button></div>
+    <p class="hint" style="margin-bottom:10px">สัญญาย้อนหลังต้องใช้<b>ตัวเลขเดิมที่แจ้งสมาชิกไปแล้ว</b> ไม่ใช่สูตรใหม่ปี 2569 —
+      แนบ PDF ตารางเดิมไว้เป็นหลักฐานว่าตัวเลขมาจากไหน · ไฟล์อ่านในเครื่องคุณ ไม่ได้อัปโหลดไปไหน</p>
+    <div class="bar">
+      <input type="file" id="at_f" accept="application/pdf" hidden>
+      <button id="at_b">เลือกไฟล์ PDF ตารางเดิม</button>
+      <span class="msg" id="at_m">${c.ref?`แนบไว้แล้ว: <b>${esc(c.ref.file)}</b> (${c.ref.d})`:""}</span>
+    </div>
+    ${g?`<div class="keybox" style="margin-top:11px">
+      <b>ตัวเลขที่พบในไฟล์ — โปรดตรวจแล้วกดยืนยัน ระบบจะไม่ใส่ให้เอง</b>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(110px,1fr));margin-top:9px">
+        <div><label>งวดละ</label><input type="number" step="0.01" id="at_inst" value="${g.inst?g.inst.v:""}"></div>
+        <div><label>วงเงิน</label><input type="number" step="0.01" id="at_amt" value="${g.amt||""}"></div>
+        <div><label>จำนวนงวด</label><input type="number" id="at_terms" value="${g.terms||""}"></div>
+        <div><label>&nbsp;</label><button id="at_ok">ยืนยัน ใส่ลงสัญญา</button></div>
+      </div>
+      <p class="hint" style="margin-top:8px">
+        ${g.inst?`ยอด <b>${B(g.inst.v)}</b> ปรากฏในไฟล์ <b>${g.inst.n} ครั้ง</b> — น่าจะเป็นยอดผ่อนต่องวด`:"ไม่พบยอดที่ซ้ำพอจะเดาได้"}
+        ${g.alts.length?`<br>ยอดอื่นที่ซ้ำ: ${g.alts.map(a=>`<b>${B(a.v)}</b> (${a.n} ครั้ง)`).join(" · ")}`:""}
+        <br>พบตัวเลขทั้งหมด ${g.count} ตัว · <b>ระบบเดาจากความถี่เท่านั้น ถ้าไม่ตรงให้พิมพ์ทับได้เลย</b></p>
+    </div>`:""}
+  </div>`;
+  $("at_x").onclick = () => { $("atbox").innerHTML = ""; };
+  $("at_b").onclick = () => $("at_f").click();
+  $("at_f").onchange = async e => {
+    const f = e.target.files[0]; if(!f) return;
+    if(typeof pdfjsLib === "undefined"){ $("at_m").className="msg bad";
+      $("at_m").textContent="โหลดตัวอ่าน PDF ไม่ได้ (ไม่มีเน็ต?)"; return; }
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    $("at_m").className="msg"; $("at_m").textContent = "กำลังอ่าน…";
+    try{
+      const txt = await pdfText(await f.arrayBuffer());
+      S.pdfg = S.pdfg || {}; S.pdfg[cid] = pdfGuess(txt);
+      c.ref = {file:f.name, d:new Date().toISOString().slice(0,10), by:"แนบจากไฟล์"};
+      attachPanel(cid); save();
+    }catch(err){ $("at_m").className="msg bad"; $("at_m").textContent = "อ่านไม่สำเร็จ: " + err.message; }
+  };
+  if($("at_ok")) $("at_ok").onclick = () => {
+    c.inst  = +$("at_inst").value||0;
+    c.amt   = +$("at_amt").value||c.amt;
+    c.terms = +$("at_terms").value||c.terms;
+    $("atbox").innerHTML = ""; all();
+  };
 }
 
 /* ============ แท็บ 2 — รับชำระ ============ */
@@ -1793,12 +1871,12 @@ function slipHTML(m){
     <div class="sigbox"><div class="sigspace"></div>
       <div class="sigline">ลงชื่อ ......................................................</div>
       <div>( ......................................................)</div>
-      <div class="sigrole">กรรมการฝ่ายการเงิน — ผู้รับเงิน</div>
+      <div class="sigrole">กรรมการฝ่ายการเงิน — ผู้รับเงิน<br><span style="font-weight:400">( ${esc(FIN())} )</span></div>
       <div class="sigdate">วันที่ ........./........./ 2569</div></div>
     <div class="sigbox"><div class="sigspace"></div>
       <div class="sigline">ลงชื่อ ......................................................</div>
       <div>( ......................................................)</div>
-      <div class="sigrole">ประธานกลุ่มบุคคล — ผู้ตรวจสอบ</div>
+      <div class="sigrole">ประธานกลุ่มบุคคล — ผู้ตรวจสอบ<br><span style="font-weight:400">( ${esc(CHAIR())} )</span></div>
       <div class="sigdate">วันที่ ........./........./ 2569</div></div>
     <div class="sigbox"><div class="sigspace"></div>
       <div class="sigline">ลงชื่อ ......................................................</div>
@@ -2083,7 +2161,7 @@ function contractHTML(c, cap, withSch){
       <div class="ksig"><div class="sp" style="height:32px"></div><div class="ln">ลงชื่อ ..............................................</div>
         <div>( ${esc(m.name)} )</div><div class="rl">ผู้กู้ — รับทราบตารางการชำระหนี้</div></div>
       <div class="ksig"><div class="sp" style="height:32px"></div><div class="ln">ลงชื่อ ..............................................</div>
-        <div>( ..............................................)</div><div class="rl">ประธานกลุ่มบุคคล</div></div>
+        <div>( ${esc(CHAIR())} )</div><div class="rl">ประธานกลุ่มบุคคล</div></div>
     </div>
   </div>`;
 
@@ -2094,6 +2172,32 @@ function contractHTML(c, cap, withSch){
 /* ============ เอกสารสัญญาแบบข้อความครบตามต้นฉบับ ============ */
 const ORG  = "กลุ่มบุคคลเพื่อบริหารจัดการเงินของข้าราชการครูและบุคลากร";
 const ORGF = ORG + "โรงเรียนมัธยมวัดหนองแขม";
+/* ============ คณะกรรมการบริหาร (คำสั่งแต่งตั้ง มติที่ประชุม 27 มีนาคม 2568) ============ */
+const BOARD = {
+  year: "2568", meet: "27 มีนาคม 2568",
+  list: [
+    {r:"ประธานคณะกรรมการ",              n:"นายศราวุธ พิมศร",        no:"001"},
+    {r:"รองประธานคณะกรรมการ",           n:"นายไผ่ ทองอยู่",          no:""},
+    {r:"กรรมการฝ่ายการเงิน",             n:"นางสาวน้ำฝน โยศรีธา",     no:""},
+    {r:"กรรมการฝ่ายการเงิน",             n:"นางสาวพรรณิตา บุญกล้า",   no:""},
+    {r:"กรรมการฝ่ายติดตามหนี้",           n:"นายวุฒินันท์ สีดีจริง",      no:"009"},
+    {r:"กรรมการฝ่ายติดตามหนี้",           n:"นายวีระ วรรณคำ",          no:""},
+    {r:"ประชาสัมพันธ์และเลขานุการ",        n:"นางแพรรุ้ง ทองอยู่",       no:""},
+  ]
+};
+const bd = role => { const x = BOARD.list.find(z=>z.r.indexOf(role)>=0); return x ? x.n : ""; };
+const CHAIR   = () => bd("ประธานคณะกรรมการ");
+const VICE    = () => bd("รองประธาน");
+const FIN     = () => bd("กรรมการฝ่ายการเงิน");
+const FIN2    = () => (BOARD.list.filter(z=>z.r==="กรรมการฝ่ายการเงิน")[1]||{}).n || "";
+const DEBT    = () => bd("กรรมการฝ่ายติดตามหนี้");
+const SECR    = () => bd("เลขานุการ");
+// ช่องลงชื่อพร้อมชื่อในวงเล็บ
+const sigOf = (role, name) => `<div class="ksig"><div class="sp"></div>
+  <div class="ln">ลงชื่อ ..............................................</div>
+  <div>( ${esc(name||"..............................................")} )</div>
+  <div class="rl">${role}</div></div>`;
+
 const AGREE = "ข้อตกลงกลุ่มบุคคลฯ ฉบับประกาศใช้วันที่ 26 มีนาคม 2569";
 
 function prof(no){ return (S.profile && S.profile[no]) || {}; }
@@ -2332,15 +2436,15 @@ function docGuar(c, idx){
     <table class="kt sg"><thead><tr><th style="width:190px">ตำแหน่ง</th><th>(ชื่อ-นามสกุล ตัวบรรจง)</th><th style="width:190px">ลายเซ็น</th></tr></thead><tbody>
       <tr><td>ผู้กู้ (รับทราบเงื่อนไขค้ำ)</td><td class="c"><b>${esc(m.name)}</b></td><td>ลงชื่อ: ...............................</td></tr>
       <tr><td>ผู้ค้ำประกันที่ ${idx}</td><td class="c"><b>${esc(g.name)}</b></td><td>ลงชื่อ: ...............................</td></tr>
-      <tr><td>ผู้ให้กู้ (ประธาน/กรรมการผู้ได้รับมอบอำนาจ)</td><td></td><td>ลงชื่อ: ...............................</td></tr>
+      <tr><td>ผู้ให้กู้ (ประธาน/กรรมการผู้ได้รับมอบอำนาจ)<br><span class="kh">${esc(CHAIR())}</span></td><td></td><td>ลงชื่อ: ...............................</td></tr>
       <tr><td>พยานคนที่ 1</td><td></td><td>ลงชื่อ: ...............................</td></tr>
       <tr><td>พยานคนที่ 2</td><td></td><td>ลงชื่อ: ...............................</td></tr>
     </tbody></table>
     <p class="kh">หมายเหตุ: "พยานต้องเป็นบุคคลที่มีอายุตั้งแต่ 20 ปีขึ้นไปและสามารถยืนยันความถูกต้องของการลงนามได้ ไม่จำเป็นต้องเป็นคณะกรรมการ"</p>
     <div class="h">คณะกรรมการบริหารกลุ่มบุคคล (ลงนามเพื่อทราบ ไม่เป็นคู่สัญญา)</div>
     <table class="kt sg"><thead><tr><th style="width:190px">ลำดับ</th><th>ลายเซ็น</th></tr></thead><tbody>
-      ${["กรรมการฝ่ายติดตามหนี้","กรรมการฝ่ายการเงิน","รองประธานกลุ่มบุคคล"].map(t=>
-        `<tr><td>${t}</td><td>ลงชื่อ: ___________________________</td></tr>`).join("")}
+      ${[["กรรมการฝ่ายติดตามหนี้",DEBT()],["กรรมการฝ่ายการเงิน",FIN()],["รองประธานกลุ่มบุคคล",VICE()]].map(([t,nm])=>
+        `<tr><td>${t}<br><span class="kh">${esc(nm)}</span></td><td>ลงชื่อ: ___________________________</td></tr>`).join("")}
     </tbody></table>
     <p class="kh">หมายเหตุ: ลายมือชื่อในส่วนนี้เป็นการลงนามเพื่อทราบการทำสัญญาค้ำ ไม่ใช่การลงนามผูกพันในฐานะคู่สัญญา</p>`;
 
@@ -2442,8 +2546,71 @@ function docSched(c){
       <div class="ksig"><div class="sp" style="height:30px"></div><div class="ln">ลงชื่อ ..............................................</div>
         <div>( ${esc(m.name)} )</div><div class="rl">ผู้กู้ — รับทราบตารางการชำระหนี้</div></div>
       <div class="ksig"><div class="sp" style="height:30px"></div><div class="ln">ลงชื่อ ..............................................</div>
-        <div>( ..............................................)</div><div class="rl">ประธานกลุ่มบุคคล</div></div>
+        <div>( ${esc(CHAIR())} )</div><div class="rl">ประธานกลุ่มบุคคล</div></div>
     </div>`,"ผู้กู้");
+}
+
+
+/* ---------- 5) คำสั่งแต่งตั้งคณะกรรมการบริหาร ---------- */
+function docOrder(){
+  const L = BOARD.list;
+  const p1 = `${logo()}<div class="kt1">คำสั่งแต่งตั้งคณะกรรมการบริหารกลุ่มบุคคล</div>
+    <div class="kt2">เพื่อบริหารจัดการเงินของข้าราชการครูและบุคลากร<br>
+      โรงเรียนมัธยมวัดหนองแขม &nbsp;·&nbsp; ประจำปี พ.ศ. ${BOARD.year}</div>
+    <p class="i2">ตามที่${ORGF} (ต่อไปนี้เรียกว่า “กลุ่มบุคคล”) ได้จัดประชุมสมาชิกเพื่อแต่งตั้งคณะกรรมการบริหารกลุ่มบุคคล
+      ประจำปี พ.ศ. ${BOARD.year} และเพื่อดำเนินการตามข้อกำหนดในข้อตกลงของกลุ่มบุคคล</p>
+    <p class="i2">คณะกรรมการบริหารกลุ่มบุคคลประจำปี พ.ศ. ${BOARD.year} ประกอบด้วย</p>
+    <table class="kt"><thead><tr><th style="width:38px">ลำดับ</th><th class="l">ตำแหน่ง</th>
+      <th class="l">ชื่อ–สกุล</th><th style="width:80px">เลขสมาชิก</th></tr></thead><tbody>
+      ${L.map((x,i)=>`<tr><td class="c">${i+1}</td><td class="l">${x.r}</td>
+        <td class="l"><b class="f">${esc(x.n)}</b></td><td class="c">${x.no||"—"}</td></tr>`).join("")}
+    </tbody></table>
+
+    <div class="h">การรับรองคำสั่งแต่งตั้ง</div>
+    <p class="i">คำสั่งแต่งตั้งนี้ได้รับการรับรองจากเสียงส่วนใหญ่ของสมาชิกที่เข้าร่วมการประชุมกลุ่มบุคคล
+      ในวันที่ <b class="f">${BOARD.meet}</b> โดยมีผลทันทีหลังจากการลงมติอนุมัติ</p>
+    <p class="i">การลงมติในที่ประชุมเป็นไปตามข้อกำหนดของข้อตกลงกลุ่มบุคคล และสมาชิกทุกคนยินยอมให้คำสั่งนี้มีผลผูกพันตามกฎหมาย</p>
+
+    <div class="h">ข้อกำหนดการดำเนินการ</div>
+    <p class="i"><b>1. อำนาจของคณะกรรมการ</b> — คณะกรรมการบริหารกลุ่มบุคคลมีอำนาจเต็มในการบริหารจัดการกองทุนและดำเนินการตามข้อตกลงที่ได้กำหนดไว้
+      รวมถึงการพิจารณาอนุมัติหรือปฏิเสธคำร้องขอกู้ยืมเงินจากสมาชิก และการใช้มาตรการทางกฎหมายในกรณีที่สมาชิกผิดข้อตกลง</p>
+    <p class="i"><b>2. บทบาทหน้าที่ของคณะกรรมการในการบริหารกองทุน</b> — คณะกรรมการบริหารมีหน้าที่ในการดำเนินการและจัดการเงินกองทุน
+      เพื่อให้กลุ่มบุคคลสามารถดำเนินการตามวัตถุประสงค์ของกลุ่ม ได้แก่</p>
+    <p class="i2">2.1 การดูแลและกำหนดนโยบายการให้กู้ยืมและการถอนทุนคืนของสมาชิก</p>
+    <p class="i2">2.2 การควบคุมและตรวจสอบการใช้เงินกองทุนให้เกิดประโยชน์สูงสุด</p>
+    <p class="i2">2.3 การจัดทำรายงานการเงินที่โปร่งใสและตรวจสอบได้</p>
+    <p class="i2">2.4 การประเมินผลการดำเนินงานทางการเงินและปรับปรุงการบริหารกองทุนตามความเหมาะสม</p>
+    <p class="i2">2.5 การดำเนินการเพื่อป้องกันการทุจริตในทุกขั้นตอนที่เกี่ยวข้องกับการบริหารกองทุน</p>
+    <p class="i2">2.6 การรักษาสภาพคล่องของกองทุนเพื่อให้สามารถตอบสนองความต้องการของสมาชิกได้ตามที่กำหนด</p>
+    <p class="i"><b>3. การฟ้องร้องทางกฎหมาย</b> — คณะกรรมการบริหารมีอำนาจในการดำเนินการฟ้องร้องทางกฎหมายในกรณีที่ผู้กู้หรือผู้ค้ำประกัน
+      ไม่ปฏิบัติตามข้อตกลงในการชำระหนี้ โดยใช้สัญญากู้ยืมเงินและสัญญาค้ำประกันเป็นหลักฐานในการดำเนินการตามกฎหมาย
+      คณะกรรมการสามารถมอบอำนาจให้ทนายความหรือบุคคลที่ได้รับมอบหมายดำเนินการแทนได้</p>
+    <p class="i"><b>4. การบังคับใช้คำพิพากษา</b> — หากศาลมีคำพิพากษาให้ผู้กู้ชำระหนี้ แต่ไม่ปฏิบัติตาม คณะกรรมการบริหารสามารถขอให้ศาลบังคับคดี
+      เพื่อยึดทรัพย์ หรืออายัดเงินเดือนของลูกหนี้ได้ทันที โดยอ้างอิงจากข้อตกลงที่ผู้กู้และผู้ค้ำประกันได้ลงนาม</p>
+    <p class="i"><b>5. การกำหนดบทลงโทษสำหรับการผิดสัญญา</b> — คณะกรรมการมีอำนาจในการกำหนดบทลงโทษและมาตรการที่เหมาะสมกับผู้ที่ละเมิดสัญญา
+      รวมถึงการจำกัดสิทธิ์ในการกู้ยืม หรือการขอถอนทุนคืนจากกองทุน</p>`;
+
+  const p2 = `<div class="h">การลงชื่อเพื่อรับรองคำสั่งแต่งตั้ง</div>
+    <p class="i">ลงชื่อรับรองโดยคณะกรรมการบริหารกลุ่มบุคคลทุกคน</p>
+    <table class="kt sg"><thead><tr><th style="width:44px">ลำดับ</th><th class="l">ชื่อคณะกรรมการ</th>
+      <th style="width:190px">ลงชื่อ</th><th style="width:110px">วันที่</th></tr></thead><tbody>
+      ${L.map((x,i)=>`<tr><td class="c">${i+1}</td>
+        <td class="l">${esc(x.n)} <span class="kh">(${x.r.replace("คณะกรรมการ","").replace("กรรมการฝ่าย","").trim()})</span></td>
+        <td>____________________</td><td>__________</td></tr>`).join("")}
+    </tbody></table>
+    <div class="h">การรับรองคำสั่งแต่งตั้งด้วยเสียงส่วนใหญ่</div>
+    <p class="i">คำสั่งนี้ได้รับการรับรองจากสมาชิกที่เข้าร่วมประชุมโดยเสียงส่วนใหญ่ และถือเป็นข้อตกลงที่มีผลทางกฎหมายต่อสมาชิกทุกคน
+      โดยมีการประชุมในวันที่ <b class="f">${BOARD.meet}</b></p>
+    <div class="keybox" style="margin-top:12px"><b>บันทึกการใช้งานในระบบ</b>
+      <ul class="ul"><li>ชื่อในคำสั่งนี้ถูกใช้เติมช่องลงนามอัตโนมัติในทุกเอกสารของระบบ —
+        สัญญาเงินกู้ · สัญญาค้ำประกัน · ตารางชำระหนี้ · แบบคำขอกู้ · ใบเสร็จ · หนังสือเตือน</li>
+        <li>หากมีการเปลี่ยนแปลงคณะกรรมการ ต้องแก้ที่คำสั่งแต่งตั้งฉบับใหม่ แล้วปรับในระบบ เอกสารทั้งหมดจะเปลี่ยนตามทันที</li></ul></div>
+    <div class="ksigs" style="grid-template-columns:1fr;max-width:300px;margin:22px auto 0">
+      ${sigOf("ประธานกลุ่มบุคคล", CHAIR())}
+      <div style="text-align:center" class="kh">วันที่ ......../......../ ..........</div>
+    </div>`;
+
+  return [p1,p2].map((b,i)=>pg(i+1,2,b,"คณะกรรมการ")).join("");
 }
 
 /* ============ แท็บ 5 — พิมพ์ชุดสัญญา ============ */
@@ -2669,9 +2836,9 @@ function docApply(o){
       </tbody></table></div>
     <table class="kt sg"><thead><tr><th style="width:150px">ตำแหน่ง</th><th style="width:160px">ความเห็น</th>
       <th>เหตุผล/เงื่อนไข</th><th style="width:150px">ลายเซ็น</th></tr></thead><tbody>
-      ${["กรรมการฝ่ายติดตามหนี้","กรรมการฝ่ายการเงิน","รองประธานกลุ่มบุคคล"].map(t=>
-        `<tr><td>${t}</td><td class="c">☐ อนุมัติ ☐ ไม่อนุมัติ</td><td></td><td>ลงชื่อ: .....................</td></tr>`).join("")}
-      <tr class="hl"><td><b>ประธานกลุ่มบุคคล</b><br><span class="kh">ผู้อนุมัติขั้นสุดท้าย</span></td>
+      ${[["กรรมการฝ่ายติดตามหนี้",DEBT()],["กรรมการฝ่ายการเงิน",FIN()],["รองประธานกลุ่มบุคคล",VICE()]].map(([t,n])=>
+        `<tr><td>${t}<br><span class="kh">${esc(n)}</span></td><td class="c">☐ อนุมัติ ☐ ไม่อนุมัติ</td><td></td><td>ลงชื่อ: .....................</td></tr>`).join("")}
+      <tr class="hl"><td><b>ประธานกลุ่มบุคคล</b><br><span class="kh">${esc(CHAIR())} — ผู้อนุมัติขั้นสุดท้าย</span></td>
         <td class="c">☐ อนุมัติ ☐ ไม่อนุมัติ</td><td>วงเงินที่อนุมัติ .................... บาท</td><td>ลงชื่อ: .....................</td></tr>
     </tbody></table>
     <p class="kh">เมื่อประธานอนุมัติแล้ว ให้บันทึกคำขอนี้เข้าทะเบียนสัญญาในระบบ แล้วสั่งพิมพ์ชุดสัญญา (สัญญาเงินกู้ · สัญญาค้ำประกัน · หนังสือยินยอม · ตารางการชำระหนี้) เพื่อลงนามต่อไป</p>`;
@@ -2904,7 +3071,7 @@ function genCode(c){
 /* ============ แท็บ 8 — ทะเบียนคุม ============ */
 let regTab = "mem";
 function drawT8(){
-  const sub = [["mem","ทะเบียนสมาชิก"],["ct","ทะเบียนคุมสัญญา"],["gu","ทะเบียนคุมผู้ค้ำ"]];
+  const sub = [["mem","ทะเบียนสมาชิก"],["ct","ทะเบียนคุมสัญญา"],["gu","ทะเบียนคุมผู้ค้ำ"],["bd","คณะกรรมการ"]];
   let body="";
 
   if(regTab==="mem"){
@@ -3015,6 +3182,36 @@ function drawT8(){
     </tbody></table></div>`;
   }
 
+  if(regTab==="bd"){
+    body = `<div class="card">
+      <div class="eyebrow">คณะกรรมการบริหาร ประจำปี ${BOARD.year}
+        <button class="ghost sm" id="bd_print" style="margin-left:auto">พิมพ์คำสั่งแต่งตั้ง</button></div>
+      <p class="hint" style="margin-bottom:11px">ชื่อในตารางนี้จะถูก<b>เติมลงช่องลงนามในทุกเอกสารอัตโนมัติ</b> —
+        สัญญาเงินกู้ · สัญญาค้ำ · ตารางชำระหนี้ · แบบคำขอกู้ · ใบเสร็จ · หนังสือเตือน
+        · แก้ที่นี่ที่เดียว เปลี่ยนทุกใบพร้อมกัน</p>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+        <div><label>รับรองโดยมติที่ประชุมวันที่</label><input id="bd_meet" value="${esc(BOARD.meet)}"></div>
+        <div><label>ประจำปี พ.ศ.</label><input id="bd_year" value="${esc(BOARD.year)}"></div>
+      </div>
+      <div class="tbl" style="margin-top:11px"><table><thead><tr><th style="width:36px">ลำดับ</th>
+        <th class="l">ตำแหน่ง</th><th class="l">ชื่อ–สกุล</th><th class="l">เลขสมาชิก</th>
+        <th class="l">สถานะการชำระของตนเอง</th></tr></thead><tbody>
+        ${BOARD.list.map((x,i)=>{ const ps = x.no ? payStat(x.no) : null;
+          return `<tr><td class="amt">${i+1}</td>
+          <td><input data-bd="${i}:r" value="${esc(x.r)}" style="width:180px"></td>
+          <td><input data-bd="${i}:n" value="${esc(x.n)}" style="min-width:180px"></td>
+          <td><select data-bd="${i}:no" style="width:150px"><option value="">— ไม่ใช่สมาชิก —</option>
+            ${DB.members.map(m=>`<option value="${m.no}" ${x.no===m.no?"selected":""}>${m.no} — ${esc(m.name)}</option>`).join("")}</select></td>
+          <td class="l" style="white-space:normal">${ps?`<span class="pill ${ps.cls}">${ps.t}</span>`:'<span class="hint">—</span>'}</td></tr>`;
+        }).join("")}
+      </tbody></table></div>
+      <p class="hint" style="margin-top:9px"><b>ข้อควรระวังเรื่องผลประโยชน์ทับซ้อน:</b>
+        กรรมการที่เป็นสมาชิกและมีหนี้อยู่ ไม่ควรร่วมพิจารณาคำขอกู้ของตนเอง หรือมติผ่อนผันที่เกี่ยวข้องกับตนเอง
+        · ควรบันทึกการงดออกเสียงไว้ในรายงานการประชุมทุกครั้ง</p>
+    </div>
+    <div id="bddoc"></div>`;
+  }
+
   $("tab8").innerHTML = `<div class="bar" style="margin-bottom:12px">
     ${sub.map(([k,t])=>`<button class="${regTab===k?"":"ghost"} sm" data-rt="${k}">${t}</button>`).join("")}
   </div>${body}`;
@@ -3023,6 +3220,14 @@ function drawT8(){
   document.querySelectorAll("[data-mp]").forEach(i=>i.onchange=e=>{
     const [no,f]=e.target.dataset.mp.split(":");
     S.profile=S.profile||{}; S.profile[no]=S.profile[no]||{}; S.profile[no][f]=e.target.value.trim(); all(); });
+  document.querySelectorAll("[data-bd]").forEach(i=>i.onchange=e=>{
+    const [k,f]=e.target.dataset.bd.split(":"); BOARD.list[+k][f]=e.target.value.trim(); all(); });
+  if($("bd_meet")) $("bd_meet").onchange=e=>{ BOARD.meet=e.target.value.trim(); all(); };
+  if($("bd_year")) $("bd_year").onchange=e=>{ BOARD.year=e.target.value.trim(); all(); };
+  if($("bd_print")) $("bd_print").onclick=()=>{
+    $("bddoc").innerHTML = docOrder();
+    document.body.classList.add("bprint");
+    setTimeout(()=>{ window.print(); document.body.classList.remove("bprint"); },300); };
   if($("g_code")) $("g_code").onclick=()=>{
     S.contracts.filter(c=>!c.code && !c.legacy).forEach(c=>{ c.code = genCode(c); });
     all();
@@ -3151,7 +3356,9 @@ $("imp").onchange = e => { const fr = new FileReader();
       if(j.profile)   S.profile = j.profile;
       ["assign","per","rule","cut"].forEach(k=>{ if(j[k]!==undefined) S[k]=j[k]; });
       sel=null; all();
-      setStatus("นำเข้าแล้ว · " + (DB.members.length||0) + " สมาชิก · " + (S.tx.length||0) + " รายการโอน");
+      setStatus("นำเข้าแล้ว · " + (DB.members.length||0) + " สมาชิก · " + (S.tx.length||0) + " รายการโอน"
+        + (inGAS ? " — กำลังบันทึกขึ้น Google Sheets…" : ""));
+      if(inGAS) doSave();
     } catch(err){ alert("ไฟล์ไม่ถูกต้อง: " + err.message); } };
   fr.readAsText(e.target.files[0]); };
 
