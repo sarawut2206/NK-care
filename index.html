@@ -294,6 +294,12 @@ margin-top:14px;font-size:11.5px;color:var(--soft);line-height:1.65}
   /* โหมดแบบคำขอกู้ (แท็บ 6) */
   body.aprint section:not(#tab6){display:none!important}
   body.aprint #tab6 .tbl{display:none!important}
+  /* โหมดบันทึกแนบท้าย (แท็บ 1) */
+  body.mprint section:not(#tab1){display:none!important}
+  body.mprint #tab1 .tbl,body.mprint #tab1 .card:not(#atbox .card),body.mprint #tab1 .keybox,
+  body.mprint #tab1 .bar,body.mprint #tab1 .grid,body.mprint #tab1 .eyebrow,body.mprint #tab1 p{display:none!important}
+  body.mprint #shdoc,body.mprint #shdoc *{display:revert!important}
+  body.mprint #atbox .card{border:0!important;padding:0!important;background:none!important}
   /* โหมดคำสั่งแต่งตั้ง (แท็บ 8) */
   body.bprint section:not(#tab8){display:none!important}
   body.bprint #tab8 .tbl,body.bprint #tab8 .bar{display:none!important}
@@ -319,6 +325,7 @@ margin-top:14px;font-size:11.5px;color:var(--soft);line-height:1.65}
     <button class="ghost sm" id="exp">ส่งออก JSON</button>
     <button class="ghost sm" id="csv">ส่งออก CSV</button>
     <button class="ghost sm" id="impBtn">นำเข้า</button>
+    <button class="ghost sm" id="clr" title="ลบข้อมูลที่จำไว้ในเบราว์เซอร์เครื่องนี้">ล้างที่จำไว้</button>
     <input type="file" id="imp" accept=".json" hidden>
   </div>
 </div>
@@ -743,13 +750,42 @@ const memOf = t => t.no || S.acct[t.a] || "";
 let _saveT = null, _saving = false, _again = false;
 function save(){
   if(!S) return;
-  if(!inGAS){ setStatus("โหมดเปิดไฟล์ตรง — การแก้ไขไม่ถูกบันทึก (กด «ส่งออก JSON» เก็บไว้)"); return; }
-  clearTimeout(_saveT); setStatus("กำลังจะบันทึก…");
+  clearTimeout(_saveT);
+  if(!inGAS){                                   // เปิดไฟล์ตรง — จำไว้ในเบราว์เซอร์เครื่องนี้
+    _saveT = setTimeout(()=>{
+      const ok = lsSave();
+      setStatus(ok ? "จำไว้ในเครื่องนี้แล้ว " + new Date().toLocaleTimeString("th-TH") + " · ยังไม่ได้ขึ้น Google Sheets"
+                   : "⚠ จำในเครื่องไม่ได้ — กด «ส่งออก JSON» สำรองไว้");
+    }, 900);
+    return;
+  }
+  setStatus("กำลังจะบันทึก…");
   _saveT = setTimeout(doSave, 1200);
 }
+const LS_KEY = "kbk_local_v1";
+function lsSave(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(pack())); return true; }catch(e){ return false; } }
+function lsLoad(){ try{ const t = localStorage.getItem(LS_KEY); return t ? JSON.parse(t) : null; }catch(e){ return null; } }
+function lsClear(){ try{ localStorage.removeItem(LS_KEY); }catch(e){} }
+
+// ยัดข้อมูลจากไฟล์สำรอง/ที่จำไว้ เข้าโปรแกรม
+function applyBackup(j){
+  if(!DB) DB = {...EMPTY};
+  if(j.members) DB.members = j.members;
+  if(j.anames)  DB.anames  = j.anames;
+  if(j.wd)      DB.wd      = j.wd;
+  if(j.acct)    DB.acct    = {...j.acct};
+  if(j.contracts) DB.contracts = j.contracts;
+  if(j.tx)        DB.tx        = j.tx;
+  if(!S) S = freshS();
+  if(j.acct)      S.acct      = {...j.acct};
+  if(j.contracts) S.contracts = j.contracts;
+  if(j.tx)        S.tx        = j.tx;
+  ["profile","assign","per","rule","cut","pdfg"].forEach(k=>{ if(j[k]!==undefined) S[k]=j[k]; });
+}
+
 function pack(){ return {members:DB.members, anames:DB.anames, wd:DB.wd,
   contracts:S.contracts, tx:S.tx, acct:S.acct, assign:S.assign,
-  profile:S.profile, per:S.per, rule:S.rule, cut:S.cut}; }
+  profile:S.profile, per:S.per, rule:S.rule, cut:S.cut, pdfg:S.pdfg}; }
 async function doSave(){
   if(_saving){ _again = true; return; }
   _saving = true; setStatus("กำลังบันทึกขึ้น Google Sheets…");
@@ -859,7 +895,7 @@ function drawT7(){
   $("tab7").innerHTML = `
   ${NA.length?`<div class="card" style="border-left:3px solid var(--gold)">
     <div class="eyebrow">ยังออกหนังสือเตือนไม่ได้ ${NA.length} สัญญา</div>
-    <p class="hint" style="margin:0"><b>สัญญาเหล่านี้ยังไม่ได้กรอก «งวดละ» ในทะเบียน (แท็บ 1)</b> —
+    <p class="hint" style="margin:0"><b>สัญญาเหล่านี้ยังไม่ได้กรอกตัวเลขสัญญา ในทะเบียน (แท็บ 1)</b> —
       ระบบจึงไม่ทราบว่าแต่ละงวดต้องชำระเท่าไหร่ และ<b>จะไม่เดาให้</b> เพราะการเดาแล้วส่งหนังสือเตือนผิดคน
       เสียหายมากกว่าการรอ · เมื่อกรอกครบ สัญญาจะโผล่ในรายการด้านล่างเอง<br>
       ค้างอยู่: ${NA.slice(0,8).map(x=>{const m=DB.members.find(z=>z.no===x.c.no);return esc(m?m.name:x.c.no);}).join(" · ")}${NA.length>8?` และอีก ${NA.length-8} ราย`:""}</p>
@@ -1060,15 +1096,13 @@ function runContract(c){
 
     const tn    = c.legacy ? (+c.t0||0) + PERIODS.indexOf(p) + 1
                            : PERIODS.indexOf(p) - PERIODS.indexOf(start) + 1;
-    const baseDue  = +c.shareM||0;
-    const extraDue = c.mode==="old"  ? +(+c.exFix||0).toFixed(2)                                  // ตารางเดิม 2568 — คงที่
-                   : c.mode==="calc" ? +((+c.inst||0)*extraRate(Math.max(1,tn))).toFixed(2)       // สูตร 2569 — ขั้นบันได
-                   : 0;
+    const D = dueOn(c, p, tn);
+    const baseDue = D.base, extraDue = D.extra;
     const shDue = +(baseDue + extraDue).toFixed(2);
     const int   = flatInt != null ? flatInt : +(bal * RATE).toFixed(2);
-    // ประเมินได้ต่อเมื่อรู้ "งวดละ" จริง — ไม่มีก็ไม่เดา (ดูทะเบียนสัญญา แท็บ 1)
-    const known = (+c.inst||0) > 0;
-    const due   = known ? +(+c.inst).toFixed(2) : 0;
+    // ประเมินได้ต่อเมื่อรู้ "เงินต้น+ดอกเบี้ยต่องวด" จริง — ไม่มีก็ไม่เดา (ดูทะเบียนสัญญา แท็บ 1)
+    const known = D.pi > 0;
+    const due   = known ? D.due : 0;
     const short = known ? +Math.max(0, due - got).toFixed(2) : 0;
     const kind  = known ? kindOf(got, int, due) : (got > 0 ? "รับชำระแล้ว" : "ไม่มีเงินเข้า");
     const fee   = known ? feeOf(c, p, got, due, txs) : 0;
@@ -1101,10 +1135,11 @@ function runContract(c){
     if (got > 0) last = p;
     if (bal <= 0.005 && !closed) closed = p;
     rows.push({p, got, due, short, int:+gInt.toFixed(2), sh, shB, shE, shDue, baseDue, extraDue,
-               pri, bal, fee, kind, relief, late, tn, known, memo:md.memo||"", note, opens:!!nl, nl, txs});
+               pri, bal, fee, kind, relief, late, tn, known, shMemo:D.memo, shChanged:D.changed,
+               memo:md.memo||"", note, opens:!!nl, nl, txs});
   });
 
-  const assessed = (+c.inst||0) > 0;
+  const assessed = piOf(c) > 0;
   const status = bal <= 0.005 && (c.legacy || rows.some(r=>r.opens)) ? "ปิดหนี้แล้ว"
                : !assessed ? "ยังประเมินไม่ได้"
                : missed >= 1 ? `ค้าง ${missed} งวด` : "ปกติ";
@@ -1233,7 +1268,7 @@ function drawT1(){
   <div id="atbox"></div>
   <div class="tbl"><table>
     <thead><tr><th class="l">ผู้กู้ / สัญญา</th><th class="l">ผลิตภัณฑ์</th><th class="l">วันที่</th>
-      <th class="l">ตารางผ่อนเดิม</th>
+      <th class="l">ตารางเดิม / หุ้นฝาก</th>
       <th>วงเงิน</th><th>งวด</th><th>งวดละ</th><th>หุ้นประจำ</th><th class="l">วิธีคิดหุ้น</th>
       <th>ชำระแล้ว</th><th>ยกมา 1/69</th><th>คงเหลือ</th><th class="l">สถานะ</th><th></th></tr></thead><tbody>
     ${R.map(({c,r})=>{
@@ -1246,10 +1281,12 @@ function drawT1(){
         <td class="l"><span class="pill ${c.prod==="ดูแลกัน"?"yel":""}">${c.prod}</span>
           <span class="hint">${PROD[c.prod].method==="flat"?"Flat":"ลดต้นลดดอก"}</span></td>
         <td class="l"><input type="date" data-e="${c.id}:d" value="${c.d}" style="font-size:11.5px;padding:3px 5px"></td>
-        <td class="l">${c.ref
-          ? `<button class="ghost sm" data-at="${c.id}" style="padding:2px 7px;font-size:10.5px;border-color:var(--green);color:var(--green)"
-               title="${esc(c.ref.file)} · แนบเมื่อ ${c.ref.d}">✓ แนบแล้ว</button>`
-          : `<button class="ghost sm" data-at="${c.id}" style="padding:2px 7px;font-size:10.5px">แนบ PDF</button>`}</td>
+        <td class="l" style="white-space:nowrap">${c.ref
+          ? `<button class="ghost sm" data-at="${c.id}" style="padding:2px 6px;font-size:10.5px;border-color:var(--green);color:var(--green)"
+               title="${esc(c.ref.file)} · แนบเมื่อ ${c.ref.d}">✓ PDF</button>`
+          : `<button class="ghost sm" data-at="${c.id}" style="padding:2px 6px;font-size:10.5px">แนบ PDF</button>`}
+          <button class="ghost sm" data-sh="${c.id}" style="padding:2px 6px;font-size:10.5px${(c.shLog&&c.shLog.length)?";border-color:var(--green);color:var(--green)":""}"
+            title="ประวัติการฝากหุ้น / ขอฝากเพิ่ม">หุ้น${(c.shLog&&c.shLog.length)?" ●"+c.shLog.length:""}</button></td>
         <td><input type="number" step="0.01" data-e="${c.id}:amt" value="${c.amt||""}"${miss("amt")} style="width:92px;padding:3px 5px"></td>
         <td><input type="number" data-e="${c.id}:terms" value="${c.terms||""}"${miss("terms")} style="width:52px;padding:3px 5px"></td>
         <td><input type="number" step="0.01" data-e="${c.id}:inst" value="${c.inst||""}"${miss("inst")} style="width:82px;padding:3px 5px"></td>
@@ -1311,6 +1348,7 @@ function drawT1(){
     all();
   });
   document.querySelectorAll("[data-at]").forEach(b => b.onclick = () => attachPanel(b.dataset.at));
+  document.querySelectorAll("[data-sh]").forEach(b => b.onclick = () => shPanel(b.dataset.sh));
   document.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
     if(!confirm("ลบสัญญาฉบับนี้?")) return;
     S.contracts = S.contracts.filter(x=>x.id!==b.dataset.del); all(); });
@@ -1440,8 +1478,143 @@ function attachPanel(cid){
     c.exFix  = +$("at_ex").value||0;
     c.t0     = +$("at_t0").value||0;
     c.mode   = "old";                       // ตารางเดิม 2568 — ฝากเพิ่มคงที่
+    c.pi     = +(c.inst - c.shareM - c.exFix).toFixed(2);   // แกนหนี้ ล็อกไว้
     $("atbox").innerHTML = ""; all();
   };
+}
+
+
+/* ============ บันทึกแนบท้าย — ขอฝากหุ้นเพิ่ม (ไม่ใช่สัญญาใหม่) ============ */
+function shPanel(cid){
+  const c = S.contracts.find(x=>x.id===cid); if(!c) return;
+  const m = DB.members.find(z=>z.no===c.no) || {name:""};
+  const L = shLogOf(c), pi = piOf(c);
+  const nowRow = shareOn(c, PERIODS[PERIODS.length-1]);
+
+  $("atbox").innerHTML = `<div class="card" style="border-left:3px solid var(--green)">
+    <div class="eyebrow">หุ้นฝากของ <span class="no">${c.no}</span>${esc(m.name)} — สัญญา ${esc(c.code)||c.prod}
+      <button class="ghost sm" id="sh_x" style="margin-left:auto">ปิด</button></div>
+
+    ${!pi ? `<p class="msg bad">ยังไม่รู้ “เงินต้น+ดอกเบี้ยต่องวด” ของสัญญานี้ — แนบ PDF ตารางเดิมก่อน
+      หรือกรอกงวดละ+หุ้นประจำ+ฝากเพิ่ม ในทะเบียน</p>` : `
+    <div class="keybox" style="margin-bottom:11px">
+      <b>หนี้กับเงินฝาก เป็นคนละก้อน</b>
+      <table style="margin-top:7px"><tbody>
+        <tr><td class="l">เงินต้น + ดอกเบี้ย / งวด</td><td class="amt"><b>${B(pi)}</b></td>
+            <td class="l hint">แกนของหนี้ — <b>ล็อกไว้ ไม่เปลี่ยนตลอดสัญญา</b> ต่อให้เพิ่มหุ้นก็ไม่ขยับ</td></tr>
+        <tr><td class="l">หุ้นฝากที่มีผลตอนนี้</td><td class="amt">${B(nowRow.base+nowRow.extra)}</td>
+            <td class="l hint">ประจำ ${B(nowRow.base)} + เพิ่ม ${B(nowRow.extra)} — <b>เงินของผู้กู้เอง ได้คืนพร้อมปันผล</b></td></tr>
+        <tr class="tot"><td class="l">ยอดที่ต้องโอน/เดือน ตอนนี้</td><td class="amt"><b>${B(pi+nowRow.base+nowRow.extra)}</b></td>
+            <td class="l hint">เปลี่ยนตามหุ้นฝากเท่านั้น</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="eyebrow" style="margin:0 0 7px">ประวัติการฝากหุ้นของสัญญานี้</div>
+    <div class="tbl"><table><thead><tr><th class="l">มีผลตั้งแต่งวด</th><th>หุ้นประจำ</th><th>ฝากเพิ่ม</th>
+      <th>ยอดโอน/เดือน</th><th class="l">อ้างอิงเอกสาร</th><th></th></tr></thead><tbody>
+      ${L.map((x,i)=>`<tr${x.origin?'':' style="background:#F3F8F4"'}>
+        <td class="l">${x.origin?'<span class="pill">งวดแรก (ตามสัญญา)</span>':`<b>${PLBL[x.from]||x.from}</b>`}</td>
+        <td class="amt">${B(x.base)}</td><td class="amt">${B(x.extra)}</td>
+        <td class="amt"><b>${B(pi + (+x.base||0) + (+x.extra||0))}</b></td>
+        <td class="l hint" style="white-space:normal">${esc(x.memo)}</td>
+        <td>${x.origin?"":`<button class="del" data-shdel="${i-1}">×</button>`}</td></tr>`).join("")}
+    </tbody></table></div>
+
+    <div class="eyebrow" style="margin:14px 0 7px">เพิ่มรายการ — ผู้กู้ขอฝากหุ้นเพิ่ม</div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(112px,1fr))">
+      <div><label>มีผลตั้งแต่งวด</label><select id="sh_from">
+        ${PERIODS.map(p=>`<option value="${p}">${PLBL[p]}</option>`).join("")}</select></div>
+      <div><label>หุ้นประจำ/งวด</label><input type="number" step="0.01" id="sh_base" value="${nowRow.base}"></div>
+      <div><label>ฝากเพิ่ม/งวด</label><input type="number" step="0.01" id="sh_ex" value="${nowRow.extra}"></div>
+      <div><label>เลขที่บันทึกแนบท้าย</label><input id="sh_memo" placeholder="บันทึกแนบท้าย 1/2569"></div>
+      <div><label>&nbsp;</label><button id="sh_add">เพิ่ม &amp; พิมพ์บันทึก</button></div>
+    </div>
+    <p class="hint" style="margin-top:8px"><b>ไม่ต้องออกสัญญาใหม่ ไม่ต้องให้ผู้ค้ำเซ็นใหม่</b> —
+      การฝากหุ้นเพิ่มไม่เพิ่มหนี้ ไม่เพิ่มภาระผู้ค้ำแม้แต่บาทเดียว
+      · ออกสัญญาใหม่โดยผู้ค้ำไม่ได้เซ็น อาจถูกอ้างว่าสัญญาเดิมระงับ แล้ว<b>ผู้ค้ำหลุดจากภาระ</b> (ปพพ. ม.700)
+      · ผู้กู้ยกเลิกการฝากเพิ่มได้ทุกเมื่อ — ถ้าบังคับ มันจะกลายเป็นหนี้ ไม่ฝากแล้วผิดนัด ซึ่งผิดเจตนา</p>
+    <div id="shdoc"></div>`}
+  </div>`;
+
+  $("sh_x").onclick = () => { $("atbox").innerHTML = ""; };
+  document.querySelectorAll("[data-shdel]").forEach(b=>b.onclick=()=>{
+    if(!confirm("ลบรายการฝากหุ้นเพิ่มรายการนี้?")) return;
+    c.shLog.splice(+b.dataset.shdel,1); shPanel(cid); all(); });
+  if($("sh_add")) $("sh_add").onclick = () => {
+    const memo = $("sh_memo").value.trim();
+    if(!memo){ alert("กรุณาระบุเลขที่บันทึกแนบท้าย — ต้องมีเอกสารอ้างอิงเสมอ"); return; }
+    c.shLog = c.shLog || [];
+    c.shLog.push({from:$("sh_from").value, base:+$("sh_base").value||0,
+                  extra:+$("sh_ex").value||0, memo});
+    all(); shPanel(cid);
+    $("shdoc").innerHTML = docAmend(c, c.shLog[c.shLog.length-1]);
+    setTimeout(()=>{ document.body.classList.add("mprint");
+      window.print(); document.body.classList.remove("mprint"); }, 350);
+  };
+}
+
+/* ---------- เอกสาร: บันทึกแนบท้ายสัญญา เรื่องขอฝากหุ้นเพิ่ม ---------- */
+function docAmend(c, x){
+  const m = DB.members.find(z=>z.no===c.no) || {name:""};
+  const pi = piOf(c), prev = shLogOf(c).filter(z=>!z.from || z.from < x.from).pop() || {base:0,extra:0};
+  const oldTot = pi + (+prev.base||0) + (+prev.extra||0), newTot = pi + (+x.base||0) + (+x.extra||0);
+  return pg(1, 1, `${logo()}<div class="kt1">บันทึกแนบท้ายสัญญาเงินกู้</div>
+    <div class="kt2">เรื่อง ความประสงค์ฝากเงินหุ้นเพิ่ม &nbsp;·&nbsp; ${esc(x.memo)}</div>
+    <div class="kmeta2"><span>แนบท้ายสัญญาเลขที่ <b>${esc(c.code)||"(ยังไม่ออกเลข)"}</b></span>
+      <span>ผู้กู้ <b>${esc(m.name)}</b> เลขที่สมาชิก ${c.no}</span>
+      <span>วันที่ทำสัญญาเดิม ${c.d||"—"}</span></div>
+
+    <p class="i2">ข้าพเจ้า <b class="f">${esc(m.name)}</b> เลขที่สมาชิก <b class="f">${c.no}</b>
+      ผู้กู้ตามสัญญาเงินกู้เลขที่ <b class="f">${esc(c.code)||"................"}</b>
+      มีความประสงค์<b>ฝากเงินหุ้นเพิ่ม</b>กับ${ORGF} โดยสมัครใจ จึงทำบันทึกฉบับนี้ไว้เป็นหลักฐาน</p>
+
+    <div class="h">ข้อ 1. รายการที่เปลี่ยนแปลง</div>
+    <table class="kt"><thead><tr><th class="l">รายการ</th><th>เดิม</th><th>ใหม่</th><th>เปลี่ยนแปลง</th></tr></thead><tbody>
+      <tr class="hl"><td class="l"><b>เงินต้น + ดอกเบี้ย ต่องวด</b></td><td class="n">${B(pi)}</td>
+        <td class="n"><b>${B(pi)}</b></td><td class="n"><b>ไม่เปลี่ยนแปลง</b></td></tr>
+      <tr><td class="l">เงินฝากหุ้นประจำ ต่องวด</td><td class="n">${B(prev.base)}</td><td class="n">${B(x.base)}</td>
+        <td class="n">${(+x.base||0)-(+prev.base||0)>=0?"+":""}${B((+x.base||0)-(+prev.base||0))}</td></tr>
+      <tr><td class="l">เงินฝากหุ้นเพิ่ม ต่องวด</td><td class="n">${B(prev.extra)}</td><td class="n">${B(x.extra)}</td>
+        <td class="n">${(+x.extra||0)-(+prev.extra||0)>=0?"+":""}${B((+x.extra||0)-(+prev.extra||0))}</td></tr>
+      <tr class="tot"><td class="l"><b>ยอดที่ต้องโอนต่อเดือน</b></td><td class="n">${B(oldTot)}</td>
+        <td class="n"><b>${B(newTot)}</b></td><td class="n"><b>${newTot-oldTot>=0?"+":""}${B(newTot-oldTot)}</b></td></tr>
+    </tbody></table>
+    <p class="i2">ให้มีผลตั้งแต่งวดเดือน <b class="f">${PLBL[x.from]||x.from}</b> เป็นต้นไป</p>
+
+    <div class="h">ข้อ 2. ข้อตกลง</div>
+    <p class="i">2.1 <b>บันทึกนี้ไม่เปลี่ยนแปลงหนี้เงินกู้</b> — วงเงิน จำนวนงวด อัตราดอกเบี้ย ตารางการชำระหนี้
+      และวันครบกำหนดสัญญา ยังคงเป็นไปตามสัญญาเงินกู้เดิมทุกประการ</p>
+    <p class="i">2.2 <b>บันทึกนี้ไม่เพิ่มภาระของผู้ค้ำประกัน</b> — ผู้ค้ำประกันตามสัญญาเดิมยังคงรับผิดเท่าเดิม
+      ภายใต้วงเงินรับผิดสูงสุดเดิม การฝากหุ้นเพิ่มตามบันทึกนี้<b>ไม่อยู่ในความรับผิดของผู้ค้ำประกัน</b></p>
+    <p class="i">2.3 <b>เงินฝากหุ้นเพิ่มเป็นการออมโดยสมัครใจ ไม่ใช่หนี้</b> —
+      หากผู้กู้ไม่ได้ฝากเพิ่มในงวดใด <b>ไม่ถือเป็นการผิดนัดชำระหนี้</b> ไม่มีค่าปรับ ไม่มีค่าทวงถาม
+      และไม่เป็นเหตุให้เรียกให้ชำระหนี้ทั้งหมดทันที</p>
+    <p class="i">2.4 <b>ผู้กู้ยกเลิกหรือแก้ไขจำนวนเงินฝากเพิ่มได้ทุกเมื่อ</b> โดยแจ้งเป็นหนังสือต่อกรรมการฝ่ายการเงิน
+      ล่วงหน้าไม่น้อยกว่า 15 วันก่อนงวดที่ประสงค์ให้มีผล</p>
+    <p class="i">2.5 เงินฝากหุ้นเพิ่มตามบันทึกนี้ <b>รวมเป็นทุนเรือนหุ้นของผู้กู้</b> มีสิทธิได้รับปันผลตามข้อตกลงกลุ่มบุคคล
+      และขอถอนคืนได้ตามหลักเกณฑ์การถอนทุน (สัญญาข้อ 7) เมื่อไม่มีหนี้และไม่มีภาระค้ำประกันคงค้าง</p>
+    <p class="i">2.6 การจัดสรรเงินที่ได้รับชำระในแต่ละงวด ให้เป็นไปตามสัญญาข้อ 2.2
+      โดย<b>เงินฝากหุ้นเพิ่มตามบันทึกนี้จะถูกกันไว้เป็นทุนเรือนหุ้น ไม่นำไปหักชำระเงินต้น</b>
+      เว้นแต่ผู้กู้แจ้งเป็นหนังสือให้นำไปชำระหนี้</p>
+
+    <div class="keybox" style="margin-top:10px"><b>ผู้กู้รับทราบว่า</b>
+      <ul class="ul"><li>เงินฝากหุ้นเพิ่ม <b>${B(x.extra)}</b> บาท/งวด <b>เป็นเงินของท่านเอง ไม่ใช่ดอกเบี้ยและไม่ใช่ค่าปรับ</b>
+          — ได้คืนพร้อมปันผลเมื่อปิดหนี้และปลดภาระค้ำแล้ว</li>
+        <li>ยอดที่ต้องโอนต่อเดือนเปลี่ยนจาก ${B(oldTot)} เป็น <b>${B(newTot)}</b> บาท
+          แต่<b>หนี้ที่ต้องชำระเท่าเดิมทุกบาท</b> ส่วนที่เพิ่มคือเงินออมของท่าน</li>
+        <li>ระหว่างที่ยังมีหนี้ค้าง <b>ห้ามนำเงินฝากหุ้นมาหักกลบหนี้</b> (สัญญาข้อ 2.4)</li></ul></div>
+
+    <div class="ksigs" style="grid-template-columns:1fr 1fr;max-width:460px;margin:18px auto 0">
+      ${sigOf("ผู้กู้ — ผู้แสดงความประสงค์", m.name)}
+      ${sigOf("กรรมการฝ่ายการเงิน — ผู้รับบันทึก", FIN())}
+    </div>
+    <div class="ksigs" style="grid-template-columns:1fr;max-width:240px;margin:12px auto 0">
+      ${sigOf("ประธานกลุ่มบุคคล — รับทราบ", CHAIR())}
+    </div>
+    <p class="kh" style="text-align:center;margin-top:12px">
+      บันทึกฉบับนี้เป็นส่วนหนึ่งของสัญญาเงินกู้เลขที่ ${esc(c.code)||"................"}
+      · <b>ไม่ต้องมีลายมือชื่อผู้ค้ำประกัน</b> เนื่องจากไม่เพิ่มภาระความรับผิดของผู้ค้ำประกัน</p>`,
+    "ผู้กู้");
 }
 
 /* ============ แท็บ 2 — รับชำระ ============ */
@@ -1842,7 +2015,7 @@ function slipHTML(m){
       ${K?`<td class="amt">${B(x.totFee)}</td>`:""}<td class="amt">${B(x.bal)}</td>${K?"<td></td>":""}</tr>
     </tbody></table>
     ${!K?`<p class="hint" style="margin-top:6px;background:#FDF6E3;border-left:3px solid var(--gold);padding:6px 9px">
-      <b>ยังไม่ได้กรอก «งวดละ» ของสัญญาฉบับนี้ในทะเบียน (แท็บ 1)</b> — ระบบจึงยังไม่ทราบว่าแต่ละงวดต้องชำระเท่าไหร่
+      <b>ยังไม่ได้กรอกตัวเลขสัญญา ของสัญญาฉบับนี้ในทะเบียน (แท็บ 1)</b> — ระบบจึงยังไม่ทราบว่าแต่ละงวดต้องชำระเท่าไหร่
       จึง<b>ไม่ประเมินการค้างชำระ ไม่คิดค่าทวงถาม และไม่ออกหนังสือเตือน</b>ให้สัญญานี้
       · ตารางข้างบนแสดงเฉพาะเงินที่รับจริงและการจัดสรรตามข้อ 2.2 ซึ่งถูกต้องแน่นอน</p>`:""}`;
     })()}
@@ -2042,6 +2215,35 @@ function maxPrincipal(M,B,N,i){
   let P=0; for(let t=1;t<=N;t++) P += (M - B - M*extraRate(t)) / Math.pow(1+i,t);
   return +P.toFixed(2);
 }
+/* ---- เงินต้น+ดอกเบี้ยต่องวด (แกนของหนี้ — ไม่เปลี่ยนตลอดสัญญา) ---- */
+function piOf(c){
+  if (+c.pi > 0) return +c.pi;                       // อ่านจาก PDF ตารางเดิมมาแล้ว
+  const inst = +c.inst||0; if(!inst) return 0;
+  return +(inst - (+c.shareM||0) - (+c.exFix||0)).toFixed(2);
+}
+/* ---- ประวัติการฝากหุ้น: [{from:"2569-08", base, extra, memo}] เรียงตามงวด ---- */
+function shLogOf(c){
+  const base0 = +c.shareM||0;
+  const ex0   = c.mode==="old" ? (+c.exFix||0) : 0;
+  const L = [{from:"", base:base0, extra:ex0, memo:"ตามสัญญา/ตารางเดิม", origin:true}];
+  (c.shLog||[]).slice().sort((a,b)=>(a.from||"")<(b.from||"")?-1:1).forEach(x=>L.push(x));
+  return L;
+}
+// หุ้นฝากที่มีผล ณ งวดนั้น
+function shareOn(c, p){
+  const L = shLogOf(c);
+  let cur = L[0];
+  L.forEach(x=>{ if(x.from && x.from <= p) cur = x; });
+  return {base:+cur.base||0, extra:+cur.extra||0, memo:cur.memo||"", changed:!cur.origin};
+}
+// ยอดที่ต้องส่งทั้งหมด ณ งวดนั้น = หนี้ + หุ้นฝากที่มีผล
+function dueOn(c, p, tn){
+  const pi = piOf(c); if(!pi) return {due:0, pi:0, base:0, extra:0, memo:"", changed:false};
+  const sh = shareOn(c, p);
+  const extra = c.mode==="calc" ? +((+c.inst||0)*extraRate(Math.max(1,tn))).toFixed(2) : sh.extra;
+  return {due:+(pi + sh.base + extra).toFixed(2), pi, base:sh.base, extra, memo:sh.memo, changed:sh.changed};
+}
+
 // ย้อนสูตร: กรอกวงเงินที่ต้องการ → ได้ยอดที่ต้องส่ง/เดือน
 // P0 = M·Σ(1−E_t)/(1+i)^t − B·Σ1/(1+i)^t  →  M = (P0 + B·A) / C
 function reqPayment(P0,B,N,i){
@@ -3324,6 +3526,20 @@ const GS_SHEETS = [
 ];
 function drawT9(){
   $("tab9").innerHTML = `
+  <div class="card" style="border-left:3px solid ${inGAS?"var(--green)":"var(--gold)"}">
+    <div class="eyebrow">สถานะการเชื่อมต่อฐานข้อมูล</div>
+    ${inGAS ? `<p style="margin:0;font-size:13px"><b style="color:var(--green)">✓ ต่อกับ Google Sheets อยู่</b>
+      — ข้อมูลอ่านจาก Sheets ตอนเปิด และบันทึกกลับอัตโนมัติทุกครั้งที่แก้ · <b>ไม่ต้องกดนำเข้าอีก</b>
+      · กรรมการทุกคนเห็นข้อมูลชุดเดียวกัน</p>`
+    : `<p style="margin:0;font-size:13px"><b style="color:var(--gold)">โหมดเปิดไฟล์ตรง — ยังไม่ได้ต่อกับ Google Sheets</b></p>
+      <p class="hint" style="margin-top:7px">ตอนนี้คุณเปิดไฟล์ HTML จากเครื่องโดยตรง มันจึงไม่รู้จัก Sheets ของคุณ
+      · ระบบ<b>จำข้อมูลไว้ในเบราว์เซอร์เครื่องนี้</b>ให้แล้ว ปิดเปิดใหม่ข้อมูลยังอยู่ <b>ไม่ต้องนำเข้าซ้ำ</b>
+      — แต่ข้อมูลอยู่แค่เครื่องนี้ เบราว์เซอร์นี้ · กรรมการคนอื่นไม่เห็น · ล้างแคชแล้วหาย</p>
+      <p class="hint" style="margin-top:6px"><b>จะให้ต่อ Sheets จริง ต้องเอาโปรแกรมขึ้น Apps Script ตามขั้นตอนด้านล่าง</b>
+      — ทำครั้งเดียวจบ หลังจากนั้นเปิดจากลิงก์ ข้อมูลจะมาจาก Sheets เอง และ<b>เวลาผมส่งไฟล์ใหม่ให้
+      คุณแค่วางทับใน Apps Script ข้อมูลไม่หาย</b>เพราะข้อมูลไม่ได้อยู่ในไฟล์</p>`}
+  </div>`;
+  $("tab9").innerHTML += `
   <div class="card">
     <div class="eyebrow">ย้ายฐานข้อมูลขึ้น Google Sheets</div>
     <p class="hint" style="margin-bottom:11px">โปรแกรมนี้เก็บข้อมูลในเครื่องคุณคนเดียว —
@@ -3423,22 +3639,13 @@ $("csv").onclick = () => {
 $("impBtn").onclick = () => $("imp").click();
 $("imp").onchange = e => { const fr = new FileReader();
   fr.onload = () => { try{
-      const j = JSON.parse(fr.result);
-      if(j.members) DB.members = j.members;
-      if(j.anames)  DB.anames  = j.anames;
-      if(j.acct)    { DB.acct = {...j.acct}; S.acct = {...j.acct}; }
-      if(j.wd)      DB.wd = j.wd;
-      if(j.contracts) S.contracts = j.contracts;
-      if(j.tx)        S.tx = j.tx;
-      if(j.profile)   S.profile = j.profile;
-      ["assign","per","rule","cut"].forEach(k=>{ if(j[k]!==undefined) S[k]=j[k]; });
-      sel=null; all();
+      applyBackup(JSON.parse(fr.result));
+      sel = null; all();
       setStatus("นำเข้าแล้ว · " + (DB.members.length||0) + " สมาชิก · " + (S.tx.length||0) + " รายการโอน"
-        + (inGAS ? " — กำลังบันทึกขึ้น Google Sheets…" : ""));
-      if(inGAS) doSave();
+        + (inGAS ? " — กำลังบันทึกขึ้น Google Sheets…" : " — จำไว้ในเครื่องนี้แล้ว"));
+      if(inGAS) doSave(); else lsSave();
     } catch(err){ alert("ไฟล์ไม่ถูกต้อง: " + err.message); } };
   fr.readAsText(e.target.files[0]); };
-
 
 /* ============ เริ่มระบบ ============ */
 const inGAS = typeof google !== "undefined" && google.script && google.script.run;
@@ -3461,11 +3668,22 @@ async function boot(){
     }
   } else {
     DB = {...EMPTY}; S = freshS();
-    setStatus("โหมดเปิดไฟล์ตรง — ยังไม่มีข้อมูล กด «นำเข้า» เพื่อโหลดไฟล์ JSON สำรอง");
+    const j = lsLoad();
+    if(j && j.members && j.members.length){
+      applyBackup(j);
+      setStatus("โหมดเปิดไฟล์ตรง — โหลดจากที่จำไว้ในเครื่องนี้ · " + DB.members.length + " สมาชิก");
+    } else {
+      setStatus("โหมดเปิดไฟล์ตรง — ยังไม่มีข้อมูล กด «นำเข้า» เพื่อโหลดไฟล์ JSON สำรอง");
+    }
   }
   draw();
 }
 function draw(){ drawT1(); drawT2(); drawT3(); drawT4(); drawT5(); drawT6(); drawT7(); drawT8(); drawT9(); }
+
+$("clr").onclick = () => {
+  if(!confirm("ลบข้อมูลที่จำไว้ในเบราว์เซอร์เครื่องนี้?\n\nข้อมูลบน Google Sheets และไฟล์ JSON ที่ส่งออกไว้จะไม่ถูกลบ\nแต่ถ้ายังไม่เคยส่งออก/ยังไม่ได้ขึ้น Sheets ข้อมูลจะหายถาวร")) return;
+  lsClear(); location.reload();
+};
 
 /* ============ เดินระบบ ============ */
 function all(){ drawT1(); drawT2(); drawT3(); drawT4(); drawT5(); drawT6(); drawT7(); drawT8(); drawT9(); save(); }
