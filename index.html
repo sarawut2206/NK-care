@@ -2048,6 +2048,17 @@ function slipHTML(m){
         || '<span style="color:var(--red)">ยังไม่ระบุ</span>'}</p>
     ${(()=>{ const K = x.assessed;   // รู้ "งวดละ" หรือยัง — ไม่รู้ก็ไม่แสดงคอลัมน์ที่ต้องเดา
       const E = x.rows.some(w=>w.extraDue>0);
+      const V = x.rows.some(w=>w.svDue>0);
+      const svStart = x.rows.find(w=>w.svDue>0);
+      const svLog = shLogOf(c).filter(z=>(+z.sv||0)>0);
+      const svNote = V && svStart ? `<p class="kh" style="margin:6px 0 0;padding:5px 8px;border:1px solid var(--gold);background:#FFFBEF">
+        <b>หุ้นเพิ่ม 2569</b> — ท่านขอฝากเพิ่ม <b>${B(svStart.svDue)} บาท/งวด</b>
+        ตั้งแต่งวด <b>${PLBL[svStart.p]}</b>${svStart.tn?` (งวดที่ ${svStart.tn} ของสัญญา)`:""} เป็นต้นไป
+        ${svLog[0]&&svLog[0].memo?` ตาม${esc(svLog[0].memo)}`:""}
+        · รวมฝากแล้ว <b>${B(x.rows.reduce((a,w)=>a+(w.shV||0),0))} บาท</b>
+        <br><b>เป็นเงินออมของท่านเอง ไม่ใช่หนี้</b> — งวดใดไม่ฝากไม่ถือว่าผิดนัด ไม่มีค่าปรับ
+        · ยกเลิกหรือเปลี่ยนจำนวนได้ทุกเมื่อ แจ้งกรรมการฝ่ายการเงินล่วงหน้า 15 วัน
+        · ผู้ค้ำประกันไม่ต้องรับผิดในเงินส่วนนี้</p>` : "";
       return `<table><thead>
       <tr><th class="l" rowspan="2" style="vertical-align:bottom">งวด</th>
         <th class="l" rowspan="2" style="vertical-align:bottom">วันที่ชำระจริง</th>
@@ -2079,9 +2090,11 @@ function slipHTML(m){
       ${K?`<td class="amt">${B(x.rows.reduce((a,w)=>a+(w.due||0),0))}</td>`:""}
       <td class="amt">${B(x.totGot)}</td>${K?`<td class="amt">${B(x.totShort)}</td>`:""}
       <td class="amt">${B(x.totInt)}</td><td class="amt">${B(x.totShB)}</td>
-      ${E?`<td class="amt">${B(x.totShE)}</td>`:""}<td class="amt">${B(x.totPri)}</td>
+      ${E?`<td class="amt">${B(x.totShE)}</td>`:""}
+      ${V?`<td class="amt svcol">${B(x.rows.reduce((a,w)=>a+(w.shV||0),0))}</td>`:""}<td class="amt">${B(x.totPri)}</td>
       ${K?`<td class="amt">${B(x.totFee)}</td>`:""}<td class="amt">${B(x.bal)}</td>${K?"<td></td>":""}</tr>
     </tbody></table>
+    ${svNote}
     ${!K?`<p class="hint" style="margin-top:6px;background:#FDF6E3;border-left:3px solid var(--gold);padding:6px 9px">
       <b>ยังไม่ได้กรอกตัวเลขสัญญา ของสัญญาฉบับนี้ในทะเบียน (แท็บ 1)</b> — ระบบจึงยังไม่ทราบว่าแต่ละงวดต้องชำระเท่าไหร่
       จึง<b>ไม่ประเมินการค้างชำระ ไม่คิดค่าทวงถาม และไม่ออกหนังสือเตือน</b>ให้สัญญานี้
@@ -2121,11 +2134,12 @@ function slipHTML(m){
     เงินที่โอนเข้ามาทั้งหมดเป็น <b>การฝากทุนเรือนหุ้น</b> ไม่มีการหักดอกเบี้ยหรือค่างวดใด ๆ</p>`:""}
   ${(()=>{ let bal=+m.share; const rs=[];
     PERIODS.forEach(p=>{
-      let base=0, extra=0, direct=0;
-      r.cs.forEach(({r:x})=>{ const w=x.rows.find(z=>z.p===p); if(w){ base+=(w.shB||0); extra+=(w.shE||0); } });
+      let base=0, extra=0, sv=0, direct=0;
+      r.cs.forEach(({r:x})=>{ const w=x.rows.find(z=>z.p===p);
+        if(w){ base+=(w.shB||0); extra+=(w.shE||0); sv+=(w.shV||0); } });
       mtx.forEach(t=>{ if(autoAssign(t)==="share" && periodOf(t.d)===p) direct+=t.m; });
-      const add=+(base+extra+direct).toFixed(2); bal=+(bal+add).toFixed(2);
-      if(add>0 || r.cs.length) rs.push({p,base,extra,direct,add,bal});
+      const add=+(base+extra+sv+direct).toFixed(2); bal=+(bal+add).toFixed(2);
+      if(add>0 || r.cs.length) rs.push({p,base,extra,sv,direct,add,bal});
     });
     if(!rs.length) return '<p class="hint">ยังไม่มีรายการฝากในช่วงนี้</p>';
     // ผู้ฝากล้วน — ไม่มีสัญญา จึงไม่มีหุ้นประจำ/หุ้นเพิ่มจากการผ่อน
@@ -2336,7 +2350,11 @@ function reqPayment(P0,B,N,i){
   return C>0 ? +((P0 + B*A)/C).toFixed(2) : 0;
 }
 function shareAt(c,t){
-  return c.mode==="calc" ? +((+c.shareM||0) + (+c.inst||0)*extraRate(t)).toFixed(2) : (+c.shareM||0);
+  const base = +c.shareM||0;
+  const ex = c.mode==="old"  ? (+c.exFix||0)                            // ตารางเดิม 2568 — คงที่ทุกงวด
+           : c.mode==="calc" ? +((+c.inst||0)*extraRate(t)).toFixed(2)  // สูตร 2569 — ขั้นบันได
+           : 0;
+  return +(base + ex).toFixed(2);
 }
 
 /* ตารางผ่อน — รองรับทั้งสูตรใหม่ (calc) และคงที่ (fixed/flat) */
@@ -2901,7 +2919,15 @@ function docSched(c){
       <span>วงเงิน <b>${B(c.amt)}</b> บาท · <b>${c.terms}</b> งวด · งวดละ <b>${B(c.inst)}</b> บาท</span></div>
     <p class="kh">คำนวณตามระบบเพดานวงเงินของกลุ่มบุคคลฯ · ดอกเบี้ย 1.00%/เดือน
       ${PROD[c.prod].method==="flat"?"(แบบคงที่/Flat)":"(ลดต้นลดดอก)"} ·
-      หุ้นเพิ่ม = ยอดส่งต่อเดือน × อัตราขั้นบันได (1–12 → 8%, 13–24 → 10%, 25–36 → 12%, 37–48 → 14%, 49–60 → 16%, 61–72 → 18%)</p>
+      ${c.mode==="old"
+        ? `หุ้นเพิ่ม = <b>${B(c.exFix||0)} บาท คงที่ทุกงวด</b> ตามตารางเดิมที่แจ้งไว้ (อัตรา × วงเงิน ÷ จำนวนงวด)`
+        : c.mode==="calc"
+        ? "หุ้นเพิ่ม = ยอดส่งต่อเดือน × อัตราขั้นบันได (1–12 → 8%, 13–24 → 10%, 25–36 → 12%, 37–48 → 14%, 49–60 → 16%, 61–72 → 18%)"
+        : "ไม่มีหุ้นเพิ่ม — ฝากหุ้นประจำอย่างเดียว"}</p>
+    ${(()=>{ const v = shLogOf(c).find(z=>(+z.sv||0)>0); return v ? `<p class="i2" style="margin-top:4px">
+      <b>ผู้กู้ขอฝากหุ้นเพิ่ม 2569 จำนวน ${B(v.sv)} บาท/งวด ตั้งแต่งวด ${PLBL[v.from]||v.from}
+      ${(()=>{const t=schedule(c).length; const i=PERIODS.indexOf(v.from); return "";})()}เป็นต้นไป</b>
+      ${v.memo?`ตาม${esc(v.memo)}`:""} — เป็นความประสงค์เพิ่มเติมของผู้กู้เอง ไม่ใช่เงื่อนไขของสัญญาเงินกู้</p>`:""; })()}
     <div class="ksch">${col(s.rows.slice(0,half))}${s.rows.length>half?col(s.rows.slice(half)):""}</div>
     <div class="ktot">รวมดอกเบี้ย ${B(s.totInt)} · รวมหุ้นประจำ ${B(s.totBase)} · รวมหุ้นเพิ่ม ${B(s.totExtra)}
       ${sv?`· <b>รวมหุ้นเพิ่ม 2569 ${B(sv*s.rows.length)}</b>`:""} ·
