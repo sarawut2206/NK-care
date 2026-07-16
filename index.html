@@ -1048,7 +1048,9 @@ function drawT1(){
           <button class="ghost sm" data-rw="${c.id}" style="padding:2px 6px;font-size:10.5px${lockedRows(c)?";border-color:var(--gold);color:#8A6D1F":""}"
             title="ดู/แก้ตารางผ่อนรายงวด">งวด${lockedRows(c)?" 🔒":""}</button>
           ${NODEBT(c.prod)?"":`<button class="ghost sm" data-st="${c.id}" style="padding:2px 6px;font-size:10.5px${settledAt(c)?";border-color:var(--green);color:var(--green)":""}"
-            title="ปิดชำระหนี้ / อนุมัติเป็นผู้ฝาก">${settledAt(c)?"ปิดแล้ว ✓":"ปิดหนี้"}</button>`}</td>
+            title="ปิดชำระหนี้ / อนุมัติเป็นผู้ฝาก">${settledAt(c)?"ปิดแล้ว ✓":"ปิดหนี้"}</button>`}
+          <button class="ghost sm" data-pr="${c.id}" style="padding:2px 6px;font-size:10.5px;border-color:var(--ink)"
+            title="ไปหน้าพิมพ์ชุดสัญญาของคนนี้">พิมพ์ ↗</button></td>
         <td><input type="number" step="0.01" data-e="${c.id}:amt" value="${c.amt||""}"${miss("amt")} style="width:92px;padding:3px 5px"></td>
         <td><input type="number" data-e="${c.id}:terms" value="${c.terms||""}"${miss("terms")} style="width:52px;padding:3px 5px"></td>
         <td><input type="number" step="0.01" data-e="${c.id}:inst" value="${c.inst||""}"${miss("inst")} style="width:82px;padding:3px 5px"></td>
@@ -1163,6 +1165,10 @@ function drawT1(){
   document.querySelectorAll("[data-sh]").forEach(b => b.onclick = () => shPanel(b.dataset.sh));
   document.querySelectorAll("[data-rw]").forEach(b => b.onclick = () => rowPanel(b.dataset.rw));
   document.querySelectorAll("[data-st]").forEach(b => b.onclick = () => setPanel(b.dataset.st));
+  document.querySelectorAll("[data-pr]").forEach(b => b.onclick = () => {
+    S.pick = b.dataset.pr; all();
+    document.querySelector('nav b[data-t="5"]').click();
+  });
   document.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
     if(!confirm("ลบสัญญาฉบับนี้?")) return;
     S.contracts = S.contracts.filter(x=>x.id!==b.dataset.del); all(); });
@@ -3072,11 +3078,17 @@ function docOrder(){
 /* ============ แท็บ 5 — พิมพ์ชุดสัญญา ============ */
 let docMode = "full", docPick = {loan:1, guar:1, consent:1, sched:1};
 function drawT5(){
-  const list = S.contracts.filter(c=>!c.legacy);
+  const list = S.contracts.slice().sort((a,b)=>(a.no+a.prod)<(b.no+b.prod)?-1:1);
   const cur = S.contracts.find(x=>x.id===S.pick) || list[0];
   if(cur) S.pick = cur.id;
-  const opts = list.map(c=>{const m=DB.members.find(z=>z.no===c.no);
-    return `<option value="${c.id}" ${c.id===S.pick?"selected":""}>${c.no} · ${esc(m?m.name:"")} · ${c.prod} · ${B(c.amt)} บาท</option>`;}).join("");
+  const grp = (ttl, arr) => arr.length ? `<optgroup label="${ttl} (${arr.length})">` + arr.map(c=>{
+      const m=DB.members.find(z=>z.no===c.no);
+      return `<option value="${c.id}" ${c.id===S.pick?"selected":""}>${c.no} · ${esc(m?m.name:"")} · ${c.prod}${
+        NODEBT(c.prod) ? " · หุ้น "+B(c.shareM)+"/งวด" : " · "+B(c.amt)+" บาท"}${settledAt(c)?" · ปิดแล้ว":""}</option>`;
+    }).join("") + `</optgroup>` : "";
+  const opts = grp("ย้อนหลัง 2568", list.filter(c=>c.legacy))
+             + grp("ปัจจุบัน 2569", list.filter(c=>!c.legacy && !NODEBT(c.prod)))
+             + grp("ฝากหุ้นอย่างเดียว", list.filter(c=>NODEBT(c.prod)));
 
   const people = cur ? [[cur.no,"ผู้กู้"],[cur.g1,"ผู้ค้ำ 1"],[cur.g2,"ผู้ค้ำ 2"]].filter(x=>x[0]) : [];
   const pf = (no,role)=>{ const m=DB.members.find(z=>z.no===no)||{name:""}, p=prof(no);
