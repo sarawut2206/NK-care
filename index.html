@@ -323,7 +323,7 @@ th.svcol{background:#FFF4D6!important}
   <div><h1>ระบบทะเบียนสัญญาและรับชำระ</h1>
     <small>กบข.นข. · โรงเรียนมัธยมวัดหนองแขม · บัญชี 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0">v2569.07.16-6</b></small></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0">v2569.07.16-7</b></small></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
@@ -1363,16 +1363,37 @@ function setPanel(cid){
         เงินที่โอนเข้าหลังจากนี้นับเป็น<b>เงินฝากหุ้น</b> · ผู้ค้ำประกันพ้นภาระตามสัญญาข้อ 1.9</p>
       <div class="bar" style="margin-top:8px"><button class="ghost" id="st_undo">ยกเลิกการอนุมัติ</button></div>
     </div>` : `
-    <div class="keybox" style="margin-bottom:11px">
-      <b>สถานะหนี้ตอนนี้</b>
+    ${(()=>{
+      const done = r.rows.filter(x=>!x.pre && x.tn);
+      const lastTn = done.length ? done[done.length-1].tn : (+c.t0||0);
+      const planRow = rowAt(c, lastTn);
+      const plan = planRow ? +planRow.bal||0 : null;
+      const diff = plan!==null ? +(r.bal - plan).toFixed(2) : null;
+      const totDue = +done.reduce((a,x)=>a+(x.due||0),0).toFixed(2);
+      const totGot = +done.reduce((a,x)=>a+(x.got||0),0).toFixed(2);
+      const gap = +(totGot - totDue).toFixed(2);
+      return `<div class="keybox" style="margin-bottom:11px">
+      <b>หนี้คงเหลือ — มี 2 ตัวเลข ต้องดูให้ถูกตัว</b>
       <table style="margin-top:6px"><tbody>
-        <tr><td class="l">หนี้คงเหลือที่ระบบคำนวณได้</td>
+        <tr><td class="l">① ตาม<b>ตารางที่แนบ</b> (แผน) ณ งวดที่ ${lastTn}</td>
+            <td class="amt"><b>${plan!==null?B(plan):"—"}</b></td>
+            <td class="l hint">ยอดที่ควรเป็น <b>ถ้าจ่ายครบตรงเวลาทุกงวด</b> ไม่ขาดไม่เกิน</td></tr>
+        <tr><td class="l">② ตาม<b>เงินที่รับจริง</b></td>
             <td class="amt"><b style="color:${r.bal>0.005?"var(--red)":"var(--green)"}">${noTable(c)?"ประเมินไม่ได้":B(r.bal)}</b></td>
-            <td class="l hint">${noTable(c)
-              ? "<b style='color:var(--red)'>ยังไม่ได้แนบตารางผ่อน</b> — ระบบไม่รู้ยอดหนี้ของสัญญานี้ แต่ยังกดอนุมัติปิดชำระได้ถ้าคุณยืนยันจากเอกสารจริง"
-              : "คำนวณจากตารางที่แนบ + เงินที่รับจริง"}</td></tr>
+            <td class="l hint">คิดจากเงินที่โอนเข้ามาจริง ${done.length} งวด — <b>ตัวนี้คือยอดที่ต้องใช้ปิดหนี้</b></td></tr>
+        ${diff!==null && Math.abs(diff)>0.05 ? `<tr class="tot"><td class="l"><b>ส่วนต่าง ② − ①</b></td>
+            <td class="amt"><b style="color:${diff<0?"var(--green)":"var(--red)"}">${diff>0?"+":""}${B(diff)}</b></td>
+            <td class="l hint">${diff<0
+              ? `<b style="color:var(--green)">หนี้น้อยกว่าแผน ${B(-diff)}</b> — รับเงินมากกว่าที่ต้องส่ง ${B(gap)} บาท
+                 <br><b style="color:var(--gold)">⚠ ถ้าเงินส่วนเกินนี้คือ «สะสมเพิ่ม» (ออมสมัครใจ) แสดงว่ายังไม่ได้บันทึก</b> —
+                 ตอนนี้มันถูกนับเป็นเงินต้น ทำให้หนี้ลดเร็วกว่าจริง <b>ไปกดปุ่ม «หุ้น» บันทึกให้ถูกก่อน</b>`
+              : `<b style="color:var(--red)">หนี้มากกว่าแผน ${B(diff)}</b> — รับเงินน้อยกว่าที่ต้องส่ง ${B(-gap)} บาท (ค้างชำระ)`}</td></tr>` : ""}
       </tbody></table>
-    </div>
+      ${noTable(c) ? `<p class="hint" style="margin-top:6px"><b style="color:var(--red)">ยังไม่ได้แนบตารางผ่อน</b> —
+        ระบบไม่รู้ยอดหนี้ของสัญญานี้ แต่ยังกดอนุมัติปิดชำระได้ถ้าคุณยืนยันจากเอกสารจริง</p>`
+      : `<p class="hint" style="margin-top:6px">รับจริงรวม <b>${B(totGot)}</b> · ต้องส่งรวม <b>${B(totDue)}</b> ·
+         ${Math.abs(gap)<=0.05 ? "<b style='color:var(--green)'>ตรงกันพอดี</b>" : (gap>0?`<b>เกิน ${B(gap)}</b>`:`<b style='color:var(--red)'>ขาด ${B(-gap)}</b>`)}</p>`}
+    </div>`; })()}
 
     <p class="hint" style="margin-bottom:9px">ใช้เมื่อผู้กู้<b>ปิดหนี้หมดแล้ว</b> — ระบุงวดที่ปิด แล้วกดอนุมัติ
       ระบบจะหยุดคิดหนี้ตั้งแต่งวดนั้น และเปลี่ยนสถานะเป็น<b>ผู้ฝากอย่างเดียว</b></p>
