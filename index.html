@@ -174,6 +174,8 @@ margin-top:14px;font-size:11.5px;color:var(--soft);line-height:1.65}
 .kt{width:100%;border-collapse:collapse;font-size:11px;margin:4px 0}
 .kt td,.kt th{border:1px solid var(--rule);padding:4px 7px;text-align:left}
 .kt th{background:#F4F1EA;font-size:10px;font-weight:600}
+.svcol{background:#FFFBEF!important;border-left:1.2px solid var(--gold)!important;border-right:1.2px solid var(--gold)!important}
+th.svcol{background:#FFF4D6!important}
 .kt .kk{width:130px;background:#FBF9F4;color:var(--soft);font-size:10.5px}
 .kt .n{text-align:right;font-family:"IBM Plex Mono",monospace}
 .kt .c{text-align:center;font-family:"IBM Plex Mono",monospace}
@@ -1100,7 +1102,7 @@ function runContract(c){
 
     if (bal <= 0.005 && !nl){
       if (got > 0) last = p;
-      rows.push({p, got, due:0, short:0, int:0, sh:0, shB:0, shE:0, pri:0, bal:0, fee:0, done:true,
+      rows.push({p, got, due:0, short:0, int:0, sh:0, shB:0, shE:0, shV:0, pri:0, bal:0, fee:0, done:true,
                  kind: got>0?"ชำระเกิน":"—", relief, late:false, txs});
       return;
     }
@@ -1109,8 +1111,8 @@ function runContract(c){
     const tn    = c.legacy ? (+c.t0||0) + PERIODS.indexOf(p) + 1
                            : PERIODS.indexOf(p) - PERIODS.indexOf(start) + 1;
     const D = dueOn(c, p, tn);
-    const baseDue = D.base, extraDue = D.extra;
-    const shDue = +(baseDue + extraDue).toFixed(2);
+    const baseDue = D.base, extraDue = D.extra, svDue = D.sv;
+    const shDue = +(baseDue + extraDue + svDue).toFixed(2);
     const int   = flatInt != null ? flatInt : +(bal * RATE).toFixed(2);
     // ประเมินได้ต่อเมื่อรู้ "เงินต้น+ดอกเบี้ยต่องวด" จริง — ไม่มีก็ไม่เดา (ดูทะเบียนสัญญา แท็บ 1)
     const known = D.pi > 0;
@@ -1123,22 +1125,25 @@ function runContract(c){
     // ชำระปิดบัญชี — จ่ายพอสำหรับเงินต้น+ดอกเบี้ยทั้งก้อน → ปิดหนี้ ไม่หักหุ้นก่อนเงินต้น
     const payoff = got >= bal + int - 1 && got > 0 && bal > 0;
     let rest = got, note = "";
-    let gInt, shB, shE, pri;
+    let gInt, shB, shE, shV, pri;
     if (payoff){
       gInt = Math.min(rest, int); rest -= gInt;
       pri  = +Math.min(rest, bal).toFixed(2); rest -= pri;         // เงินต้นก่อน — ปิดให้จบ
       shB  = Math.max(0, Math.min(rest, baseDue));  rest -= shB;   // ที่เหลือค่อยเข้าหุ้น
       shE  = Math.max(0, Math.min(rest, extraDue)); rest -= shE;
+      shV  = Math.max(0, Math.min(rest, svDue));    rest -= shV;
       note = "ชำระปิดบัญชี";
     } else {
-      // จัดสรรตามข้อ 2.2 : ดอกเบี้ย → เงินฝากหุ้นประจำ → เงินฝากเพิ่ม → เงินต้น
+      // ข้อ 2.2 : ดอกเบี้ย → หุ้นประจำ → หุ้นเพิ่ม → หุ้นเพิ่ม 2569 → เงินต้น
+      // หุ้นเพิ่ม 2569 กันไว้เป็นทุนเรือนหุ้นก่อน ไม่ให้ไหลไปโปะเงินต้น (บันทึกแนบท้าย ข้อ 2.6)
       gInt = Math.min(rest, int); rest -= gInt;
       shB  = Math.max(0, Math.min(rest, baseDue));  rest -= shB;
       shE  = Math.max(0, Math.min(rest, extraDue)); rest -= shE;
+      shV  = Math.max(0, Math.min(rest, svDue));    rest -= shV;
       pri  = +rest.toFixed(2);
       if (pri > bal){ note = "ชำระปิดบัญชี"; pri = +bal.toFixed(2); }
     }
-    const sh = +(shB + shE).toFixed(2);
+    const sh = +(shB + shE + shV).toFixed(2);
     bal = +(bal - pri).toFixed(2);
     if (bal <= 0.005) bal = 0;
 
@@ -1146,7 +1151,7 @@ function runContract(c){
     if (known && short > 0.005 && !relief) missed++; else if (known) { missed = 0; }
     if (got > 0) last = p;
     if (bal <= 0.005 && !closed) closed = p;
-    rows.push({p, got, due, short, int:+gInt.toFixed(2), sh, shB, shE, shDue, baseDue, extraDue,
+    rows.push({p, got, due, short, int:+gInt.toFixed(2), sh, shB, shE, shV, shDue, baseDue, extraDue, svDue,
                pri, bal, fee, kind, relief, late, tn, known, shMemo:D.memo, shChanged:D.changed,
                memo:md.memo||"", note, opens:!!nl, nl, txs});
   });
@@ -1177,6 +1182,38 @@ function runMember(m){
 /* ============ ตรวจสอบ — ระบบกันปัญหาเดิมกลับมา ============ */
 function checks(){
   const out = [];
+
+  // 0 ความถูกต้องของข้อมูลตัวบุคคล — ตัวเลขพวกนี้ถูกพิมพ์ลงสัญญาและหนังสือเตือน
+  const nm = no => { const m = DB.members.find(z=>z.no===no); return no + " " + (m?m.name:""); };
+
+  const badCid = DB.members.filter(m=>{ const c=(prof(m.no)||{}).cid; return c && !cidOK(c); });
+  out.push({ok:!badCid.length, t:"เลขบัตรประชาชนถูกต้องตามหลักตรวจสอบ",
+    p: badCid.length ? `<b>${badCid.map(m=>nm(m.no)).join(" · ")}</b> — หลักสุดท้ายไม่ตรงกับสูตรตรวจสอบ แปลว่าพิมพ์ผิด · เลขบัตรผิดในสัญญาทำให้ระบุตัวลูกหนี้ไม่ได้`
+                     : `ตรวจแล้ว ${DB.members.filter(m=>(prof(m.no)||{}).cid).length} เลข ผ่านทุกใบ`});
+
+  const cidMap = {};
+  DB.members.forEach(m=>{ const c=(prof(m.no)||{}).cid; if(c) (cidMap[c]=cidMap[c]||[]).push(m.no); });
+  const dupCid = Object.keys(cidMap).filter(c=>cidMap[c].length>1);
+  out.push({ok:!dupCid.length, t:"ไม่มีเลขบัตรประชาชนซ้ำกัน",
+    p: dupCid.length ? dupCid.map(c=>`สมาชิก ${cidMap[c].join(", ")} ใช้เลขบัตรเดียวกัน`).join(" · ")
+                     : "ไม่มีใครใช้เลขบัตรซ้ำกัน"});
+
+  const debtors = [...new Set(S.contracts.filter(c=>runContract(c).bal>0.5).map(c=>c.no))];
+  const noAddr = debtors.filter(no=>!(prof(no)||{}).addr);
+  out.push({ok:!noAddr.length, t:"ผู้กู้ที่ยังมีหนี้ มีที่อยู่ครบ",
+    p: noAddr.length ? `<b>${noAddr.map(nm).join(" · ")}</b> — ไม่มีที่อยู่ = ออกหนังสือเตือนไม่ได้ ฟ้องไม่ได้ · กรอกที่แท็บ «ทะเบียนคุม»`
+                     : `ผู้กู้ที่มีหนี้ ${debtors.length} คน มีที่อยู่ครบทุกคน`});
+
+  const guars = [...new Set(S.contracts.filter(c=>runContract(c).bal>0.5).flatMap(c=>[c.g1,c.g2]).filter(Boolean))];
+  const noAddrG = guars.filter(no=>!(prof(no)||{}).addr);
+  out.push({ok:!noAddrG.length, t:"ผู้ค้ำประกันที่ยังมีภาระ มีที่อยู่ครบ",
+    p: noAddrG.length ? `<b>${noAddrG.map(nm).join(" · ")}</b> — ผู้ค้ำที่ไม่เคยได้รับหนังสือแจ้ง อ้างได้ว่าไม่ทราบการผิดนัด`
+                      : (guars.length ? `ผู้ค้ำ ${guars.length} คน มีที่อยู่ครบ` : "ยังไม่มีสัญญาที่ระบุผู้ค้ำ")});
+
+  const unver = DB.members.filter(m=>{ const q=prof(m.no)||{}; return q.addr && q.addrSrc; });
+  out.push({ok:!unver.length, t:"ที่อยู่ยืนยันกับเจ้าตัวแล้วทุกคน",
+    p: unver.length ? `<b>${unver.length} คน</b>ยังใช้ที่อยู่จากไฟล์ ยังไม่ได้ยืนยัน — หนังสือเตือนที่ส่งผิดที่อยู่ ผู้รับอ้างได้ว่าไม่เคยได้รับ · ยืนยันกับใครแล้วให้ลบช่อง «ที่มาของที่อยู่» ของคนนั้นในแท็บ «ทะเบียนคุม»`
+                    : "ที่อยู่ทุกคนยืนยันแล้ว"});
 
   // 1 บัญชีผู้โอนที่จับคู่ไม่ได้
   const unk = [...new Set(S.tx.filter(t=>!memOf(t)).map(t=>t.a))];
@@ -1497,6 +1534,9 @@ function attachPanel(cid){
 
 
 /* ============ บันทึกแนบท้าย — ขอฝากหุ้นเพิ่ม (ไม่ใช่สัญญาใหม่) ============ */
+// หุ้นเพิ่ม 2569 ที่มีผลกับสัญญานี้ (ค่าล่าสุด) — ใช้แสดงในตารางแนบท้ายสัญญา
+function svOf(c){ return shareOn(c, PERIODS[PERIODS.length-1]).sv; }
+
 function shPanel(cid){
   const c = S.contracts.find(x=>x.id===cid); if(!c) return;
   const m = DB.members.find(z=>z.no===c.no) || {name:""};
@@ -1514,20 +1554,25 @@ function shPanel(cid){
       <table style="margin-top:7px"><tbody>
         <tr><td class="l">เงินต้น + ดอกเบี้ย / งวด</td><td class="amt"><b>${B(pi)}</b></td>
             <td class="l hint">แกนของหนี้ — <b>ล็อกไว้ ไม่เปลี่ยนตลอดสัญญา</b> ต่อให้เพิ่มหุ้นก็ไม่ขยับ</td></tr>
-        <tr><td class="l">หุ้นฝากที่มีผลตอนนี้</td><td class="amt">${B(nowRow.base+nowRow.extra)}</td>
-            <td class="l hint">ประจำ ${B(nowRow.base)} + เพิ่ม ${B(nowRow.extra)} — <b>เงินของผู้กู้เอง ได้คืนพร้อมปันผล</b></td></tr>
-        <tr class="tot"><td class="l">ยอดที่ต้องโอน/เดือน ตอนนี้</td><td class="amt"><b>${B(pi+nowRow.base+nowRow.extra)}</b></td>
-            <td class="l hint">เปลี่ยนตามหุ้นฝากเท่านั้น</td></tr>
+        <tr><td class="l">หุ้นประจำ + หุ้นเพิ่ม (บังคับ)</td><td class="amt">${B(nowRow.base+nowRow.extra)}</td>
+            <td class="l hint">ประจำ ${B(nowRow.base)} + เพิ่ม ${B(nowRow.extra)} — เงินของผู้กู้เอง แต่<b>บังคับตามสัญญา</b> มาจากสูตรวงเงินกู้</td></tr>
+        <tr><td class="l"><b>หุ้นเพิ่ม 2569</b> (สมัครใจ)</td><td class="amt svcol"><b>${B(nowRow.sv)}</b></td>
+            <td class="l hint"><b>ไม่เกี่ยวกับสูตรกู้เลย</b> — ผู้กู้ขอออมเพิ่มเอง · ไม่ฝากงวดไหนก็<b>ไม่ผิดนัด</b> · ยกเลิกได้ทุกเมื่อ · ผู้ค้ำไม่รับผิด</td></tr>
+        <tr class="tot"><td class="l">ยอดที่ต้องโอน/เดือน ตอนนี้</td><td class="amt"><b>${B(pi+nowRow.base+nowRow.extra+nowRow.sv)}</b></td>
+            <td class="l hint">เปลี่ยนตามหุ้นฝากเท่านั้น หนี้ไม่ขยับ</td></tr>
       </tbody></table>
     </div>
 
     <div class="eyebrow" style="margin:0 0 7px">ประวัติการฝากหุ้นของสัญญานี้</div>
-    <div class="tbl"><table><thead><tr><th class="l">มีผลตั้งแต่งวด</th><th>หุ้นประจำ</th><th>ฝากเพิ่ม</th>
+    <div class="tbl"><table><thead><tr><th class="l">มีผลตั้งแต่งวด</th><th>หุ้นประจำ<br><span class="hint">บังคับ</span></th>
+      <th>หุ้นเพิ่ม<br><span class="hint">บังคับ (สูตร)</span></th>
+      <th class="svcol">หุ้นเพิ่ม 2569<br><span class="hint">สมัครใจ</span></th>
       <th>ยอดโอน/เดือน</th><th class="l">อ้างอิงเอกสาร</th><th></th></tr></thead><tbody>
       ${L.map((x,i)=>`<tr${x.origin?'':' style="background:#F3F8F4"'}>
         <td class="l">${x.origin?'<span class="pill">งวดแรก (ตามสัญญา)</span>':`<b>${PLBL[x.from]||x.from}</b>`}</td>
         <td class="amt">${B(x.base)}</td><td class="amt">${B(x.extra)}</td>
-        <td class="amt"><b>${B(pi + (+x.base||0) + (+x.extra||0))}</b></td>
+        <td class="amt svcol">${(+x.sv||0)?B(x.sv):"—"}</td>
+        <td class="amt"><b>${B(pi + (+x.base||0) + (+x.extra||0) + (+x.sv||0))}</b></td>
         <td class="l hint" style="white-space:normal">${esc(x.memo)}</td>
         <td>${x.origin?"":`<button class="del" data-shdel="${i-1}">×</button>`}</td></tr>`).join("")}
     </tbody></table></div>
@@ -1537,7 +1582,9 @@ function shPanel(cid){
       <div><label>มีผลตั้งแต่งวด</label><select id="sh_from">
         ${PERIODS.map(p=>`<option value="${p}">${PLBL[p]}</option>`).join("")}</select></div>
       <div><label>หุ้นประจำ/งวด</label><input type="number" step="0.01" id="sh_base" value="${nowRow.base}"></div>
-      <div><label>ฝากเพิ่ม/งวด</label><input type="number" step="0.01" id="sh_ex" value="${nowRow.extra}"></div>
+      <div><label>หุ้นเพิ่ม/งวด (สูตร)</label><input type="number" step="0.01" id="sh_ex" value="${nowRow.extra}"></div>
+      <div><label style="color:#8A6D1F"><b>หุ้นเพิ่ม 2569</b> (สมัครใจ)</label>
+        <input type="number" step="0.01" id="sh_sv" value="${nowRow.sv}" style="border-color:var(--gold);background:#FFFBEF"></div>
       <div><label>เลขที่บันทึกแนบท้าย</label><input id="sh_memo" placeholder="บันทึกแนบท้าย 1/2569"></div>
       <div><label>&nbsp;</label><button id="sh_add">เพิ่ม &amp; พิมพ์บันทึก</button></div>
     </div>
@@ -1557,7 +1604,7 @@ function shPanel(cid){
     if(!memo){ alert("กรุณาระบุเลขที่บันทึกแนบท้าย — ต้องมีเอกสารอ้างอิงเสมอ"); return; }
     c.shLog = c.shLog || [];
     c.shLog.push({from:$("sh_from").value, base:+$("sh_base").value||0,
-                  extra:+$("sh_ex").value||0, memo});
+                  extra:+$("sh_ex").value||0, sv:+$("sh_sv").value||0, memo});
     all(); shPanel(cid);
     $("shdoc").innerHTML = docAmend(c, c.shLog[c.shLog.length-1]);
     setTimeout(()=>{ document.body.classList.add("mprint");
@@ -1569,7 +1616,8 @@ function shPanel(cid){
 function docAmend(c, x){
   const m = DB.members.find(z=>z.no===c.no) || {name:""};
   const pi = piOf(c), prev = shLogOf(c).filter(z=>!z.from || z.from < x.from).pop() || {base:0,extra:0};
-  const oldTot = pi + (+prev.base||0) + (+prev.extra||0), newTot = pi + (+x.base||0) + (+x.extra||0);
+  const oldTot = pi + (+prev.base||0) + (+prev.extra||0) + (+prev.sv||0);
+  const newTot = pi + (+x.base||0) + (+x.extra||0) + (+x.sv||0);
   return pg(1, 1, `${logo()}<div class="kt1">บันทึกแนบท้ายสัญญาเงินกู้</div>
     <div class="kt2">เรื่อง ความประสงค์ฝากเงินหุ้นเพิ่ม &nbsp;·&nbsp; ${esc(x.memo)}</div>
     <div class="kmeta2"><span>แนบท้ายสัญญาเลขที่ <b>${esc(c.code)||"(ยังไม่ออกเลข)"}</b></span>
@@ -1586,8 +1634,11 @@ function docAmend(c, x){
         <td class="n"><b>${B(pi)}</b></td><td class="n"><b>ไม่เปลี่ยนแปลง</b></td></tr>
       <tr><td class="l">เงินฝากหุ้นประจำ ต่องวด</td><td class="n">${B(prev.base)}</td><td class="n">${B(x.base)}</td>
         <td class="n">${(+x.base||0)-(+prev.base||0)>=0?"+":""}${B((+x.base||0)-(+prev.base||0))}</td></tr>
-      <tr><td class="l">เงินฝากหุ้นเพิ่ม ต่องวด</td><td class="n">${B(prev.extra)}</td><td class="n">${B(x.extra)}</td>
+      <tr><td class="l">เงินฝากหุ้นเพิ่ม ต่องวด (ตามสูตร)</td><td class="n">${B(prev.extra)}</td><td class="n">${B(x.extra)}</td>
         <td class="n">${(+x.extra||0)-(+prev.extra||0)>=0?"+":""}${B((+x.extra||0)-(+prev.extra||0))}</td></tr>
+      <tr class="hl"><td class="l"><b>หุ้นเพิ่ม 2569 ต่องวด (สมัครใจ)</b></td><td class="n">${B(prev.sv)}</td>
+        <td class="n"><b>${B(x.sv)}</b></td>
+        <td class="n"><b>${(+x.sv||0)-(+prev.sv||0)>=0?"+":""}${B((+x.sv||0)-(+prev.sv||0))}</b></td></tr>
       <tr class="tot"><td class="l"><b>ยอดที่ต้องโอนต่อเดือน</b></td><td class="n">${B(oldTot)}</td>
         <td class="n"><b>${B(newTot)}</b></td><td class="n"><b>${newTot-oldTot>=0?"+":""}${B(newTot-oldTot)}</b></td></tr>
     </tbody></table>
@@ -2001,12 +2052,14 @@ function slipHTML(m){
         ${K?'<th rowspan="2" style="vertical-align:bottom">ต้องชำระ</th>':""}
         <th rowspan="2" style="vertical-align:bottom">รับชำระ</th>
         ${K?'<th rowspan="2" style="vertical-align:bottom">ขาด</th>':""}
-        <th colspan="${E?4:3}">จัดสรรตามลำดับในสัญญาข้อ 2.2</th>
+        <th colspan="${(E?1:0)+(V?1:0)+3}">จัดสรรตามลำดับในสัญญาข้อ 2.2</th>
         ${K?'<th rowspan="2" style="vertical-align:bottom">ค่าทวงถาม</th>':""}
         <th rowspan="2" style="vertical-align:bottom">เงินต้นคงเหลือ</th>
         ${K?'<th class="l" rowspan="2" style="vertical-align:bottom">สถานะงวด</th>':""}</tr>
       <tr><th><span class="ordmark">1</span>ดอกเบี้ย</th><th><span class="ordmark">2</span>ฝากหุ้นประจำ</th>
-        ${E?'<th><span class="ordmark">3</span>ฝากเพิ่ม</th>':""}<th><span class="ordmark">${E?4:3}</span>เงินต้น</th></tr>
+        ${E?'<th><span class="ordmark">3</span>ฝากเพิ่ม</th>':""}
+        ${V?`<th class="svcol"><span class="ordmark">${E?4:3}</span>หุ้นเพิ่ม 2569<br><span style="font-weight:400;font-size:8.5px">สมัครใจ</span></th>`:""}
+        <th><span class="ordmark">${(E?1:0)+(V?1:0)+3}</span>เงินต้น</th></tr>
     </thead><tbody>
     ${x.rows.map(w => w.pre||w.done ? "" :
       `<tr class="${w.opens?"newloan":(K&&w.short>0.005&&!w.relief?"miss":"")}">
@@ -2016,7 +2069,8 @@ function slipHTML(m){
          <td class="amt">${w.got>0?B(w.got):"ไม่มีเงินเข้า"}</td>
          ${K?`<td class="amt">${w.short>0.005?`<b>${B(w.short)}</b>`:"—"}</td>`:""}
          <td class="amt">${B(w.int)}</td><td class="amt">${B(w.shB)}</td>
-         ${E?`<td class="amt">${w.extraDue?B(w.shE):"—"}</td>`:""}<td class="amt">${B(w.pri)}</td>
+         ${E?`<td class="amt">${w.extraDue?B(w.shE):"—"}</td>`:""}
+         ${V?`<td class="amt svcol">${w.svDue?B(w.shV):"—"}</td>`:""}<td class="amt">${B(w.pri)}</td>
          ${K?`<td class="amt">${w.fee?B(w.fee):"—"}</td>`:""}<td class="amt">${B(w.bal)}</td>
          ${K?`<td class="l"><span class="pill ${KIND_CLS[w.kind]||""}">${w.kind}</span>${w.relief?`<br><span class="pill grn">ผ่อนผัน ${esc(w.memo||"")}</span>`:""}</td>`:""}</tr>`).join("")}
     <tr class="tot"><td class="l">รวม</td><td></td>
@@ -2083,17 +2137,21 @@ function slipHTML(m){
       <tr class="tot"><td class="l" colspan="2">รวมฝากในช่วงนี้</td>
         <td class="amt">${B(rs.reduce((a,w)=>a+w.add,0))}</td><td class="amt">${B(r.shares)}</td></tr>
     </tbody></table>`;
-    const hasE = rs.some(w=>w.extra>0), hasD = rs.some(w=>w.direct>0);
+    const hasE = rs.some(w=>w.extra>0), hasD = rs.some(w=>w.direct>0), hasV = rs.some(w=>w.sv>0);
     return `<table><thead><tr><th class="l">งวด</th><th>ฝากหุ้นประจำ</th>${hasE?"<th>ฝากเพิ่ม</th>":""}
+      ${hasV?'<th class="svcol">หุ้นเพิ่ม 2569<br><span style="font-weight:400;font-size:8.5px">สมัครใจ</span></th>':""}
       ${hasD?"<th>ฝากหุ้นโดยตรง</th>":""}<th>รวมฝากงวดนี้</th><th>ทุนเรือนหุ้นสะสม ณ สิ้นงวด</th></tr></thead><tbody>
       <tr><td class="l">ยกมา 1/2569</td><td class="amt">—</td>${hasE?'<td class="amt">—</td>':""}
+        ${hasV?'<td class="amt svcol">—</td>':""}
         ${hasD?'<td class="amt">—</td>':""}<td class="amt">—</td><td class="amt"><b>${B(m.share)}</b></td></tr>
       ${rs.map(w=>`<tr><td class="l">${PLBL[w.p]}</td><td class="amt">${B(w.base)}</td>
         ${hasE?`<td class="amt">${w.extra?B(w.extra):"—"}</td>`:""}
+        ${hasV?`<td class="amt svcol">${w.sv?B(w.sv):"—"}</td>`:""}
         ${hasD?`<td class="amt">${w.direct?B(w.direct):"—"}</td>`:""}
         <td class="amt">${B(w.add)}</td><td class="amt" style="font-weight:600">${B(w.bal)}</td></tr>`).join("")}
       <tr class="tot"><td class="l">รวมฝากในช่วงนี้</td><td class="amt">${B(rs.reduce((a,w)=>a+w.base,0))}</td>
         ${hasE?`<td class="amt">${B(rs.reduce((a,w)=>a+w.extra,0))}</td>`:""}
+        ${hasV?`<td class="amt svcol">${B(rs.reduce((a,w)=>a+w.sv,0))}</td>`:""}
         ${hasD?`<td class="amt">${B(rs.reduce((a,w)=>a+w.direct,0))}</td>`:""}
         <td class="amt">${B(rs.reduce((a,w)=>a+w.add,0))}</td><td class="amt">${B(r.shares)}</td></tr>
     </tbody></table>
@@ -2172,6 +2230,14 @@ function printAll(){
 }
 
 
+// เลขบัตรประชาชนไทยมีหลักตรวจสอบในตัว — พิมพ์ผิดจับได้ทันที
+function cidOK(c){
+  c = String(c||"").replace(/\D/g,"");
+  if(c.length !== 13) return false;
+  let s = 0; for(let i=0;i<12;i++) s += +c[i] * (13-i);
+  return (11 - s%11) % 10 === +c[12];
+}
+
 /* ============ แท็บ 4 — ตรวจสอบ ============ */
 function drawT4(){
   const C = checks();
@@ -2233,27 +2299,31 @@ function piOf(c){
   const inst = +c.inst||0; if(!inst) return 0;
   return +(inst - (+c.shareM||0) - (+c.exFix||0)).toFixed(2);
 }
-/* ---- ประวัติการฝากหุ้น: [{from:"2569-08", base, extra, memo}] เรียงตามงวด ---- */
+/* ---- เงินต่องวดมี 4 ก้อน แยกกันเด็ดขาด ----
+     1. pi     เงินต้น+ดอกเบี้ย   = หนี้        · บังคับ · ผู้ค้ำรับผิด
+     2. base   หุ้นประจำ          = เงินตัวเอง · บังคับตามสัญญา
+     3. extra  หุ้นเพิ่ม           = เงินตัวเอง · บังคับ มาจากสูตรวงเงินกู้
+     4. sv     หุ้นเพิ่ม 2569      = เงินตัวเอง · สมัครใจ ยกเลิกได้ ไม่ผิดนัด  ← เปิดปี 2569
+--------------------------------------------------------------- */
 function shLogOf(c){
-  const base0 = +c.shareM||0;
-  const ex0   = c.mode==="old" ? (+c.exFix||0) : 0;
-  const L = [{from:"", base:base0, extra:ex0, memo:"ตามสัญญา/ตารางเดิม", origin:true}];
+  const L = [{from:"", base:+c.shareM||0, extra:(c.mode==="old" ? (+c.exFix||0) : 0), sv:0,
+              memo:"ตามสัญญา/ตารางเดิม", origin:true}];
   (c.shLog||[]).slice().sort((a,b)=>(a.from||"")<(b.from||"")?-1:1).forEach(x=>L.push(x));
   return L;
 }
-// หุ้นฝากที่มีผล ณ งวดนั้น
 function shareOn(c, p){
   const L = shLogOf(c);
   let cur = L[0];
   L.forEach(x=>{ if(x.from && x.from <= p) cur = x; });
-  return {base:+cur.base||0, extra:+cur.extra||0, memo:cur.memo||"", changed:!cur.origin};
+  return {base:+cur.base||0, extra:+cur.extra||0, sv:+cur.sv||0, memo:cur.memo||"", changed:!cur.origin};
 }
-// ยอดที่ต้องส่งทั้งหมด ณ งวดนั้น = หนี้ + หุ้นฝากที่มีผล
 function dueOn(c, p, tn){
-  const pi = piOf(c); if(!pi) return {due:0, pi:0, base:0, extra:0, memo:"", changed:false};
+  const pi = piOf(c);
+  if(!pi) return {due:0, pi:0, base:0, extra:0, sv:0, memo:"", changed:false};
   const sh = shareOn(c, p);
   const extra = c.mode==="calc" ? +((+c.inst||0)*extraRate(Math.max(1,tn))).toFixed(2) : sh.extra;
-  return {due:+(pi + sh.base + extra).toFixed(2), pi, base:sh.base, extra, memo:sh.memo, changed:sh.changed};
+  return {due:+(pi + sh.base + extra + sh.sv).toFixed(2), pi, base:sh.base, extra, sv:sh.sv,
+          memo:sh.memo, changed:sh.changed};
 }
 
 // ย้อนสูตร: กรอกวงเงินที่ต้องการ → ได้ยอดที่ต้องส่ง/เดือน
@@ -2818,11 +2888,12 @@ function docConsent(c, idx){
 function docSched(c){
   const m=DB.members.find(z=>z.no===c.no)||{name:""}, s=schedule(c);
   const half=Math.ceil(s.rows.length/2);
+  const sv = svOf(c);
   const col = rs => `<table class="kt ktsch"><thead><tr><th>งวด</th><th>ยอดส่ง</th><th>เงินต้น</th>
-    <th>ดอกเบี้ย</th><th>หุ้นประจำ</th><th>หุ้นเพิ่ม</th><th>คงเหลือ</th></tr></thead><tbody>
-    ${rs.map(r=>`<tr><td class="c">${r.t}</td><td class="n">${B(r.pay)}</td><td class="n">${B(r.pri)}</td>
+    <th>ดอกเบี้ย</th><th>หุ้นประจำ</th><th>หุ้นเพิ่ม</th>${sv?'<th>หุ้นเพิ่ม 2569</th>':""}<th>คงเหลือ</th></tr></thead><tbody>
+    ${rs.map(r=>`<tr><td class="c">${r.t}</td><td class="n">${B(r.pay + sv)}</td><td class="n">${B(r.pri)}</td>
       <td class="n">${B(r.int)}</td><td class="n">${B(r.base)}</td><td class="n">${B(r.extra)}</td>
-      <td class="n">${B(r.bal)}</td></tr>`).join("")}</tbody></table>`;
+      ${sv?`<td class="n">${B(sv)}</td>`:""}<td class="n">${B(r.bal)}</td></tr>`).join("")}</tbody></table>`;
   return pg(1,1,`${logo()}<div class="kt1">เอกสารแนบท้าย · ตารางการชำระหนี้รายเดือน</div>
     <div class="kmeta2"><span>สัญญาเลขที่ <b>${esc(c.code)||"…………"}</b></span><span>ผู้กู้ <b>${esc(m.name)}</b></span>
       <span>วงเงิน <b>${B(c.amt)}</b> บาท · <b>${c.terms}</b> งวด · งวดละ <b>${B(c.inst)}</b> บาท</span></div>
@@ -2830,8 +2901,22 @@ function docSched(c){
       ${PROD[c.prod].method==="flat"?"(แบบคงที่/Flat)":"(ลดต้นลดดอก)"} ·
       หุ้นเพิ่ม = ยอดส่งต่อเดือน × อัตราขั้นบันได (1–12 → 8%, 13–24 → 10%, 25–36 → 12%, 37–48 → 14%, 49–60 → 16%, 61–72 → 18%)</p>
     <div class="ksch">${col(s.rows.slice(0,half))}${s.rows.length>half?col(s.rows.slice(half)):""}</div>
-    <div class="ktot">รวมดอกเบี้ย ${B(s.totInt)} · รวมหุ้นประจำ ${B(s.totBase)} · รวมหุ้นเพิ่ม ${B(s.totExtra)} ·
-      รวมเงินต้น ${B(s.totPri)} · <b>รวมทั้งสิ้น ${B(s.totPay)} บาท</b></div>
+    <div class="ktot">รวมดอกเบี้ย ${B(s.totInt)} · รวมหุ้นประจำ ${B(s.totBase)} · รวมหุ้นเพิ่ม ${B(s.totExtra)}
+      ${sv?`· <b>รวมหุ้นเพิ่ม 2569 ${B(sv*s.rows.length)}</b>`:""} ·
+      รวมเงินต้น ${B(s.totPri)} · <b>รวมทั้งสิ้น ${B(s.totPay + sv*s.rows.length)} บาท</b></div>
+    ${sv?`<div class="keybox" style="margin-top:7px;border-left:3px solid var(--gold)">
+      <b>คอลัมน์ «หุ้นเพิ่ม 2569» — ${B(sv)} บาท/งวด (รวม ${B(sv*s.rows.length)} บาท)</b>
+      <ul class="ul" style="margin-top:4px">
+        <li><b>เป็นเงินออมโดยสมัครใจ ตามความประสงค์ของผู้กู้เอง</b> ไม่ใช่หนี้ ไม่ใช่ดอกเบี้ย
+            ไม่ใช่ค่าธรรมเนียม และ<b>ไม่เกี่ยวกับสูตรคำนวณวงเงินกู้</b></li>
+        <li><b>งวดใดไม่ได้ฝาก ไม่ถือเป็นการผิดนัดชำระหนี้</b> ไม่มีค่าปรับ ไม่มีค่าทวงถาม
+            และไม่เป็นเหตุให้เรียกชำระหนี้ทั้งหมดทันที</li>
+        <li><b>ยกเลิกหรือแก้ไขจำนวนได้ทุกเมื่อ</b> โดยแจ้งเป็นหนังสือต่อกรรมการฝ่ายการเงิน
+            ล่วงหน้าไม่น้อยกว่า 15 วัน</li>
+        <li><b>ไม่อยู่ในความรับผิดของผู้ค้ำประกัน</b> — ผู้ค้ำรับผิดเฉพาะเงินต้นและดอกเบี้ยตามสัญญาเท่านั้น</li>
+        <li>รวมเป็น<b>ทุนเรือนหุ้นของผู้กู้</b> ได้รับปันผลตามข้อตกลงกลุ่มบุคคล
+            และขอถอนคืนได้ตามสัญญาข้อ 7 เมื่อไม่มีหนี้และไม่มีภาระค้ำประกันคงค้าง</li>
+      </ul></div>`:""}
     <p class="i2 star">“เอกสารแนบท้าย: ตารางชำระหนี้รายเดือนตามระบบคำนวณเพดานกู้ของกลุ่มบุคคลฯ ถือเป็นส่วนหนึ่งของสัญญานี้ และมีผลผูกพันเช่นเดียวกับข้อความในสัญญา”</p>
     <div class="ksigs" style="margin-top:14px">
       <div class="ksig"><div class="sp" style="height:30px"></div><div class="ln">ลงชื่อ ..............................................</div>
