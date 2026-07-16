@@ -895,6 +895,21 @@ function checks(){
   out.push({ok:!vio.length, t:"ทุกสัญญาอยู่ในกรอบระเบียบของผลิตภัณฑ์",
     p: vio.length ? vio.map(v=>`• ${v}`).join("<br>") : "วงเงิน จำนวนงวด และจำนวนผู้ค้ำ ถูกต้องตามประกาศโครงการทุกฉบับ"});
 
+  // 5b ยอดส่งต้องแตกออกเป็น 3 ก้อนได้ครบ ไม่งั้นส่วนที่เหลือจะถูกกลืนเป็น "เงินต้น" เงียบๆ
+  const swal = [];
+  S.contracts.forEach(c=>{
+    const inst = +c.inst||0; if(!inst) return;
+    const gap = +(inst - piOf(c) - (+c.shareM||0) - (c.mode==="old" ? (+c.exFix||0) : 0)).toFixed(2);
+    if (c.mode==="old" && !(+c.exFix>0))
+      swal.push(`${esc(nm(c.no))} — ตั้ง «ตารางเดิม 2568» ไว้ แต่ยังไม่ได้ใส่ <b>หุ้นเพิ่ม/งวด</b>`);
+    else if (+c.pi>0 && Math.abs(gap) > 0.02)
+      swal.push(`${esc(nm(c.no))} — ยอดส่ง ${B(inst)} แตกไม่ครบ เหลือ <b>${B(Math.abs(gap))}</b> ที่ยังไม่ได้ระบุว่าเป็นหุ้นเพิ่ม
+        <b style="color:var(--red)">→ ตอนนี้ถูกนับเป็นเงินต้น</b> ใส่ที่ช่อง «หุ้นเพิ่ม/งวด» ในทะเบียน`);
+  });
+  out.push({ok:!swal.length, t:"ยอดส่งต่องวดแตกเป็น เงินต้น+ดอกเบี้ย · หุ้นประจำ · หุ้นเพิ่ม ได้ครบทุกสัญญา",
+    p: swal.length ? swal.map(v=>`• ${v}`).join("<br>")
+      : "ไม่มีสัญญาไหนที่เงินหุ้นถูกกลืนเข้าไปรวมกับเงินต้น — ตัวเลขในตารางแนบท้ายตรงกับตารางเดิมที่แจ้งสมาชิก"});
+
   // 6b เพดานผู้ค้ำ
   const gover = DB.members.map(m=>({m, a:activeGuar(m.no)})).filter(x=>x.a.length>GUAR_MAX);
   const gblk  = S.contracts.filter(c=>!c.legacy).flatMap(c=>[c.g1,c.g2].filter(Boolean)
@@ -979,7 +994,11 @@ function drawT1(){
           <option value="fixed" ${!c.mode||c.mode==="fixed"?"selected":""}>ประจำอย่างเดียว</option>
           <option value="old" ${c.mode==="old"?"selected":""}>ตารางเดิม 2568 (คงที่)</option>
           <option value="calc" ${c.mode==="calc"?"selected":""}>สูตร 2569 (ขั้นบันได)</option></select>
-          ${c.mode==="old"&&c.exFix?`<div class="hint" style="font-size:10px">ฝากเพิ่ม ${B(c.exFix)}/งวด</div>`:""}</td>
+          ${c.mode==="old"?`<div style="margin-top:3px;display:flex;align-items:center;gap:3px">
+            <input type="number" step="0.01" data-e="${c.id}:exFix" value="${c.exFix||""}" placeholder="0.00"
+              title="หุ้นเพิ่มคงที่ต่องวด ตามตารางเดิม 2568 — ถ้าไม่ใส่ เงินก้อนนี้จะถูกกลืนเป็นเงินต้น"
+              style="width:70px;padding:2px 4px;font-size:10.5px${(+c.exFix||0)>0?"":";border-color:var(--red);background:#FDF3F3"}">
+            <span class="hint" style="font-size:9.5px;line-height:1.2">${(+c.exFix||0)>0?"หุ้นเพิ่ม<br>/งวด":"<b style=\'color:var(--red)\'>⚠ ยังไม่ใส่<br>หุ้นเพิ่ม</b>"}</span></div>`:""}</td>
         <td><input type="number" data-e="${c.id}:t0" value="${c.t0||0}" title="งวดที่ชำระไปแล้วก่อน ม.ค.69" style="width:48px;padding:3px 5px"></td>
         <td class="amt">${c.legacy?B(c.open):"—"}</td>
         <td class="amt" style="font-weight:600">${B(r.bal)}</td>
@@ -1171,6 +1190,27 @@ function attachPanel(cid){
 /* ============ บันทึกแนบท้าย — ขอฝากหุ้นเพิ่ม (ไม่ใช่สัญญาใหม่) ============ */
 // หุ้นเพิ่ม 2569 ที่มีผลกับสัญญานี้ (ค่าล่าสุด) — ใช้แสดงในตารางแนบท้ายสัญญา
 function svOf(c){ return shareOn(c, PERIODS[PERIODS.length-1]).sv; }
+
+/* งวดที่ t ของสัญญา = เดือนไหน — ตรงข้ามกับสูตรที่ใช้ในบัญชีรายงวด */
+function periodAtTerm(c,t){
+  const i = c.legacy ? (+t) - (+c.t0||0) - 1
+                     : (+t) - 1 + PERIODS.indexOf(periodOf(c.d));
+  if(i < 0) return null;                                   // งวดก่อนเริ่มเก็บข้อมูล ม.ค.69
+  return PERIODS[Math.min(i, PERIODS.length-1)];           // เลยเดือนล่าสุด = ใช้ค่าล่าสุดต่อไป
+}
+/* หุ้นเพิ่ม 2569 (สมัครใจ) ของงวดที่ t — 0 ถ้ายังไม่ถึงงวดที่เริ่มฝาก */
+function svAtTerm(c,t){
+  const p = periodAtTerm(c,t);
+  return p ? +(shareOn(c,p).sv||0) : 0;
+}
+/* งวดแรกที่เริ่มฝากหุ้นเพิ่ม 2569 — ใช้เขียนในเอกสาร */
+function svStart(c){
+  const v = shLogOf(c).find(z=>(+z.sv||0)>0);
+  if(!v || !v.from) return null;
+  const i = PERIODS.indexOf(v.from);
+  const t = c.legacy ? (+c.t0||0) + i + 1 : i - PERIODS.indexOf(periodOf(c.d)) + 1;
+  return {t, p:v.from, sv:+v.sv||0, memo:v.memo||""};
+}
 
 function shPanel(cid){
   const c = S.contracts.find(x=>x.id===cid); if(!c) return;
@@ -2001,13 +2041,15 @@ function schedule(c){
     let pri = +(M - sh - int).toFixed(2);
     if(t===N || pri>bal) pri = +bal.toFixed(2);
     bal = +(bal-pri).toFixed(2);
+    const sv = svAtTerm(c,t);
     rows.push({t, pay:+(pri+int+sh).toFixed(2), pri, int, base:+c.shareM||0,
-               extra:+(sh-(+c.shareM||0)).toFixed(2), sh, bal});
+               extra:+(sh-(+c.shareM||0)).toFixed(2), sh, sv,
+               total:+(pri+int+sh+sv).toFixed(2), bal});
     if(bal<=0.005) break;
   }
   const T = f => +rows.reduce((s,r)=>s+r[f],0).toFixed(2);
   return {rows, totInt:T("int"), totSh:T("sh"), totBase:T("base"), totExtra:T("extra"),
-          totPri:T("pri"), totPay:T("pay"), ok:bal<=0.005};
+          totPri:T("pri"), totPay:T("pay"), totSv:T("sv"), totAll:T("total"), ok:bal<=0.005};
 }
 function capOf(c){ return c.cap || Math.ceil(((+c.amt||0)+schedule(c).totInt)/1000)*1000; }
 
@@ -2541,12 +2583,14 @@ function docConsent(c, idx){
 function docSched(c){
   const m=DB.members.find(z=>z.no===c.no)||{name:""}, s=schedule(c);
   const half=Math.ceil(s.rows.length/2);
-  const sv = svOf(c);
+  const st = svStart(c);                      // สะสมเพิ่มกี่บาท · ตั้งแต่งวดไหน
+  const hasSv = s.rows.some(r=>r.sv>0);
   const col = rs => `<table class="kt ktsch"><thead><tr><th>งวด</th><th>ยอดส่ง</th><th>เงินต้น</th>
-    <th>ดอกเบี้ย</th><th>หุ้นประจำ</th><th>หุ้นเพิ่ม</th>${sv?'<th>หุ้นเพิ่ม 2569</th>':""}<th>คงเหลือ</th></tr></thead><tbody>
-    ${rs.map(r=>`<tr><td class="c">${r.t}</td><td class="n">${B(r.pay + sv)}</td><td class="n">${B(r.pri)}</td>
+    <th>ดอกเบี้ย</th><th>หุ้นประจำ</th><th>หุ้นเพิ่ม</th>${hasSv?'<th class="svcol">สะสมเพิ่ม</th>':""}<th>คงเหลือ</th></tr></thead><tbody>
+    ${rs.map(r=>`<tr${st&&r.t===st.t?' style="border-top:1.5px solid #C8A24B"':""}><td class="c">${r.t}</td>
+      <td class="n"><b>${B(r.total)}</b></td><td class="n">${B(r.pri)}</td>
       <td class="n">${B(r.int)}</td><td class="n">${B(r.base)}</td><td class="n">${B(r.extra)}</td>
-      ${sv?`<td class="n">${B(sv)}</td>`:""}<td class="n">${B(r.bal)}</td></tr>`).join("")}</tbody></table>`;
+      ${hasSv?`<td class="n svcol">${r.sv>0?B(r.sv):"—"}</td>`:""}<td class="n">${B(r.bal)}</td></tr>`).join("")}</tbody></table>`;
   return pg(1,1,`${logo()}<div class="kt1">เอกสารแนบท้าย · ตารางการชำระหนี้รายเดือน</div>
     <div class="kmeta2"><span>สัญญาเลขที่ <b>${esc(c.code)||"…………"}</b></span><span>ผู้กู้ <b>${esc(m.name)}</b></span>
       <span>วงเงิน <b>${B(c.amt)}</b> บาท · <b>${c.terms}</b> งวด · งวดละ <b>${B(c.inst)}</b> บาท</span></div>
@@ -2557,16 +2601,17 @@ function docSched(c){
         : c.mode==="calc"
         ? "หุ้นเพิ่ม = ยอดส่งต่อเดือน × อัตราขั้นบันได (1–12 → 8%, 13–24 → 10%, 25–36 → 12%, 37–48 → 14%, 49–60 → 16%, 61–72 → 18%)"
         : "ไม่มีหุ้นเพิ่ม — ฝากหุ้นประจำอย่างเดียว"}</p>
-    ${(()=>{ const v = shLogOf(c).find(z=>(+z.sv||0)>0); return v ? `<p class="i2" style="margin-top:4px">
-      <b>ผู้กู้ขอฝากหุ้นเพิ่ม 2569 จำนวน ${B(v.sv)} บาท/งวด ตั้งแต่งวด ${PLBL[v.from]||v.from}
-      ${(()=>{const t=schedule(c).length; const i=PERIODS.indexOf(v.from); return "";})()}เป็นต้นไป</b>
-      ${v.memo?`ตาม${esc(v.memo)}`:""} — เป็นความประสงค์เพิ่มเติมของผู้กู้เอง ไม่ใช่เงื่อนไขของสัญญาเงินกู้</p>`:""; })()}
+    ${st ? `<p class="i2" style="margin-top:4px">
+      <b>ผู้กู้ขอฝาก «สะสมเพิ่ม» จำนวน ${B(st.sv)} บาท/งวด ตั้งแต่งวดที่ ${st.t} (${PLBL[st.p]||st.p}) เป็นต้นไป</b>
+      ${st.memo?`ตาม${esc(st.memo)}`:""} — เป็นความประสงค์เพิ่มเติมของผู้กู้เอง <b>ไม่ใช่เงื่อนไขของสัญญาเงินกู้</b> ·
+      งวดที่ 1–${st.t-1} ยอดส่ง ${B(s.rows[0].total)} บาท · ตั้งแต่งวดที่ ${st.t} ยอดส่ง
+      ${B((s.rows.find(r=>r.t===st.t)||s.rows[s.rows.length-1]).total)} บาท</p>`:""}
     <div class="ksch">${col(s.rows.slice(0,half))}${s.rows.length>half?col(s.rows.slice(half)):""}</div>
     <div class="ktot">รวมดอกเบี้ย ${B(s.totInt)} · รวมหุ้นประจำ ${B(s.totBase)} · รวมหุ้นเพิ่ม ${B(s.totExtra)}
-      ${sv?`· <b>รวมหุ้นเพิ่ม 2569 ${B(sv*s.rows.length)}</b>`:""} ·
-      รวมเงินต้น ${B(s.totPri)} · <b>รวมทั้งสิ้น ${B(s.totPay + sv*s.rows.length)} บาท</b></div>
-    ${sv?`<div class="keybox" style="margin-top:7px;border-left:3px solid var(--gold)">
-      <b>คอลัมน์ «หุ้นเพิ่ม 2569» — ${B(sv)} บาท/งวด (รวม ${B(sv*s.rows.length)} บาท)</b>
+      ${hasSv?`· <b class="svcol">รวมสะสมเพิ่ม ${B(s.totSv)}</b>`:""} ·
+      รวมเงินต้น ${B(s.totPri)} · <b>รวมทั้งสิ้น ${B(s.totAll)} บาท</b></div>
+    ${hasSv?`<div class="keybox" style="margin-top:7px;border-left:3px solid var(--gold)">
+      <b>คอลัมน์ «สะสมเพิ่ม» — ${B(st?st.sv:0)} บาท/งวด ตั้งแต่งวดที่ ${st?st.t:"—"} (รวมทั้งสิ้น ${B(s.totSv)} บาท)</b>
       <ul class="ul" style="margin-top:4px">
         <li><b>เป็นเงินออมโดยสมัครใจ ตามความประสงค์ของผู้กู้เอง</b> ไม่ใช่หนี้ ไม่ใช่ดอกเบี้ย
             ไม่ใช่ค่าธรรมเนียม และ<b>ไม่เกี่ยวกับสูตรคำนวณวงเงินกู้</b></li>
