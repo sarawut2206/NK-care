@@ -321,7 +321,9 @@ th.svcol{background:#FFF4D6!important}
 <div class="mast">
   <div class="flag"><i></i><i></i><i></i></div>
   <div><h1>ระบบทะเบียนสัญญาและรับชำระ</h1>
-    <small>กบข.นข. · โรงเรียนมัธยมวัดหนองแขม · บัญชี 206-2-63177-8</small></div>
+    <small>กบข.นข. · โรงเรียนมัธยมวัดหนองแขม · บัญชี 206-2-63177-8 ·
+      <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
+         style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0">v2569.07.16-6</b></small></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
@@ -1203,6 +1205,8 @@ function pdfGuess(txt){
     // กันแถวมั่ว: ยอดส่งต้องตรงกับที่หัวตารางบอก
     if(!o.inst || Math.abs(r.pay - o.inst) <= 1) o.rows.push(r);
   }
+  // กันอ่าน "จำนวนงวด" ผิด — มีตาราง 50 แถวแต่บอกว่า 5 งวด เป็นไปไม่ได้
+  if(o.rows.length > o.terms){ o.termsRaw = o.terms; o.terms = o.rows.length; }
   o.ok = !!(o.inst && o.amt && o.terms);
   return o;
 }
@@ -1251,7 +1255,9 @@ function attachPanel(cid){
       </tbody></table>
       <p class="hint" style="margin-top:7px">ตรวจ: ${B(g.pi)} + ${B(g.base)} + ${B(g.exAmt)} =
         <b>${B(g.pi+g.base+g.exAmt)}</b> ${Math.abs(g.pi+g.base+g.exAmt-g.inst)<=0.02?"✓ ตรงกับยอดส่ง":"⚠ ไม่ตรงกับยอดส่ง "+B(g.inst)}
-        · อ่านตารางได้ ${g.rows.length} / ${g.terms} งวด</p>
+        · อ่านตารางได้ <b>${g.rows.length}</b> / ${g.terms} งวด${
+          g.termsRaw ? ` <b style="color:var(--gold)">· ⚠ ในไฟล์เขียนว่า ${g.termsRaw} งวด
+            แต่ตารางมี ${g.rows.length} แถว — ระบบใช้ ${g.terms} ตามตาราง ตรวจให้แน่ใจด้วย</b>` : ""}</p>
 
       ${hit ? `<p class="msg ok" style="margin-top:8px">พบว่ายอดยกมาในระบบ <b>${B(c.open)}</b>
         ตรงกับยอดคงเหลือหลัง<b>งวดที่ ${hit.t}</b> ในตาราง (${B(hit.bal)})
