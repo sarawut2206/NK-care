@@ -1231,8 +1231,9 @@ function drawT1(){
   <div id="atbox"></div>
   <div class="tbl"><table>
     <thead><tr><th class="l">ผู้กู้ / สัญญา</th><th class="l">ผลิตภัณฑ์</th><th class="l">วันที่</th>
+      <th class="l">ตารางผ่อนเดิม</th>
       <th>วงเงิน</th><th>งวด</th><th>งวดละ</th><th>หุ้นประจำ</th><th class="l">วิธีคิดหุ้น</th>
-      <th>ชำระแล้ว</th><th>ยกมา 1/69</th><th>คงเหลือ</th><th class="l">สถานะ</th><th class="l">ตารางเดิม</th><th></th></tr></thead><tbody>
+      <th>ชำระแล้ว</th><th>ยกมา 1/69</th><th>คงเหลือ</th><th class="l">สถานะ</th><th></th></tr></thead><tbody>
     ${R.map(({c,r})=>{
       const m = DB.members.find(z=>z.no===c.no);
       const miss = f => (!c[f] ? ' class="bad"' : "");
@@ -1243,6 +1244,10 @@ function drawT1(){
         <td class="l"><span class="pill ${c.prod==="ดูแลกัน"?"yel":""}">${c.prod}</span>
           <span class="hint">${PROD[c.prod].method==="flat"?"Flat":"ลดต้นลดดอก"}</span></td>
         <td class="l"><input type="date" data-e="${c.id}:d" value="${c.d}" style="font-size:11.5px;padding:3px 5px"></td>
+        <td class="l">${c.ref
+          ? `<button class="ghost sm" data-at="${c.id}" style="padding:2px 7px;font-size:10.5px;border-color:var(--green);color:var(--green)"
+               title="${esc(c.ref.file)} · แนบเมื่อ ${c.ref.d}">✓ แนบแล้ว</button>`
+          : `<button class="ghost sm" data-at="${c.id}" style="padding:2px 7px;font-size:10.5px">แนบ PDF</button>`}</td>
         <td><input type="number" step="0.01" data-e="${c.id}:amt" value="${c.amt||""}"${miss("amt")} style="width:92px;padding:3px 5px"></td>
         <td><input type="number" data-e="${c.id}:terms" value="${c.terms||""}"${miss("terms")} style="width:52px;padding:3px 5px"></td>
         <td><input type="number" step="0.01" data-e="${c.id}:inst" value="${c.inst||""}"${miss("inst")} style="width:82px;padding:3px 5px"></td>
@@ -1254,10 +1259,6 @@ function drawT1(){
         <td class="amt">${c.legacy?B(c.open):"—"}</td>
         <td class="amt" style="font-weight:600">${B(r.bal)}</td>
         <td class="l"><span class="pill ${st}">${r.status}</span></td>
-        <td class="l">${c.ref
-          ? `<span class="pill grn" title="${esc(c.ref.file)}">แนบแล้ว</span>
-             <button class="ghost sm" data-at="${c.id}" style="padding:1px 6px;font-size:10.5px">ดู/แก้</button>`
-          : `<button class="ghost sm" data-at="${c.id}" style="padding:1px 6px;font-size:10.5px">แนบ PDF</button>`}</td>
         <td><button class="del" data-del="${c.id}">×</button></td></tr>`;
     }).join("")}
     </tbody></table></div>
@@ -1291,6 +1292,7 @@ function drawT1(){
     c[f] = (f==="d"||f==="mode") ? e.target.value : +e.target.value||0;
     all();
   });
+  document.querySelectorAll("[data-at]").forEach(b => b.onclick = () => attachPanel(b.dataset.at));
   document.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
     if(!confirm("ลบสัญญาฉบับนี้?")) return;
     S.contracts = S.contracts.filter(x=>x.id!==b.dataset.del); all(); });
