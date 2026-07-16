@@ -680,7 +680,7 @@ function amtMap(no){
   mine.forEach(t => { const a = (+t.m).toFixed(2); cnt[a] = (cnt[a]||0) + 1; });
   const rec = Object.keys(cnt).filter(a => cnt[a] >= 2);          // ยอดที่โอนซ้ำอย่างน้อย 2 ครั้ง
   if (rec.length !== cs.length) return _am[k] = null;             // ไม่พอดี → ไม่เดา
-  const size = c => c.legacy ? (+c.open||0) : (+c.amt||0);
+  const size = c => c.legacy ? openOf(c) : (+c.amt||0);
   const byAmt = rec.slice().sort((a,b) => +b - +a);
   const byBal = cs.slice().sort((a,b) => size(b) - size(a));
   if (size(byBal[byBal.length-1]) <= 0) return _am[k] = null;
@@ -716,9 +716,27 @@ function runOpen(c){
   const k = c.id + "|" + S.tx.length;
   if (_ro[k] !== undefined) return _ro[k];
   const paid = S.tx.reduce((a,t)=> a + ((S.assign[txKey(t)]===c.id) ? t.m : 0), 0);
-  const base = c.legacy ? (+c.open||0) : (+c.amt||0);
+  if(settledAt(c)) return _ro[k] = false;            // อนุมัติปิดชำระแล้ว
+  if(noTable(c))   return _ro[k] = true;             // ยังไม่รู้ยอด — ถือว่ายังไม่ปิด ปลอดภัยกว่า
+  const base = c.legacy ? openOf(c) : (+c.amt||0);
   return _ro[k] = base > paid * 0.5;                 // ยังไม่น่าจะปิด
 }
+
+/* ---- ยอดตั้งต้น 1/2569 ----------------------------------------------
+   ผู้กู้  : ไม่กรอก "ยกมา" อีกต่อไป — อ่านจากตารางที่แนบ = คงเหลือหลังงวดที่ t0
+   ผู้ฝาก : c.open = ทุนเรือนหุ้นยกมา (ไม่ใช่หนี้)                          */
+function openOf(c){
+  if(!c) return 0;
+  if(NODEBT(c.prod)) return 0;                 // ผู้ฝากไม่มีหนี้
+  if(!c.legacy) return 0;                      // สัญญาใหม่ เริ่มที่ 0 แล้วบวกวงเงินตอนงวดแรก
+  const R = rowAt(c, +c.t0||0);
+  if(R) return +R.bal||0;                      // ← ยอดหนี้ยกมา มาจากเอกสาร ไม่ใช่คนกรอก
+  return 0;
+}
+/* สัญญาย้อนหลังที่ยังไม่มีตาราง = ประเมินไม่ได้ ห้ามเดา ห้ามบอกว่าปิดแล้ว */
+function noTable(c){ return !!c && !!c.legacy && !NODEBT(c.prod) && !lockedRows(c); }
+/* ปิดชำระหนี้แล้วหรือยัง — คืนงวด(เดือน)ที่ปิด ถ้าอนุมัติแล้ว */
+function settledAt(c){ return (c && c.settled && c.settled.ok) ? c.settled.p : null; }
 
 /* ============ เครื่องคำนวณ — รายสัญญา ============ */
 function runContract(c){
@@ -728,7 +746,8 @@ function runContract(c){
   const start = periodOf(c.d);
   const flatInt = PROD[c.prod].method === "flat" ? +(c.amt * RATE).toFixed(2) : null;
 
-  let bal = c.legacy ? +c.open : 0;
+  let bal = c.legacy ? openOf(c) : 0;
+  const NT = noTable(c), SET = settledAt(c);
   const rows = []; let missed = 0, last = null, closed = null;
 
   PERIODS.forEach(p => {
@@ -737,6 +756,21 @@ function runContract(c){
     const md  = per(c.id, p), relief = !!md.relief;
     const nl  = (!c.legacy && p === start) ? +(+c.amt||0) : 0;
     if (!c.legacy && p < start){ rows.push({p, pre:true}); return; }
+
+    // ยังไม่ได้แนบตาราง → ไม่รู้ยอดหนี้ ห้ามเดา ห้ามบอกว่าปิดแล้ว
+    if (NT){
+      if (got > 0) last = p;
+      rows.push({p, got, due:0, short:0, int:0, sh:0, shB:0, shE:0, shV:0, pri:0, bal:0, fee:0,
+                 done:false, unknown:true, kind: got>0?"รับชำระแล้ว":"ไม่มีเงินเข้า", relief, late:false, txs});
+      return;
+    }
+    // อนุมัติปิดชำระแล้ว — ตั้งแต่งวดนั้นเป็นต้นไปไม่มีหนี้อีก
+    if (SET && p >= SET){
+      if (got > 0) last = p;
+      rows.push({p, got, due:0, short:0, int:0, sh:0, shB:0, shE:0, shV:0, pri:0, bal:0, fee:0, done:true,
+                 kind: got>0?"ฝากหุ้น":"ปิดชำระแล้ว", relief, late:false, txs});
+      return;
+    }
 
     if (bal <= 0.005 && !nl){
       if (got > 0) last = p;
@@ -794,8 +828,10 @@ function runContract(c){
                memo:md.memo||"", note, opens:!!nl, nl, txs});
   });
 
-  const assessed = piOf(c) > 0;
-  const status = bal <= 0.005 && (c.legacy || rows.some(r=>r.opens)) ? "ปิดหนี้แล้ว"
+  const assessed = !NT && piOf(c) > 0;              // ไม่มีตาราง = ประเมินไม่ได้ ห้ามเดา
+  const status = NT  ? "ยังไม่ได้แนบตารางผ่อน"
+               : SET ? "ปิดชำระแล้ว · อนุมัติ"
+               : bal <= 0.005 && (c.legacy || rows.some(r=>r.opens)) ? "ปิดหนี้แล้ว"
                : !assessed ? "ยังประเมินไม่ได้"
                : missed >= 1 ? `ค้าง ${missed} งวด` : "ปกติ";
   const T = f => +rows.reduce((s,r)=>s+(r[f]||0),0).toFixed(2);
@@ -909,6 +945,16 @@ function checks(){
       swal.push(`${esc(nm(c.no))} — ยอดส่ง ${B(inst)} แตกไม่ครบ เหลือ <b>${B(Math.abs(gap))}</b> ที่ยังไม่ได้ระบุว่าเป็นหุ้นเพิ่ม
         <b style="color:var(--red)">→ ตอนนี้ถูกนับเป็นเงินต้น</b> ใส่ที่ช่อง «หุ้นเพิ่ม/งวด» ในทะเบียน`);
   });
+  // 5c สัญญาย้อนหลังต้องมีตารางผ่อน ไม่งั้นระบบไม่รู้ยอดหนี้เลย
+  const nt = S.contracts.filter(c=>noTable(c));
+  out.push({ok:!nt.length, t:"สัญญาย้อนหลังทุกฉบับแนบตารางผ่อนแล้ว",
+    p: nt.length
+      ? `<b style="color:var(--red)">${nt.length} สัญญายังไม่ได้แนบตาราง — ระบบไม่รู้ยอดหนี้ ประเมินอะไรไม่ได้เลย</b><br>`
+        + nt.map(c=>`• ${esc(nm(c.no))} ${c.code?"("+esc(c.code)+")":""}`).join("<br>")
+        + `<br><span style="color:var(--muted)">กดปุ่ม «PDF» ในทะเบียน → แนบตารางผ่อนเดิม → «ล็อกตารางนี้เป็นตัวจริง»
+           · ยอดหนี้ยกมาจะมาจากเอกสาร ไม่ต้องกรอกมืออีก</span>`
+      : "ยอดหนี้ยกมาของทุกสัญญามาจากเอกสารที่แนบไว้ ไม่มีตัวเลขที่กรอกมือลอย ๆ"});
+
   out.push({ok:!swal.length, t:"ยอดส่งต่องวดแตกเป็น เงินต้น+ดอกเบี้ย · หุ้นประจำ · หุ้นเพิ่ม ได้ครบทุกสัญญา",
     p: swal.length ? swal.map(v=>`• ${v}`).join("<br>")
       : "ไม่มีสัญญาไหนที่เงินหุ้นถูกกลืนเข้าไปรวมกับเงินต้น — ตัวเลขในตารางแนบท้ายตรงกับตารางเดิมที่แจ้งสมาชิก"});
@@ -968,6 +1014,7 @@ function drawT1(){
       <div><label>หุ้น${S.fkind==="share"?"/งวด":"ประจำ/งวด"}</label><input type="number" id="f_sh" step="0.01" value="${S.fkind==="share"?"":"200"}"></div>
       <div id="w_ex"><label>หุ้นเพิ่ม/งวด</label><input type="number" id="f_ex" step="0.01" placeholder="432.08"></div>
       <div id="w_t0"><label>ชำระแล้ว (งวด)</label><input type="number" id="f_t0" value="0" title="จำนวนงวดที่ผ่อนไปแล้วก่อน ม.ค.69"></div>
+      <div id="w_open"><label>ทุนเรือนหุ้นยกมา</label><input type="number" id="f_open" step="0.01" placeholder="0.00" title="หุ้นสะสมที่มีอยู่แล้วก่อน ม.ค.69"></div>
       <div><label>เลข${S.fkind==="share"?"ที่บันทึก":"ที่สัญญา"}</label><input id="f_code" placeholder="${S.fkind==="back"?"กบขนข-68/…":"กบขนข-69/…"}"></div>
       <div id="w_g1"><label>ผู้ค้ำ 1</label><select id="f_g1"><option value="">—</option>${opts}</select></div>
       <div id="w_g2"><label>ผู้ค้ำ 2</label><select id="f_g2"><option value="">—</option>${opts}</select></div>
@@ -999,7 +1046,9 @@ function drawT1(){
           <button class="ghost sm" data-sh="${c.id}" style="padding:2px 6px;font-size:10.5px${(c.shLog&&c.shLog.length)?";border-color:var(--green);color:var(--green)":""}"
             title="ประวัติการฝากหุ้น / ขอฝากเพิ่ม">หุ้น${(c.shLog&&c.shLog.length)?" ●"+c.shLog.length:""}</button>
           <button class="ghost sm" data-rw="${c.id}" style="padding:2px 6px;font-size:10.5px${lockedRows(c)?";border-color:var(--gold);color:#8A6D1F":""}"
-            title="ดู/แก้ตารางผ่อนรายงวด">งวด${lockedRows(c)?" 🔒":""}</button></td>
+            title="ดู/แก้ตารางผ่อนรายงวด">งวด${lockedRows(c)?" 🔒":""}</button>
+          ${NODEBT(c.prod)?"":`<button class="ghost sm" data-st="${c.id}" style="padding:2px 6px;font-size:10.5px${settledAt(c)?";border-color:var(--green);color:var(--green)":""}"
+            title="ปิดชำระหนี้ / อนุมัติเป็นผู้ฝาก">${settledAt(c)?"ปิดแล้ว ✓":"ปิดหนี้"}</button>`}</td>
         <td><input type="number" step="0.01" data-e="${c.id}:amt" value="${c.amt||""}"${miss("amt")} style="width:92px;padding:3px 5px"></td>
         <td><input type="number" data-e="${c.id}:terms" value="${c.terms||""}"${miss("terms")} style="width:52px;padding:3px 5px"></td>
         <td><input type="number" step="0.01" data-e="${c.id}:inst" value="${c.inst||""}"${miss("inst")} style="width:82px;padding:3px 5px"></td>
@@ -1014,7 +1063,10 @@ function drawT1(){
               style="width:70px;padding:2px 4px;font-size:10.5px${(+c.exFix||0)>0?"":";border-color:var(--red);background:#FDF3F3"}">
             <span class="hint" style="font-size:9.5px;line-height:1.2">${(+c.exFix||0)>0?"หุ้นเพิ่ม<br>/งวด":"<b style=\'color:var(--red)\'>⚠ ยังไม่ใส่<br>หุ้นเพิ่ม</b>"}</span></div>`:""}</td>
         <td><input type="number" data-e="${c.id}:t0" value="${c.t0||0}" title="งวดที่ชำระไปแล้วก่อน ม.ค.69" style="width:48px;padding:3px 5px"></td>
-        <td class="amt">${c.legacy?B(c.open):"—"}</td>
+        <td class="amt">${NODEBT(c.prod) ? `${B(c.open)} <span class="hint" style="font-size:9.5px">หุ้น</span>`
+          : c.legacy ? (noTable(c) ? '<span class="pill red" title="ยอดหนี้ยกมาต้องมาจากตารางที่แนบ ไม่ใช่กรอกมือ">ยังไม่แนบตาราง</span>'
+                                   : B(openOf(c)))
+          : "—"}</td>
         <td class="amt" style="font-weight:600">${B(r.bal)}</td>
         <td class="l"><span class="pill ${st}">${r.status}</span></td>
         <td><button class="del" data-del="${c.id}">×</button></td></tr>`;
@@ -1048,7 +1100,7 @@ function drawT1(){
     const K = kind(), share = K === "share";
     const show = (id,on) => { const e=$(id); if(e) e.style.display = on ? "" : "none"; };
     show("w_prod", !share); show("w_amt", !share); show("w_inst", !share);
-    show("w_ex", K === "back"); show("w_t0", K === "back");
+    show("w_ex", K === "back"); show("w_t0", K === "back"); show("w_open", share);
     const p = share ? "ฝากหุ้น" : $("f_prod").value, P = PROD[p];
     show("w_g1", P.guar >= 1); show("w_g2", P.guar >= 2);
     if($("f_g2")) $("f_g2").disabled = P.guar < 2;
@@ -1082,7 +1134,7 @@ function drawT1(){
       inst: share ? sh : +(+$("f_inst").value||0).toFixed(2),
       shareM: sh, code:$("f_code").value.trim(),
       g1: share ? "" : $("f_g1").value, g2: share ? "" : $("f_g2").value,
-      open:0, legacy: K === "back"};
+      open: share ? +($("f_open")||{}).value||0 : 0, legacy: K === "back"};
 
     if(K === "back"){
       c.mode  = "old";                       // ตารางเดิม 2568 คงที่ ไม่ใช่สูตร 2569
@@ -1098,7 +1150,7 @@ function drawT1(){
       c.mode = "fixed";
     }
     S.contracts.push(c);
-    ["f_amt","f_terms","f_inst","f_code","f_ex"].forEach(k=>{ if($(k)) $(k).value=""; });
+    ["f_amt","f_terms","f_inst","f_code","f_ex","f_open"].forEach(k=>{ if($(k)) $(k).value=""; });
     all();
   };
   document.querySelectorAll("[data-e]").forEach(i => i.onchange = e => {
@@ -1110,6 +1162,7 @@ function drawT1(){
   document.querySelectorAll("[data-at]").forEach(b => b.onclick = () => attachPanel(b.dataset.at));
   document.querySelectorAll("[data-sh]").forEach(b => b.onclick = () => shPanel(b.dataset.sh));
   document.querySelectorAll("[data-rw]").forEach(b => b.onclick = () => rowPanel(b.dataset.rw));
+  document.querySelectorAll("[data-st]").forEach(b => b.onclick = () => setPanel(b.dataset.st));
   document.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
     if(!confirm("ลบสัญญาฉบับนี้?")) return;
     S.contracts = S.contracts.filter(x=>x.id!==b.dataset.del); all(); });
@@ -1271,6 +1324,88 @@ function attachPanel(cid){
   };
 }
 
+
+/* ============ ปิดชำระหนี้ → อนุมัติเป็นผู้ฝากอย่างเดียว ============ */
+function setPanel(cid){
+  const c = S.contracts.find(x=>x.id===cid); if(!c) return;
+  const m = DB.members.find(z=>z.no===c.no) || {name:""};
+  const r = runContract(c);
+  const st = c.settled || {};
+  const others = S.contracts.filter(x => x.no===c.no && x.id!==c.id
+                   && !NODEBT(x.prod) && !settledAt(x));
+
+  $("atbox").innerHTML = `<div class="card" style="border-left:3px solid ${settledAt(c)?"var(--green)":"var(--gold)"}">
+    <div class="eyebrow">ปิดชำระหนี้ — <span class="no">${c.no}</span>${esc(m.name)} · สัญญา ${esc(c.code)||c.prod}
+      <button class="ghost sm" id="st_x" style="margin-left:auto">ปิด</button></div>
+
+    ${settledAt(c) ? `<div class="keybox" style="border-left:3px solid var(--green);margin-bottom:11px">
+      <b style="color:var(--green)">✓ อนุมัติปิดชำระหนี้แล้ว</b>
+      <table style="margin-top:6px"><tbody>
+        <tr><td class="l">ปิดชำระตั้งแต่งวด</td><td class="l"><b>${PLBL[st.p]||st.p}</b>${st.t?` (งวดที่ ${st.t})`:""}</td></tr>
+        <tr><td class="l">วันที่อนุมัติ</td><td class="l">${esc(st.d||"—")}</td></tr>
+        <tr><td class="l">ผู้อนุมัติ</td><td class="l">${esc(st.by||"—")}</td></tr>
+        <tr><td class="l">อ้างอิง</td><td class="l">${esc(st.memo||"—")}</td></tr>
+      </tbody></table>
+      <p class="hint" style="margin-top:6px">ตั้งแต่งวด ${PLBL[st.p]||st.p} เป็นต้นไป
+        <b>ระบบไม่คิดหนี้ ไม่คิดดอกเบี้ย ไม่นับผิดนัด ไม่คิดค่าทวงถาม</b> ·
+        เงินที่โอนเข้าหลังจากนี้นับเป็น<b>เงินฝากหุ้น</b> · ผู้ค้ำประกันพ้นภาระตามสัญญาข้อ 1.9</p>
+      <div class="bar" style="margin-top:8px"><button class="ghost" id="st_undo">ยกเลิกการอนุมัติ</button></div>
+    </div>` : `
+    <div class="keybox" style="margin-bottom:11px">
+      <b>สถานะหนี้ตอนนี้</b>
+      <table style="margin-top:6px"><tbody>
+        <tr><td class="l">หนี้คงเหลือที่ระบบคำนวณได้</td>
+            <td class="amt"><b style="color:${r.bal>0.005?"var(--red)":"var(--green)"}">${noTable(c)?"ประเมินไม่ได้":B(r.bal)}</b></td>
+            <td class="l hint">${noTable(c)
+              ? "<b style='color:var(--red)'>ยังไม่ได้แนบตารางผ่อน</b> — ระบบไม่รู้ยอดหนี้ของสัญญานี้ แต่ยังกดอนุมัติปิดชำระได้ถ้าคุณยืนยันจากเอกสารจริง"
+              : "คำนวณจากตารางที่แนบ + เงินที่รับจริง"}</td></tr>
+      </tbody></table>
+    </div>
+
+    <p class="hint" style="margin-bottom:9px">ใช้เมื่อผู้กู้<b>ปิดหนี้หมดแล้ว</b> — ระบุงวดที่ปิด แล้วกดอนุมัติ
+      ระบบจะหยุดคิดหนี้ตั้งแต่งวดนั้น และเปลี่ยนสถานะเป็น<b>ผู้ฝากอย่างเดียว</b></p>
+
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(124px,1fr))">
+      <div><label>ปิดชำระตั้งแต่งวด</label><select id="st_p">
+        ${PERIODS.map(p=>`<option value="${p}" ${st.p===p?"selected":""}>${PLBL[p]||p}</option>`).join("")}</select></div>
+      <div><label>วันที่อนุมัติ</label><input type="date" id="st_d" value="${st.d||new Date().toISOString().slice(0,10)}"></div>
+      <div><label>ผู้อนุมัติ</label><input id="st_by" value="${esc(st.by||CHAIR()||"")}" placeholder="ชื่อกรรมการ"></div>
+      <div style="grid-column:span 2"><label>อ้างอิง / มติที่ประชุม</label>
+        <input id="st_memo" value="${esc(st.memo||"")}" placeholder="เช่น มติที่ประชุมครั้งที่ 3/2569 · ใบเสร็จเลขที่ …"></div>
+    </div>
+
+    <div class="bar" style="margin-top:11px">
+      <button id="st_ok">อนุมัติปิดชำระหนี้</button>
+      <span class="hint">กดแล้วยกเลิกได้ ไม่ใช่การลบข้อมูล</span>
+    </div>`}
+
+    ${others.length ? `<p class="msg bad" style="margin-top:10px">
+      <b>⚠ ${esc(m.name)} ยังมีสัญญากู้อื่นที่ยังไม่ปิด ${others.length} ฉบับ</b> —
+      ${others.map(x=>esc(x.code)||x.prod).join(" · ")} ·
+      ปิดสัญญานี้แล้ว<b>ยังไม่เป็นผู้ฝากอย่างเดียว</b> ต้องปิดให้ครบทุกฉบับก่อน</p>`
+    : (settledAt(c) ? `<p class="msg ok" style="margin-top:10px">
+      <b>✓ ${esc(m.name)} ไม่มีหนี้ค้างแล้ว — สถานะปัจจุบันคือ «ผู้ฝาก»</b> ·
+      เห็นได้ที่แท็บ 3 สรุป & ใบเสร็จ</p>` : "")}
+  </div>`;
+
+  $("st_x").onclick = () => { $("atbox").innerHTML = ""; };
+  if($("st_undo")) $("st_undo").onclick = () => {
+    if(!confirm("ยกเลิกการอนุมัติปิดชำระ?\n\nระบบจะกลับไปคิดหนี้ ดอกเบี้ย และการผิดนัดตามปกติ")) return;
+    delete c.settled; setPanel(cid); all();
+  };
+  if($("st_ok")) $("st_ok").onclick = () => {
+    const p = $("st_p").value;
+    const tn = c.legacy ? (+c.t0||0) + PERIODS.indexOf(p) + 1
+                        : PERIODS.indexOf(p) - PERIODS.indexOf(periodOf(c.d)) + 1;
+    if(!confirm("อนุมัติว่า " + m.name + " ปิดชำระหนี้สัญญานี้แล้ว\n"
+      + "ตั้งแต่งวด " + (PLBL[p]||p) + " (งวดที่ " + tn + ")\n\n"
+      + (r.bal > 0.005 && !noTable(c) ? "⚠ ระบบยังคำนวณได้ว่าเหลือหนี้ " + B(r.bal) + " บาท\n\n" : "")
+      + "หลังอนุมัติ: หยุดคิดหนี้ · หยุดคิดดอกเบี้ย · ไม่นับผิดนัด · ผู้ค้ำพ้นภาระ")) return;
+    c.settled = {ok:true, p, t:tn, d:$("st_d").value, by:$("st_by").value.trim(),
+                 memo:$("st_memo").value.trim()};
+    setPanel(cid); all();
+  };
+}
 
 /* ============ แผงแก้รายงวด — ตารางล็อก แก้ได้ทุกช่อง ============ */
 function rowPanel(cid){
@@ -1874,8 +2009,12 @@ function slipHTML(m){
     <span>ช่องทางรับชำระ <b>โอนเงินเข้าบัญชี</b></span>
   </div>
   <div class="who"><span class="no">สมาชิกเลขที่ ${m.no}</span>${esc(m.name)}
-    ${r.cs.map(x=>`<span class="pill ${x.c.prod==="ดูแลกัน"?"yel":""}">สัญญา${x.c.prod}</span>`).join("")}
-    ${!r.cs.length?'<span class="pill grn">ผู้ฝาก</span>':""}</div>
+    ${r.cs.map(x=>`<span class="pill ${settledAt(x.c)?"grn":(x.c.prod==="ดูแลกัน"?"yel":"")}">${
+        NODEBT(x.c.prod) ? "ฝากหุ้น" : "สัญญา"+x.c.prod + (settledAt(x.c)?" · ปิดแล้ว":"")}</span>`).join("")}
+    ${r.cs.every(x=>NODEBT(x.c.prod)||settledAt(x.c))
+      ? '<span class="pill grn">ผู้ฝาก</span>' + (r.cs.some(x=>settledAt(x.c))
+          ? '<span class="hint" style="margin-left:5px">— ปิดหนี้แล้ว เหลือแต่เงินฝาก</span>' : "")
+      : ""}</div>
 
   <div class="kv">
     <div><div class="k">ทุนเรือนหุ้นยกมา 1/2569</div><div class="v">${B(m.share)}</div></div>
@@ -3356,7 +3495,11 @@ function payStat(no){
   const m = DB.members.find(z=>z.no===no);
   if(!m) return {t:"—", cls:""};
   const r = runMember(m);
-  if(!r.cs.length) return {t:"ผู้ฝาก", cls:""};
+  if(!r.cs.length) return {t:"ผู้ฝาก", cls:"grn"};
+  const nt = r.cs.filter(x=>noTable(x.c));
+  if(nt.length) return {t:`ยังไม่ได้แนบตารางผ่อน ${nt.length} สัญญา — ประเมินไม่ได้`, cls:"red"};
+  if(r.cs.every(x=>NODEBT(x.c.prod)||settledAt(x.c)))
+    return {t: r.cs.some(x=>settledAt(x.c)) ? "ผู้ฝาก · ปิดหนี้แล้ว" : "ผู้ฝาก", cls:"grn"};
   if(r.bal<=0.005) return {t:"ปิดยอดชำระ", cls:"grn"};
   if(r.cs.every(x=>!x.r.assessed)) return {t:"ยังประเมินไม่ได้ — ยังไม่กรอก «งวดละ»", cls:"yel"};
   const S2 = {miss:0, io:0, part:0, late:0};
@@ -3371,7 +3514,8 @@ function payStat(no){
 function memStatus(no){ return payStat(no).t; }
 const ST_CLS = s => s.includes("ยังประเมินไม่ได้")?"yel"
   : (s.includes("ค้าง")||s.includes("เพียงดอกเบี้ย")||s.includes("บางส่วน"))?"red"
-  : s.includes("ล่าช้า")?"yel" : (s==="ปิดยอดชำระ"||s==="ปิดหนี้แล้ว"||s==="ปกติ")?"grn"
+  : s.includes("แนบตาราง")?"red" : s.includes("ล่าช้า")?"yel"
+  : (s==="ปิดยอดชำระ"||s==="ปิดหนี้แล้ว"||s==="ปกติ"||s.includes("ปิดชำระแล้ว")||s.includes("ผู้ฝาก"))?"grn"
   : s.includes("ถอนทุน")?"yel" : "";
 
 function genCode(c){
@@ -3438,9 +3582,11 @@ function drawT8(){
         const m=DB.members.find(z=>z.no===c.no)||{name:""};
         const q=[]; if(r.nMiss)q.push(`ค้างชำระ ${r.nMiss} งวด`); if(r.nInt)q.push(`ชำระเพียงดอกเบี้ย ${r.nInt} งวด`);
         if(r.nPart)q.push(`ชำระบางส่วน ${r.nPart} งวด`); if(r.nLate)q.push(`ชำระล่าช้า ${r.nLate} งวด`);
-        const st=r.bal<=0.005?"ปิดยอดชำระ":!r.assessed?"ยังประเมินไม่ได้ — ยังไม่กรอก «งวดละ»":(q.length?q.join(" · "):"ปกติ");
+        const st=noTable(c)?"ยังไม่ได้แนบตารางผ่อน — ประเมินไม่ได้"
+               :settledAt(c)?"ปิดชำระแล้ว · อนุมัติ"
+               :r.bal<=0.005?"ปิดยอดชำระ":!r.assessed?"ยังประเมินไม่ได้ — ยังไม่กรอก «งวดละ»":(q.length?q.join(" · "):"ปกติ");
         const gs=[c.g1,c.g2].filter(Boolean).map(g=>{const z=DB.members.find(y=>y.no===g);return z?z.name:g;});
-        const canW = r.bal<=0.005 && !activeGuar(c.no).length;
+        const canW = !noTable(c) && r.bal<=0.005 && !activeGuar(c.no).length;
         return `<tr><td class="l">${c.code?`<b class="mono" style="font-family:'IBM Plex Mono',monospace;font-size:11px">${esc(c.code)}</b>`
             :'<span class="pill red">ยังไม่ออกเลข</span>'}${c.legacy?' <span class="pill">ยกมา</span>':""}</td>
           <td class="l"><span class="no">${c.no}</span>${esc(m.name)}</td>
