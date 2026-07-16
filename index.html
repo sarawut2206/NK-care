@@ -323,7 +323,7 @@ th.svcol{background:#FFF4D6!important}
   <div><h1>ระบบทะเบียนสัญญาและรับชำระ</h1>
     <small>กบข.นข. · โรงเรียนมัธยมวัดหนองแขม · บัญชี 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0">v2569.07.16-7</b></small></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0">v2569.07.16-9</b></small></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
@@ -735,6 +735,19 @@ function openOf(c){
   if(R) return +R.bal||0;                      // ← ยอดหนี้ยกมา มาจากเอกสาร ไม่ใช่คนกรอก
   return 0;
 }
+/* ---- คงเหลือ = ตัวเลขในตาราง PDF ณ «งวดที่ชำระแล้ว» เท่านั้น -----------
+   ไม่นับช่วงปี ไม่คำนวณจากเงินที่โอนเข้า — งวดที่ชำระแล้วมาจากช่อง t0 ที่กรอกเอง */
+function balOf(c){
+  if(!c || NODEBT(c.prod)) return 0;
+  if(!lockedRows(c)) return null;                 // ไม่มีตาราง = ไม่รู้ ห้ามเดา
+  const t = +c.t0||0;
+  if(t <= 0) return +c.amt||0;                    // ยังไม่ได้ชำระงวดไหนเลย = เต็มวงเงิน
+  const R = rowAt(c, t);
+  if(R) return +R.bal||0;                         // ← ตรงกับ PDF บรรทัดนั้นเป๊ะ
+  const L = lockedRows(c).slice().sort((a,b)=>(+a.t)-(+b.t));
+  const last = L[L.length-1];
+  return (t >= +last.t) ? +last.bal||0 : (+c.amt||0);
+}
 /* สัญญาย้อนหลังที่ยังไม่มีตาราง = ประเมินไม่ได้ ห้ามเดา ห้ามบอกว่าปิดแล้ว */
 function noTable(c){ return !!c && !!c.legacy && !NODEBT(c.prod) && !lockedRows(c); }
 /* ปิดชำระหนี้แล้วหรือยัง — คืนงวด(เดือน)ที่ปิด ถ้าอนุมัติแล้ว */
@@ -787,7 +800,9 @@ function runContract(c){
     const D = dueOn(c, p, tn);
     const baseDue = D.base, extraDue = D.extra, svDue = D.sv;
     const shDue = +(baseDue + extraDue + svDue).toFixed(2);
-    const int   = flatInt != null ? flatInt : +(bal * RATE).toFixed(2);
+    const LR    = rowAt(c, tn);                       // แถวในตารางที่แนบ (ถ้ามี = ตัวจริง)
+    const int   = LR ? +(+LR.int||0).toFixed(2)       // ★ ยึดตาราง — ไม่คำนวณเอง
+                : flatInt != null ? flatInt : +(bal * RATE).toFixed(2);
     // ประเมินได้ต่อเมื่อรู้ "เงินต้น+ดอกเบี้ยต่องวด" จริง — ไม่มีก็ไม่เดา (ดูทะเบียนสัญญา แท็บ 1)
     const known = D.pi > 0;
     const due   = known ? D.due : 0;
@@ -798,7 +813,7 @@ function runContract(c){
 
     // ชำระปิดบัญชี — จ่ายพอสำหรับเงินต้น+ดอกเบี้ยทั้งก้อน → ปิดหนี้ ไม่หักหุ้นก่อนเงินต้น
     const payoff = got >= bal + int - 1 && got > 0 && bal > 0;
-    let rest = got, note = "";
+    let rest = got, note = "", over = 0;
     let gInt, shB, shE, shV, pri;
     if (payoff){
       gInt = Math.min(rest, int); rest -= gInt;
@@ -816,19 +831,35 @@ function runContract(c){
       shV  = Math.max(0, Math.min(rest, svDue));    rest -= shV;
       pri  = +rest.toFixed(2);
       if (pri > bal){ note = "ชำระปิดบัญชี"; pri = +bal.toFixed(2); }
+      // ★ ยึดตาราง: เงินต้นงวดนี้เท่ากับที่ตารางระบุเท่านั้น เงินเกินไม่โปะเงินต้นเงียบ ๆ
+      if (LR){
+        const capPri = +(+LR.pri||0).toFixed(2);
+        if (pri > capPri + 0.005){
+          over = +(pri - capPri).toFixed(2);
+          pri  = capPri;
+          note = "รับเกินตาราง " + B(over) + " — ยังไม่จัดสรร";
+        }
+      }
     }
     const sh = +(shB + shE + shV).toFixed(2);
     bal = +(bal - pri).toFixed(2);
     if (bal <= 0.005) bal = 0;
+    // ★ ถ้าจ่ายครบตามตาราง ยอดคงเหลือต้องตรงตารางเป๊ะ ไม่ให้เศษปัดสะสม
+    if (LR && !payoff && short <= 0.005 && bal > 0.005) bal = +(+LR.bal||0).toFixed(2);
 
     // ข้อ 2.3 — ชำระไม่ครบ = ยังผิดนัด เว้นแต่ได้รับผ่อนผันเป็นหนังสือ (ข้อ 2.2)
     if (known && short > 0.005 && !relief) missed++; else if (known) { missed = 0; }
     if (got > 0) last = p;
     if (bal <= 0.005 && !closed) closed = p;
     rows.push({p, got, due, short, int:+gInt.toFixed(2), sh, shB, shE, shV, shDue, baseDue, extraDue, svDue,
-               pri, bal, fee, kind, relief, late, tn, known, shMemo:D.memo, shChanged:D.changed,
+               pri, bal, over, fee, kind, relief, late, tn, known, shMemo:D.memo, shChanged:D.changed,
                memo:md.memo||"", note, opens:!!nl, nl, txs});
   });
+
+  // ★ คงเหลือที่รายงานออกไป = ตาราง PDF ณ งวดที่ชำระแล้ว (ไม่นับช่วงปี)
+  const LB = balOf(c);
+  if (LB !== null && !SET) bal = LB;
+  if (SET) bal = 0;
 
   const assessed = !NT && piOf(c) > 0;              // ไม่มีตาราง = ประเมินไม่ได้ ห้ามเดา
   const status = NT  ? "ยังไม่ได้แนบตารางผ่อน"
@@ -947,6 +978,19 @@ function checks(){
       swal.push(`${esc(nm(c.no))} — ยอดส่ง ${B(inst)} แตกไม่ครบ เหลือ <b>${B(Math.abs(gap))}</b> ที่ยังไม่ได้ระบุว่าเป็นหุ้นเพิ่ม
         <b style="color:var(--red)">→ ตอนนี้ถูกนับเป็นเงินต้น</b> ใส่ที่ช่อง «หุ้นเพิ่ม/งวด» ในทะเบียน`);
   });
+  // 5d เงินที่รับเกินตาราง — ต้องบันทึกให้ถูก ไม่ใช่ปล่อยลอย
+  const ovr = S.contracts.map(c=>({c, r:runContract(c)}))
+    .map(x=>({...x, o:+x.r.rows.reduce((a,w)=>a+(w.over||0),0).toFixed(2)}))
+    .filter(x=>x.o > 0.05);
+  out.push({ok:!ovr.length, t:"เงินที่รับเข้ามาถูกจัดสรรครบทุกบาท",
+    p: ovr.length
+      ? `<b style="color:var(--gold)">${ovr.length} สัญญามีเงินที่รับเกินตาราง — ยังไม่ได้จัดสรร</b><br>`
+        + ovr.map(x=>`• ${esc(nm(x.c.no))} ${x.c.code?"("+esc(x.c.code)+")":""} — <b>เกิน ${B(x.o)}</b>`).join("<br>")
+        + `<br><span style="color:var(--muted)">เงินก้อนนี้ <b>ไม่ได้ถูกโปะเงินต้น</b> (ยอดคงเหลือยังตรงตาราง) ·
+           ถ้าเป็นเงินออมสมัครใจ ให้กดปุ่ม <b>«หุ้น»</b> บันทึกเป็น «สะสมเพิ่ม» ระบุจำนวนและงวดที่เริ่ม
+           มันจะเข้าทุนเรือนหุ้นของเจ้าตัวอย่างถูกต้อง</span>`
+      : "ไม่มีสัญญาไหนที่มีเงินรับเข้ามาแล้วไม่รู้ว่าเป็นเงินอะไร"});
+
   // 5c สัญญาย้อนหลังต้องมีตารางผ่อน ไม่งั้นระบบไม่รู้ยอดหนี้เลย
   const nt = S.contracts.filter(c=>noTable(c));
   out.push({ok:!nt.length, t:"สัญญาย้อนหลังทุกฉบับแนบตารางผ่อนแล้ว",
@@ -1030,7 +1074,9 @@ function drawT1(){
     <thead><tr><th class="l">ผู้กู้ / สัญญา</th><th class="l">ผลิตภัณฑ์</th><th class="l">วันที่</th>
       <th class="l">ตารางเดิม / หุ้นฝาก</th>
       <th>วงเงิน</th><th>งวด</th><th>งวดละ</th><th>หุ้นประจำ</th><th class="l">วิธีคิดหุ้น</th>
-      <th>ชำระแล้ว</th><th>ยกมา 1/69</th><th>คงเหลือ</th><th class="l">สถานะ</th><th></th></tr></thead><tbody>
+      <th title="ชำระไปแล้วกี่งวด — กรอกเอง อัปเดตทุกเดือน">ชำระแล้ว<br><span class="hint" style="font-weight:400">งวด</span></th>
+      <th title="อ่านจากตารางที่แนบ บรรทัดของงวดที่ชำระแล้ว — ไม่ได้คำนวณเอง">คงเหลือ<br><span class="hint" style="font-weight:400">ตาม PDF</span></th>
+      <th class="l">สถานะ</th><th></th></tr></thead><tbody>
     ${R.map(({c,r})=>{
       const m = DB.members.find(z=>z.no===c.no);
       const miss = f => (!c[f] ? ' class="bad"' : "");
@@ -1067,11 +1113,10 @@ function drawT1(){
               style="width:70px;padding:2px 4px;font-size:10.5px${(+c.exFix||0)>0?"":";border-color:var(--red);background:#FDF3F3"}">
             <span class="hint" style="font-size:9.5px;line-height:1.2">${(+c.exFix||0)>0?"หุ้นเพิ่ม<br>/งวด":"<b style=\'color:var(--red)\'>⚠ ยังไม่ใส่<br>หุ้นเพิ่ม</b>"}</span></div>`:""}</td>
         <td><input type="number" data-e="${c.id}:t0" value="${c.t0||0}" title="งวดที่ชำระไปแล้วก่อน ม.ค.69" style="width:48px;padding:3px 5px"></td>
-        <td class="amt">${NODEBT(c.prod) ? `${B(c.open)} <span class="hint" style="font-size:9.5px">หุ้น</span>`
-          : c.legacy ? (noTable(c) ? '<span class="pill red" title="ยอดหนี้ยกมาต้องมาจากตารางที่แนบ ไม่ใช่กรอกมือ">ยังไม่แนบตาราง</span>'
-                                   : B(openOf(c)))
-          : "—"}</td>
-        <td class="amt" style="font-weight:600">${B(r.bal)}</td>
+        <td class="amt" style="font-weight:600">${NODEBT(c.prod)
+          ? `${B(c.open)} <span class="hint" style="font-size:9.5px">หุ้น</span>`
+          : noTable(c) ? '<span class="pill red" title="คงเหลือต้องอ่านจากตารางที่แนบ — ยังไม่ได้แนบ">ยังไม่แนบตาราง</span>'
+          : `${B(r.bal)}${lockedRows(c)?` <span class="hint" style="font-size:9.5px" title="อ่านจากตาราง PDF บรรทัดงวดที่ ${+c.t0||0}">งวด ${+c.t0||0}</span>`:""}`}</td>
         <td class="l"><span class="pill ${st}">${r.status}</span></td>
         <td><button class="del" data-del="${c.id}">×</button></td></tr>`;
     }).join("")}
