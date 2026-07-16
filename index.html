@@ -369,7 +369,10 @@ const PROD = {
               note:"ลดต้นลดดอก · ดอกเบี้ยคิดจากเงินต้นคงเหลือ (สัญญาข้อ 2.5)"},
   "ดูแลกัน": {method:"flat",   maxAmt:35000, maxTerms:36, guar:1, quota:150000, slots:10,
               note:"Flat · ดอกเบี้ยคงที่ทุกงวด = วงเงิน × 1% (สัญญาข้อ 2.3)"},
+  "ฝากหุ้น": {method:"none",   maxAmt:0,     maxTerms:0,  guar:0, quota:0,      slots:0,
+              note:"ฝากหุ้นอย่างเดียว — ไม่มีหนี้ ไม่มีดอกเบี้ย ไม่ต้องมีผู้ค้ำ ถอนคืนได้ตามข้อ 7"},
 };
+const NODEBT = p => PROD[p] && PROD[p].method === "none";
 const B  = n => (+n||0).toLocaleString("th-TH",{minimumFractionDigits:2,maximumFractionDigits:2});
 const B0 = n => (+n||0).toLocaleString("th-TH",{maximumFractionDigits:0});
 const $  = id => document.getElementById(id);
@@ -947,19 +950,28 @@ function drawT1(){
   </div>
 
   <div class="card">
-    <div class="eyebrow">เพิ่มสัญญาใหม่ (ม.ค. – ก.ค. 69)</div>
+    <div class="eyebrow">เพิ่มสัญญา</div>
+    <div class="bar" style="margin-bottom:11px;gap:0">
+      ${[["back","1 · ย้อนหลัง 2568","สัญญาที่แจ้งสมาชิกไปแล้ว มีตารางผ่อนเดิม"],
+         ["new","2 · ปัจจุบัน 2569","สัญญาที่ทำใหม่ ใช้สูตรปี 2569"],
+         ["share","3 · ฝากหุ้นอย่างเดียว","ไม่มีหนี้ ไม่มีดอกเบี้ย ไม่ต้องมีผู้ค้ำ"]]
+        .map(([k,lbl,tip])=>`<button class="${S.fkind===k||(!S.fkind&&k==="back")?"":"ghost"}" data-fk="${k}"
+          title="${tip}" style="border-radius:0;font-size:12px">${lbl}</button>`).join("")}
+    </div>
     <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(112px,1fr))">
-      <div><label>ผลิตภัณฑ์</label><select id="f_prod">${Object.keys(PROD).map(p=>`<option>${p}</option>`).join("")}</select></div>
-      <div><label>ผู้กู้</label><select id="f_no">${opts}</select></div>
-      <div><label>วันที่ทำสัญญา</label><input type="date" id="f_d"></div>
-      <div><label>วงเงินกู้</label><input type="number" id="f_amt" step="0.01"></div>
+      <div id="w_prod"><label>ผลิตภัณฑ์</label><select id="f_prod">${Object.keys(PROD).filter(p=>!NODEBT(p)).map(p=>`<option>${p}</option>`).join("")}</select></div>
+      <div><label>${S.fkind==="share"?"สมาชิก":"ผู้กู้"}</label><select id="f_no">${opts}</select></div>
+      <div><label>วันที่${S.fkind==="share"?"เริ่มฝาก":"ทำสัญญา"}</label><input type="date" id="f_d"></div>
+      <div id="w_amt"><label>วงเงินกู้</label><input type="number" id="f_amt" step="0.01"></div>
       <div><label>จำนวนงวด</label><input type="number" id="f_terms"></div>
-      <div><label>งวดละ (บาท)</label><input type="number" id="f_inst" step="0.01"></div>
-      <div><label>หุ้น/เดือน</label><input type="number" id="f_sh" step="0.01" value="500"></div>
-      <div><label>เลขที่สัญญา</label><input id="f_code" placeholder="กบขนข-69/…"></div>
-      <div><label>ผู้ค้ำ 1</label><select id="f_g1"><option value="">—</option>${opts}</select></div>
-      <div><label>ผู้ค้ำ 2</label><select id="f_g2"><option value="">—</option>${opts}</select></div>
-      <div><button id="f_add">เพิ่มสัญญา</button></div>
+      <div id="w_inst"><label>งวดละ (บาท)</label><input type="number" id="f_inst" step="0.01"></div>
+      <div><label>หุ้น${S.fkind==="share"?"/งวด":"ประจำ/งวด"}</label><input type="number" id="f_sh" step="0.01" value="${S.fkind==="share"?"":"200"}"></div>
+      <div id="w_ex"><label>หุ้นเพิ่ม/งวด</label><input type="number" id="f_ex" step="0.01" placeholder="432.08"></div>
+      <div id="w_t0"><label>ชำระแล้ว (งวด)</label><input type="number" id="f_t0" value="0" title="จำนวนงวดที่ผ่อนไปแล้วก่อน ม.ค.69"></div>
+      <div><label>เลข${S.fkind==="share"?"ที่บันทึก":"ที่สัญญา"}</label><input id="f_code" placeholder="${S.fkind==="back"?"กบขนข-68/…":"กบขนข-69/…"}"></div>
+      <div id="w_g1"><label>ผู้ค้ำ 1</label><select id="f_g1"><option value="">—</option>${opts}</select></div>
+      <div id="w_g2"><label>ผู้ค้ำ 2</label><select id="f_g2"><option value="">—</option>${opts}</select></div>
+      <div><label>&nbsp;</label><button id="f_add">เพิ่ม</button></div>
     </div>
     <p class="hint" id="f_note" style="margin-top:10px"></p>
   </div>
@@ -985,7 +997,9 @@ function drawT1(){
                title="${esc(c.ref.file)} · แนบเมื่อ ${c.ref.d}">✓ PDF</button>`
           : `<button class="ghost sm" data-at="${c.id}" style="padding:2px 6px;font-size:10.5px">แนบ PDF</button>`}
           <button class="ghost sm" data-sh="${c.id}" style="padding:2px 6px;font-size:10.5px${(c.shLog&&c.shLog.length)?";border-color:var(--green);color:var(--green)":""}"
-            title="ประวัติการฝากหุ้น / ขอฝากเพิ่ม">หุ้น${(c.shLog&&c.shLog.length)?" ●"+c.shLog.length:""}</button></td>
+            title="ประวัติการฝากหุ้น / ขอฝากเพิ่ม">หุ้น${(c.shLog&&c.shLog.length)?" ●"+c.shLog.length:""}</button>
+          <button class="ghost sm" data-rw="${c.id}" style="padding:2px 6px;font-size:10.5px${lockedRows(c)?";border-color:var(--gold);color:#8A6D1F":""}"
+            title="ดู/แก้ตารางผ่อนรายงวด">งวด${lockedRows(c)?" 🔒":""}</button></td>
         <td><input type="number" step="0.01" data-e="${c.id}:amt" value="${c.amt||""}"${miss("amt")} style="width:92px;padding:3px 5px"></td>
         <td><input type="number" data-e="${c.id}:terms" value="${c.terms||""}"${miss("terms")} style="width:52px;padding:3px 5px"></td>
         <td><input type="number" step="0.01" data-e="${c.id}:inst" value="${c.inst||""}"${miss("inst")} style="width:82px;padding:3px 5px"></td>
@@ -1027,21 +1041,64 @@ function drawT1(){
   แก้ในตารางได้เลย ระบบคำนวณใหม่ทันทีและบันทึกให้เอง ·
   <b>“งวดละ” สำคัญที่สุด</b> เพราะระบบใช้จับคู่ว่ายอดที่โอนเข้ามาเป็นของสัญญาไหน</p>`;
 
-  const upd = () => { const p = $("f_prod").value, P = PROD[p];
-    $("f_note").innerHTML = `<b>${p}</b> — ${P.note} · ผู้ค้ำ ${P.guar} คน` +
+  document.querySelectorAll("[data-fk]").forEach(b => b.onclick = () => { S.fkind = b.dataset.fk; drawT1(); });
+  const kind = () => S.fkind || "back";
+
+  const upd = () => {
+    const K = kind(), share = K === "share";
+    const show = (id,on) => { const e=$(id); if(e) e.style.display = on ? "" : "none"; };
+    show("w_prod", !share); show("w_amt", !share); show("w_inst", !share);
+    show("w_ex", K === "back"); show("w_t0", K === "back");
+    const p = share ? "ฝากหุ้น" : $("f_prod").value, P = PROD[p];
+    show("w_g1", P.guar >= 1); show("w_g2", P.guar >= 2);
+    if($("f_g2")) $("f_g2").disabled = P.guar < 2;
+
+    const head = K === "back"
+      ? `<b style="color:var(--gold)">กรณีที่ 1 — สัญญาย้อนหลัง 2568</b> · ตัวเลขต้องตรงกับตารางที่<b>แจ้งสมาชิกไปแล้ว</b>
+         ไม่ใช่สูตรปี 2569 · เพิ่มเสร็จแล้วให้กดปุ่ม <b>«PDF»</b> ในตาราง แนบตารางผ่อนเดิม แล้วกด <b>«ล็อกตารางนี้เป็นตัวจริง»</b>`
+      : K === "new"
+      ? `<b style="color:var(--green)">กรณีที่ 2 — สัญญาปัจจุบัน 2569</b> · โปรแกรมคำนวณตารางผ่อนให้จากสูตร
+         (ลำดับจัดสรรข้อ 2.2 · หุ้นเพิ่มขั้นบันได) · อยากแก้ตัวเลขรายงวดเองก็กดปุ่ม <b>«งวด»</b> ในตารางได้`
+      : `<b style="color:#8A6D1F">กรณีที่ 3 — ฝากหุ้นอย่างเดียว</b> · <b>ไม่ใช่หนี้</b> ไม่มีดอกเบี้ย ไม่มีผู้ค้ำ
+         ไม่มีการผิดนัด · เป็นการออมล้วน ๆ ถอนคืนได้ตามสัญญาข้อ 7 เมื่อไม่มีหนี้และไม่มีภาระค้ำ`;
+    $("f_note").innerHTML = head + (share ? "" :
+      `<br><b>${p}</b> — ${P.note} · ผู้ค้ำ ${P.guar} คน` +
       (P.maxAmt?` · วงเงินไม่เกิน ${B0(P.maxAmt)}`:"") + ` · ไม่เกิน ${P.maxTerms} งวด` +
-      (P.quota?` · เพดานโครงการ ${B0(P.quota)} / ${P.slots} สิทธิ์`:"");
-    $("f_g2").disabled = P.guar < 2; };
-  $("f_prod").onchange = upd; upd();
+      (P.quota?` · เพดานโครงการ ${B0(P.quota)} / ${P.slots} สิทธิ์`:""));
+  };
+  if($("f_prod")) $("f_prod").onchange = upd;
+  upd();
 
   $("f_add").onclick = () => {
-    const amt = +$("f_amt").value||0, d = $("f_d").value;
-    if(!d || amt<=0){ alert("กรอกวันที่ทำสัญญา และวงเงินกู้"); return; }
-    S.contracts.push({id:"C"+Math.random().toString(36).slice(2,8), prod:$("f_prod").value,
-      no:$("f_no").value, d, amt:+amt.toFixed(2), terms:+$("f_terms").value||0,
-      inst:+(+$("f_inst").value||0).toFixed(2), shareM:+$("f_sh").value||0,
-      code:$("f_code").value.trim(), g1:$("f_g1").value, g2:$("f_g2").value, open:0, legacy:false});
-    ["f_amt","f_terms","f_inst","f_code"].forEach(k=>$(k).value="");
+    const K = kind(), share = K === "share", d = $("f_d").value;
+    const amt = +$("f_amt").value||0, terms = +$("f_terms").value||0, sh = +$("f_sh").value||0;
+    if(!d){ alert("กรอกวันที่ก่อน"); return; }
+    if(share && sh <= 0){ alert("กรอกจำนวนหุ้นที่ฝากต่องวด"); return; }
+    if(!share && amt <= 0){ alert("กรอกวงเงินกู้"); return; }
+
+    const c = {id:"C"+Math.random().toString(36).slice(2,8),
+      prod: share ? "ฝากหุ้น" : $("f_prod").value,
+      no:$("f_no").value, d, amt: share ? 0 : +amt.toFixed(2), terms,
+      inst: share ? sh : +(+$("f_inst").value||0).toFixed(2),
+      shareM: sh, code:$("f_code").value.trim(),
+      g1: share ? "" : $("f_g1").value, g2: share ? "" : $("f_g2").value,
+      open:0, legacy: K === "back"};
+
+    if(K === "back"){
+      c.mode  = "old";                       // ตารางเดิม 2568 คงที่ ไม่ใช่สูตร 2569
+      c.exFix = +$("f_ex").value||0;
+      c.t0    = +$("f_t0").value||0;
+      c.pi    = +(c.inst - c.shareM - c.exFix).toFixed(2);   // แกนหนี้ ล็อกไว้
+      if(c.pi <= 0) { alert("งวดละ ต้องมากกว่า หุ้นประจำ + หุ้นเพิ่ม\n\nตอนนี้ "
+        + B(c.inst) + " − " + B(c.shareM) + " − " + B(c.exFix) + " = " + B(c.pi)); return; }
+      if(!c.exFix && !confirm("ยังไม่ได้ใส่ «หุ้นเพิ่ม/งวด»\n\nถ้าตารางเดิมมีหุ้นเพิ่ม เงินก้อนนั้นจะถูกกลืนเป็นเงินต้น\nจะเพิ่มต่อไหม?")) return;
+    } else if(K === "new"){
+      c.mode = "calc";                       // สูตร 2569 ขั้นบันได
+    } else {
+      c.mode = "fixed";
+    }
+    S.contracts.push(c);
+    ["f_amt","f_terms","f_inst","f_code","f_ex"].forEach(k=>{ if($(k)) $(k).value=""; });
     all();
   };
   document.querySelectorAll("[data-e]").forEach(i => i.onchange = e => {
@@ -1052,6 +1109,7 @@ function drawT1(){
   });
   document.querySelectorAll("[data-at]").forEach(b => b.onclick = () => attachPanel(b.dataset.at));
   document.querySelectorAll("[data-sh]").forEach(b => b.onclick = () => shPanel(b.dataset.sh));
+  document.querySelectorAll("[data-rw]").forEach(b => b.onclick = () => rowPanel(b.dataset.rw));
   document.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
     if(!confirm("ลบสัญญาฉบับนี้?")) return;
     S.contracts = S.contracts.filter(x=>x.id!==b.dataset.del); all(); });
@@ -1153,6 +1211,19 @@ function attachPanel(cid){
       </div>
       <p class="hint" style="margin-top:7px">กดยืนยันแล้วระบบจะตั้ง <b>วิธีคิดหุ้น = ตารางเดิม 2568</b> ให้อัตโนมัติ
         (ฝากเพิ่มคงที่ ${B(g.exAmt)} ทุกงวด ตามที่แจ้งสมาชิกไปแล้ว) <b>ไม่ใช้สูตรขั้นบันไดปี 2569</b></p>
+
+      <div class="keybox" style="margin-top:11px;border-left:3px solid ${lockedRows(c)?"var(--green)":"var(--gold)"}">
+        <b>${lockedRows(c) ? "✓ ล็อกตารางไว้แล้ว — โปรแกรมใช้ตัวเลขจากเอกสารนี้ทุกงวด ไม่คำนวณเอง"
+                           : "ยังไม่ได้ล็อกตาราง — ตอนนี้โปรแกรมยัง<b>คำนวณเอง</b>จากสูตร"}</b>
+        <p class="hint" style="margin:5px 0 8px">อ่านตารางจากไฟล์ได้ <b>${g.rows.length}</b> งวด
+          ${g.terms && g.rows.length < g.terms ? `<b style="color:var(--red)">— ไม่ครบ ${g.terms} งวด</b>` : ""} ·
+          ล็อกแล้วตัวเลขทุกช่องจะตรงกับเอกสารที่แจ้งสมาชิกเป๊ะ แม้สูตรจะคิดได้ไม่เท่ากัน (เศษปัดทศนิยม)</p>
+        <div class="bar">
+          ${g.rows.length ? `<button id="at_lock">${lockedRows(c)?"ล็อกใหม่จากไฟล์นี้":"ล็อกตารางนี้เป็นตัวจริง"}</button>` : ""}
+          ${lockedRows(c) ? `<button class="ghost" id="at_unlock">ปลดล็อก กลับไปใช้สูตร</button>
+            <button class="ghost" id="at_edit">ดู / แก้รายงวด (${c.rows.length} งวด)</button>` : ""}
+        </div>
+      </div>
     </div>` : `<p class="msg bad" style="margin-top:9px">อ่านไฟล์ได้ แต่หาหัวข้อที่ต้องการไม่เจอ —
       ไฟล์นี้อาจเป็นคนละรูปแบบ · ที่หาไม่เจอ: ${[!g.inst&&"รวมยอดชำระต่อเดือน",!g.amt&&"วงเงินกู้สูงสุด",!g.terms&&"จำนวนงวด"].filter(Boolean).join(" · ")}</p>`)
     : ""}
@@ -1173,6 +1244,20 @@ function attachPanel(cid){
       attachPanel(cid); save();
     }catch(err){ $("at_m").className="msg bad"; $("at_m").textContent = "อ่านไม่สำเร็จ: " + err.message; }
   };
+  if($("at_lock")) $("at_lock").onclick = () => {
+    const g2 = S.pdfg[cid];
+    if(!confirm("ล็อกตารางจากไฟล์นี้เป็นตัวจริง " + g2.rows.length + " งวด?\n\n"
+      + "หลังล็อก โปรแกรมจะใช้ตัวเลขจากเอกสารทุกช่อง ไม่คำนวณเองอีก\nแก้รายงวดทีหลังได้")) return;
+    c.rows = g2.rows.map(r=>({t:+r.t, pri:+r.pri||0, int:+r.int||0,
+                              base:+r.base||0, extra:+r.ex||0, bal:+r.bal||0}));
+    if(!c.terms) c.terms = g2.terms || c.rows.length;
+    attachPanel(cid); all();
+  };
+  if($("at_unlock")) $("at_unlock").onclick = () => {
+    if(!confirm("ปลดล็อก? โปรแกรมจะกลับไปคำนวณเองจากสูตร\nตัวเลขที่แก้ไว้รายงวดจะหายทั้งหมด")) return;
+    delete c.rows; attachPanel(cid); all();
+  };
+  if($("at_edit")) $("at_edit").onclick = () => { $("atbox").innerHTML=""; rowPanel(cid); };
   if($("at_ok")) $("at_ok").onclick = () => {
     c.amt    = +$("at_amt").value||0;
     c.terms  = +$("at_terms").value||0;
@@ -1186,6 +1271,115 @@ function attachPanel(cid){
   };
 }
 
+
+/* ============ แผงแก้รายงวด — ตารางล็อก แก้ได้ทุกช่อง ============ */
+function rowPanel(cid){
+  const c = S.contracts.find(x=>x.id===cid); if(!c) return;
+  const m = DB.members.find(z=>z.no===c.no) || {name:""};
+  if(!lockedRows(c)){
+    // ยังไม่ล็อก — เอาตารางที่สูตรคำนวณได้มาเป็นจุดตั้งต้นให้แก้
+    if(!confirm("สัญญานี้ยังไม่ได้ล็อกตาราง\n\nจะเอาตารางที่โปรแกรมคำนวณได้มาเป็นตัวตั้งต้น แล้วล็อกไว้ให้แก้ไหม?\n"
+      + "(หลังจากนี้โปรแกรมจะไม่คำนวณเองอีก ใช้ตัวเลขในตารางนี้ล้วน ๆ)")) return;
+    c.rows = schedule(c).rows.map(r=>({t:r.t, pri:r.pri, int:r.int, base:r.base, extra:r.extra, bal:r.bal}));
+  }
+  const R = c.rows.slice().sort((a,b)=>(+a.t)-(+b.t));
+  const sum = f => +R.reduce((s,r)=>s+(+r[f]||0),0).toFixed(2);
+  const tot = +R.reduce((s,r)=>s+(+r.pri||0)+(+r.int||0)+(+r.base||0)+(+r.extra||0),0).toFixed(2);
+
+  $("atbox").innerHTML = `<div class="card" style="border-left:3px solid var(--gold)">
+    <div class="eyebrow">แก้รายงวด — <span class="no">${c.no}</span>${esc(m.name)} · สัญญา ${esc(c.code)||c.prod}
+      <button class="ghost sm" id="rp_x" style="margin-left:auto">ปิด</button></div>
+
+    <div class="keybox" style="margin-bottom:11px;border-left:3px solid var(--green)">
+      <b>✓ ตารางนี้คือตัวจริง — โปรแกรมไม่คำนวณเอง</b>
+      <p class="hint" style="margin:4px 0 0">แก้ช่องไหนก็ได้ กด Tab หรือคลิกออกแล้วบันทึกทันที ·
+        <b>«คงเหลือ» ไม่ได้คำนวณจากเงินต้น</b> — เป็นตัวเลขอิสระที่คุณกรอกเอง ตามที่เอกสารระบุ ·
+        «สะสมเพิ่ม» ไม่ได้อยู่ในตารางนี้ เพราะมาจากบันทึกแนบท้าย (ปุ่ม «หุ้น»)</p>
+    </div>
+
+    <div class="bar" style="margin-bottom:9px">
+      <button class="ghost sm" id="rp_add">+ เพิ่มงวดต่อท้าย</button>
+      <span class="hint">ปรับทุกงวดพร้อมกัน:</span>
+      <select id="rp_f" style="width:auto"><option value="base">หุ้นประจำ</option>
+        <option value="extra">หุ้นเพิ่ม</option><option value="pri">เงินต้น</option>
+        <option value="int">ดอกเบี้ย</option></select>
+      <input type="number" step="0.01" id="rp_v" placeholder="จำนวน" style="width:88px">
+      <span class="hint">ตั้งแต่งวด</span>
+      <input type="number" id="rp_from" value="1" style="width:56px">
+      <button class="ghost sm" id="rp_set">ตั้งเป็นค่านี้</button>
+      <button class="ghost sm" id="rp_inc">+ บวกเพิ่ม</button>
+    </div>
+
+    <div class="tbl" style="max-height:420px;overflow:auto"><table><thead><tr>
+      <th>งวด</th><th>ยอดส่ง<br><span class="hint">รวมให้เอง</span></th><th>เงินต้น</th><th>ดอกเบี้ย</th>
+      <th>หุ้นประจำ</th><th>หุ้นเพิ่ม</th><th class="svcol">สะสมเพิ่ม<br><span class="hint">จากบันทึก</span></th>
+      <th>คงเหลือ</th><th></th></tr></thead><tbody>
+      ${R.map(r=>{
+        const sv = svAtTerm(c, r.t);
+        const pay = +((+r.pri||0)+(+r.int||0)+(+r.base||0)+(+r.extra||0)+sv).toFixed(2);
+        const nb = (f,w=78) => `<input type="number" step="0.01" data-r="${c.id}:${r.t}:${f}"
+          value="${r[f]!==undefined?r[f]:0}" style="width:${w}px;padding:3px 5px;font-size:11px">`;
+        return `<tr><td class="c"><b>${r.t}</b></td>
+          <td class="amt" style="font-weight:600">${B(pay)}</td>
+          <td>${nb("pri")}</td><td>${nb("int")}</td><td>${nb("base",62)}</td><td>${nb("extra",70)}</td>
+          <td class="amt svcol">${sv>0?B(sv):"—"}</td>
+          <td>${nb("bal",92)}</td>
+          <td><button class="del" data-rdel="${c.id}:${r.t}">×</button></td></tr>`;
+      }).join("")}
+    </tbody><tfoot><tr class="tot">
+      <td class="c"><b>รวม</b></td><td class="amt"><b>${B(tot + R.reduce((s,r)=>s+svAtTerm(c,r.t),0))}</b></td>
+      <td class="amt">${B(sum("pri"))}</td><td class="amt">${B(sum("int"))}</td>
+      <td class="amt">${B(sum("base"))}</td><td class="amt">${B(sum("extra"))}</td>
+      <td class="amt svcol">${B(R.reduce((s,r)=>s+svAtTerm(c,r.t),0))}</td><td></td><td></td>
+    </tr></tfoot></table></div>
+
+    <p class="hint" style="margin-top:8px">
+      ${(()=>{ const bad=[];
+        if(c.amt && Math.abs(sum("pri") - c.amt) > 1)
+          bad.push(`รวมเงินต้น ${B(sum("pri"))} ไม่เท่าวงเงิน ${B(c.amt)} (ต่าง ${B(Math.abs(sum("pri")-c.amt))})`);
+        const last = R[R.length-1];
+        if(last && Math.abs(+last.bal||0) > 1) bad.push(`งวดสุดท้ายคงเหลือ ${B(last.bal)} ไม่เป็นศูนย์`);
+        if(c.terms && R.length !== +c.terms) bad.push(`มี ${R.length} งวด แต่สัญญาระบุ ${c.terms} งวด`);
+        return bad.length
+          ? `<b style="color:var(--red)">⚠ ตรวจพบ:</b> ${bad.join(" · ")}
+             <br><span style="color:var(--muted)">ไม่ได้ห้ามบันทึก — ถ้าเอกสารจริงเป็นแบบนี้ก็ปล่อยไว้ได้ แค่เตือนให้ดู</span>`
+          : `<b style="color:var(--green)">✓ ตรวจแล้ว:</b> รวมเงินต้นเท่าวงเงิน · งวดสุดท้ายคงเหลือศูนย์ · จำนวนงวดตรงกับสัญญา`;
+      })()}</p>
+  </div>`;
+
+  $("rp_x").onclick = () => { $("atbox").innerHTML = ""; };
+
+  document.querySelectorAll("[data-r]").forEach(i => i.onchange = e => {
+    const [id, t, f] = e.target.dataset.r.split(":");
+    const cc = S.contracts.find(x=>x.id===id); if(!cc || !cc.rows) return;
+    const row = cc.rows.find(x=>+x.t === +t); if(!row) return;
+    row[f] = +e.target.value||0;
+    rowPanel(id); all();
+  });
+  document.querySelectorAll("[data-rdel]").forEach(b => b.onclick = () => {
+    const [id, t] = b.dataset.rdel.split(":");
+    if(!confirm("ลบงวดที่ " + t + " ออกจากตาราง?")) return;
+    const cc = S.contracts.find(x=>x.id===id);
+    cc.rows = cc.rows.filter(x=>+x.t !== +t);
+    if(!cc.rows.length) delete cc.rows;
+    rowPanel(id); all();
+  });
+  $("rp_add").onclick = () => {
+    const last = R[R.length-1] || {t:0, pri:0, int:0, base:+c.shareM||0, extra:+c.exFix||0, bal:0};
+    c.rows.push({t:(+last.t||0)+1, pri:0, int:0, base:+last.base||0, extra:+last.extra||0, bal:+last.bal||0});
+    rowPanel(cid); all();
+  };
+  const bulk = (mode) => {
+    const f = $("rp_f").value, v = +$("rp_v").value, from = +$("rp_from").value||1;
+    if($("rp_v").value === ""){ alert("ใส่จำนวนก่อน"); return; }
+    let n = 0;
+    c.rows.forEach(r=>{ if(+r.t >= from){ r[f] = +((mode==="set" ? v : (+r[f]||0) + v)).toFixed(2); n++; } });
+    alert("แก้ " + n + " งวดแล้ว (ตั้งแต่งวดที่ " + from + ")");
+    rowPanel(cid); all();
+  };
+  $("rp_set").onclick = () => bulk("set");
+  $("rp_inc").onclick = () => bulk("inc");
+}
 
 /* ============ บันทึกแนบท้าย — ขอฝากหุ้นเพิ่ม (ไม่ใช่สัญญาใหม่) ============ */
 // หุ้นเพิ่ม 2569 ที่มีผลกับสัญญานี้ (ค่าล่าสุด) — ใช้แสดงในตารางแนบท้ายสัญญา
@@ -2007,6 +2201,17 @@ function shareOn(c, p){
   return {base:+cur.base||0, extra:+cur.extra||0, sv:+cur.sv||0, memo:cur.memo||"", changed:!cur.origin};
 }
 function dueOn(c, p, tn){
+  const sh0 = shareOn(c, p);
+  const R = rowAt(c, tn);
+  if(R){                                   // ── ตารางล็อก: ตัวเลขงวดนี้มาจากเอกสาร ไม่คำนวณ
+    const pi = +((+R.pri||0) + (+R.int||0)).toFixed(2);
+    return {due:+(pi + (+R.base||0) + (+R.extra||0) + sh0.sv).toFixed(2), pi,
+            base:+R.base||0, extra:+R.extra||0, sv:sh0.sv, memo:sh0.memo, changed:sh0.changed};
+  }
+  if(NODEBT(c.prod)){                      // ── ฝากหุ้นอย่างเดียว
+    return {due:+(sh0.base + sh0.sv).toFixed(2), pi:0, base:sh0.base, extra:0, sv:sh0.sv,
+            memo:sh0.memo, changed:sh0.changed};
+  }
   const pi = piOf(c);
   if(!pi) return {due:0, pi:0, base:0, extra:0, sv:0, memo:"", changed:false};
   const sh = shareOn(c, p);
@@ -2030,8 +2235,37 @@ function shareAt(c,t){
   return +(base + ex).toFixed(2);
 }
 
-/* ตารางผ่อน — รองรับทั้งสูตรใหม่ (calc) และคงที่ (fixed/flat) */
+/* ---- ตารางล็อก: ถ้าสัญญามี c.rows = ตัวเลขจริงจากเอกสาร โปรแกรมห้ามคำนวณเอง ----
+   c.rows = [{t, pri, int, base, extra, bal}]  ·  «สะสมเพิ่ม» (sv) ยังมาจาก shLog เหมือนเดิม */
+function lockedRows(c){ return (c && c.rows && c.rows.length) ? c.rows : null; }
+function rowAt(c,t){ const L = lockedRows(c); return L ? (L.find(r=>+r.t===+t) || null) : null; }
+
+/* ตารางผ่อน — ตารางล็อก > สูตรใหม่ (calc) > คงที่ (fixed/flat) */
 function schedule(c){
+  const L = lockedRows(c);
+  if(L){                                   // ── ยึดตามเอกสารทุกงวด ไม่คำนวณเลย
+    const rows = L.slice().sort((a,b)=>(+a.t)-(+b.t)).map(r=>{
+      const pri=+r.pri||0, int=+r.int||0, base=+r.base||0, extra=+r.extra||0;
+      const sh=+(base+extra).toFixed(2), sv=svAtTerm(c,+r.t);
+      return {t:+r.t, pri, int, base, extra, sh, sv,
+              pay:+(pri+int+sh).toFixed(2), total:+(pri+int+sh+sv).toFixed(2), bal:+r.bal||0};
+    });
+    const T = f => +rows.reduce((s,r)=>s+r[f],0).toFixed(2);
+    return {rows, totInt:T("int"), totSh:T("sh"), totBase:T("base"), totExtra:T("extra"),
+            totPri:T("pri"), totPay:T("pay"), totSv:T("sv"), totAll:T("total"),
+            locked:true, ok:true};
+  }
+  if(NODEBT(c.prod)){                      // ── ฝากหุ้นอย่างเดียว ไม่มีหนี้
+    const N=+c.terms||0, rows=[];
+    for(let t=1;t<=N && t<=120;t++){
+      const base=+c.shareM||0, sv=svAtTerm(c,t);
+      rows.push({t, pri:0, int:0, base, extra:0, sh:base, sv,
+                 pay:base, total:+(base+sv).toFixed(2), bal:0});
+    }
+    const T = f => +rows.reduce((s,r)=>s+r[f],0).toFixed(2);
+    return {rows, totInt:0, totSh:T("sh"), totBase:T("base"), totExtra:0,
+            totPri:0, totPay:T("pay"), totSv:T("sv"), totAll:T("total"), locked:false, ok:true};
+  }
   const flat = PROD[c.prod].method==="flat";
   const N = +c.terms||0, M = +c.inst||0;
   let bal = +c.amt||0; const rows=[];
@@ -2049,7 +2283,8 @@ function schedule(c){
   }
   const T = f => +rows.reduce((s,r)=>s+r[f],0).toFixed(2);
   return {rows, totInt:T("int"), totSh:T("sh"), totBase:T("base"), totExtra:T("extra"),
-          totPri:T("pri"), totPay:T("pay"), totSv:T("sv"), totAll:T("total"), ok:bal<=0.005};
+          totPri:T("pri"), totPay:T("pay"), totSv:T("sv"), totAll:T("total"),
+          locked:false, ok:bal<=0.005};
 }
 function capOf(c){ return c.cap || Math.ceil(((+c.amt||0)+schedule(c).totInt)/1000)*1000; }
 
