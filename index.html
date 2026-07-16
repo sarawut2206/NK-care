@@ -388,7 +388,7 @@ let _saveT = null, _saving = false, _again = false;
 function save(){
   if(!S) return;
   clearTimeout(_saveT);
-  if(!inGAS){                                   // เปิดไฟล์ตรง — จำไว้ในเบราว์เซอร์เครื่องนี้
+  if(!inGAS && !REMOTE){                        // เปิดไฟล์ตรง ไม่ได้ตั้งค่าต่อระยะไกล — จำไว้ในเบราว์เซอร์เครื่องนี้
     _saveT = setTimeout(()=>{
       const ok = lsSave();
       setStatus(ok ? "จำไว้ในเครื่องนี้แล้ว " + new Date().toLocaleTimeString("th-TH") + " · ยังไม่ได้ขึ้น Google Sheets"
@@ -3373,8 +3373,25 @@ $("imp").onchange = e => { const fr = new FileReader();
 
 /* ============ เริ่มระบบ ============ */
 const inGAS = typeof google !== "undefined" && google.script && google.script.run;
-function gas(fn, ...a){ return new Promise((ok,no)=>
-  google.script.run.withSuccessHandler(ok).withFailureHandler(no)[fn](...a)); }
+
+/* ต่อระยะไกล — สำหรับกรณีเปิดจากที่อื่น (เช่น GitHub Pages) ไม่ใช่จาก Apps Script โดยตรง
+   ต้องตั้งค่า URL + รหัส ก่อนถึงจะใช้ได้ · เก็บไว้ในเบราว์เซอร์เครื่องนี้เท่านั้น */
+const REMOTE_KEY = "kbk_remote_v1";
+function remoteConf(){ try{ const t = localStorage.getItem(REMOTE_KEY); return t ? JSON.parse(t) : null; }catch(e){ return null; } }
+let REMOTE = !inGAS ? remoteConf() : null;
+
+function gas(fn, ...a){
+  if(inGAS) return new Promise((ok,no)=>
+    google.script.run.withSuccessHandler(ok).withFailureHandler(no)[fn](...a));
+  if(REMOTE) return fetch(REMOTE.url, {
+      method: "POST", headers: {"Content-Type":"text/plain;charset=utf-8"},
+      body: JSON.stringify({token: REMOTE.token, action: fn, payload: a[0]})
+    }).then(r=>r.json()).then(r=>{
+      if(r && r.error) throw new Error(r.error);
+      return fn==="getData" ? JSON.stringify(r) : r;   // ให้รูปแบบตรงกับ google.script.run
+    });
+  return Promise.reject(new Error("ยังไม่ได้ต่อกับ Google Sheets"));
+}
 function setStatus(t){ const e=$("saved"); if(e) e.textContent = t; }
 
 /* แถบใหญ่ใต้เมนู — บอกตรง ๆ ว่าต่อกับอะไร มีข้อมูลไหม ต้องทำอะไรต่อ */
@@ -3383,7 +3400,7 @@ function banner(){
   const n = (DB && DB.members) ? DB.members.length : 0;
   const box = (col,bg,html) => { e.style.display="block";
     e.style.borderLeft = "4px solid " + col; e.style.background = bg; e.innerHTML = html; };
-  if(inGAS && !n){
+  if((inGAS||REMOTE) && !n){
     box("var(--gold)", "#FFFBEF",
       '<b style="font-size:14px">ต่อกับ Google Sheets แล้ว — แต่ใน Sheets ยังไม่มีข้อมูล</b>'
       + '<p class="hint" style="margin:5px 0 9px">ยัดข้อมูลเข้า Sheets <b>ครั้งเดียว</b> แล้วจะไม่ต้องทำอีกเลย</p>'
@@ -3396,19 +3413,36 @@ function banner(){
       + n + ' สมาชิก · ' + S.contracts.length + ' สัญญา · ' + S.tx.length
       + ' รายการโอน · แก้อะไรบันทึกลง Sheets ให้เอง ไม่ต้องนำเข้าอีก</span>');
     setTimeout(()=>{ const x=$("bnr"); if(x) x.style.display="none"; }, 7000);
+  } else if(REMOTE){
+    box("var(--gold)", "#FFFBEF",
+      '<b style="color:#8A6D1F">⚠ ต่อกับ Google Sheets อยู่ — แต่ผ่านทางลัดที่ไม่ล็อกอิน</b>'
+      + '<span class="hint"> — ' + n + ' สมาชิก · ใครมีลิงก์นี้ + รหัสก็แก้ข้อมูลได้เหมือนกัน '
+      + '<button class="ghost sm" id="bnrDisc" style="margin-left:6px">เลิกต่อ</button></span>');
+    const b = $("bnrDisc"); if(b) b.onclick = () => { if(confirm("เลิกต่อกับ Sheets ทางนี้?")){ localStorage.removeItem(REMOTE_KEY); location.reload(); } };
   } else {
     box("var(--red)", "#FDF3F3",
       '<b style="color:var(--red)">คุณกำลังเปิดไฟล์จากเครื่อง — ไม่ได้ต่อกับ Google Sheets</b>'
-      + '<p class="hint" style="margin:5px 0 0">ข้อมูลอยู่แค่เบราว์เซอร์เครื่องนี้ กรรมการคนอื่นไม่เห็น · '
-      + 'จะออนไลน์จริงต้อง<b>เปิดจากลิงก์ Apps Script</b> (ลงท้าย /exec) ไม่ใช่เปิดไฟล์นี้ · '
-      + 'หาลิงก์: หน้า Sheet → เมนู <b>กบข.นข. → เปิดหน้าเว็บระบบ</b></p>');
+      + '<p class="hint" style="margin:5px 0 7px">ข้อมูลอยู่แค่เบราว์เซอร์เครื่องนี้ กรรมการคนอื่นไม่เห็น · '
+      + 'ทางที่ปลอดภัยสุดคือ<b>เปิดจากลิงก์ Apps Script</b> (ลงท้าย /exec) โดยตรง</p>'
+      + '<div class="bar"><button id="bnrConn">ตั้งค่าต่อกับ Sheets จากที่นี่</button>'
+      + '<span class="hint">ใช้ URL + รหัสที่กรรมการฝ่ายการเงินให้มา</span></div>');
+    const b = $("bnrConn"); if(b) b.onclick = () => connectRemote();
   }
+}
+function connectRemote(){
+  const url = prompt("วาง URL Apps Script (ลงท้าย /exec):", (REMOTE&&REMOTE.url)||"");
+  if(!url) return;
+  const token = prompt("วางรหัสเชื่อมต่อ (REMOTE_TOKEN จาก Code.gs):", "");
+  if(!token) return;
+  try{ localStorage.setItem(REMOTE_KEY, JSON.stringify({url:url.trim(), token:token.trim()})); }
+  catch(e){ alert("บันทึกในเบราว์เซอร์ไม่ได้: " + e.message); return; }
+  location.reload();
 }
 const EMPTY = {members:[], tx:[], acct:{}, anames:{}, contracts:[], wd:[], profile:{}};
 
 async function boot(){
   DB = {...EMPTY}; S = freshS();          // มีของใช้เสมอ ต่อให้โหลดพัง ปุ่มก็ยังกดได้
-  if(inGAS){
+  if(inGAS || REMOTE){
     setStatus("กำลังโหลดข้อมูลจาก Google Sheets…");
     try{ draw(); }catch(e){}
     try{
@@ -3431,8 +3465,10 @@ async function boot(){
       if(b){ b.style.display="block"; b.style.borderLeft="4px solid var(--red)"; b.style.background="#FDF3F3";
         b.innerHTML = '<b style="color:var(--red)">ต่อกับ Apps Script ได้ แต่อ่าน Google Sheets ไม่สำเร็จ</b>'
           + '<p class="hint" style="margin:5px 0 0">ข้อความจากเซิร์ฟเวอร์: <code>' + esc(msg) + '</code></p>'
-          + '<p class="hint" style="margin:5px 0 0">มักเกิดจาก<b>ยังไม่ได้สร้างชีท</b> — '
-          + 'หน้า Sheet → เมนู <b>กบข.นข. → 1) สร้างชีททั้งหมด</b> → รีเฟรชหน้านี้</p>'; }
+          + '<p class="hint" style="margin:5px 0 0">มักเกิดจาก<b>ยังไม่ได้สร้างชีท</b> หรือ<b>รหัสเชื่อมต่อผิด</b> — '
+          + (REMOTE ? '<button class="ghost sm" id="bReconn">ตั้งค่าใหม่</button>'
+                    : 'หน้า Sheet → เมนู <b>กบข.นข. → 1) สร้างชีททั้งหมด</b> → รีเฟรชหน้านี้') + '</p>';
+        if(REMOTE){ const bb=$("bReconn"); if(bb) bb.onclick=()=>{ localStorage.removeItem(REMOTE_KEY); connectRemote(); }; } }
       draw(); return;
     }
   } else {
@@ -3448,6 +3484,7 @@ async function boot(){
   draw();
   banner();
 }
+
 function draw(){
   // แท็บไหนพัง ให้พังแค่แท็บนั้น อย่าลากทั้งหน้าจอลงไปด้วย
   [["tab1",drawT1],["tab2",drawT2],["tab3",drawT3],["tab4",drawT4],["tab5",drawT5],
