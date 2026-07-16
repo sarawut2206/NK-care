@@ -324,6 +324,7 @@ th.svcol{background:#FFF4D6!important}
     <small>กบข.นข. · โรงเรียนมัธยมวัดหนองแขม · บัญชี 206-2-63177-8</small></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
+    <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
     <button class="ghost sm" id="exp">ส่งออก JSON</button>
     <button class="ghost sm" id="csv">ส่งออก CSV</button>
     <button class="ghost sm" id="impBtn">นำเข้า</button>
@@ -344,6 +345,7 @@ th.svcol{background:#FFF4D6!important}
   <b data-t="9">9 · Google Sheets</b>
 </nav>
 
+<div id="bnr" style="display:none;padding:10px 13px;border-radius:0 6px 6px 0;margin:0 0 14px"></div>
 <section id="tab1" class="on"></section>
 <section id="tab2"></section>
 <section id="tab3"></section>
@@ -3749,11 +3751,41 @@ const inGAS = typeof google !== "undefined" && google.script && google.script.ru
 function gas(fn, ...a){ return new Promise((ok,no)=>
   google.script.run.withSuccessHandler(ok).withFailureHandler(no)[fn](...a)); }
 function setStatus(t){ const e=$("saved"); if(e) e.textContent = t; }
+
+/* แถบใหญ่ใต้เมนู — บอกตรง ๆ ว่าต่อกับอะไร มีข้อมูลไหม ต้องทำอะไรต่อ */
+function banner(){
+  const e = $("bnr"); if(!e) return;
+  const n = (DB && DB.members) ? DB.members.length : 0;
+  const box = (col,bg,html) => { e.style.display="block";
+    e.style.borderLeft = "4px solid " + col; e.style.background = bg; e.innerHTML = html; };
+  if(inGAS && !n){
+    box("var(--gold)", "#FFFBEF",
+      '<b style="font-size:14px">ต่อกับ Google Sheets แล้ว — แต่ใน Sheets ยังไม่มีข้อมูล</b>'
+      + '<p class="hint" style="margin:5px 0 9px">ยัดข้อมูลเข้า Sheets <b>ครั้งเดียว</b> แล้วจะไม่ต้องทำอีกเลย</p>'
+      + '<div class="bar"><button id="bnrImp">นำเข้า kbk-data-backup.json</button>'
+      + '<span class="hint">ถ้ากดแล้วขึ้น error — ในหน้า Sheet กดเมนู <b>กบข.นข. → 1) สร้างชีททั้งหมด</b> ก่อน แล้วรีเฟรชหน้านี้</span></div>');
+    const b = $("bnrImp"); if(b) b.onclick = () => $("imp").click();
+  } else if(inGAS){
+    box("var(--green)", "#F3F8F4",
+      '<b style="color:var(--green)">✓ ต่อกับ Google Sheets อยู่</b><span class="hint"> — '
+      + n + ' สมาชิก · ' + S.contracts.length + ' สัญญา · ' + S.tx.length
+      + ' รายการโอน · แก้อะไรบันทึกลง Sheets ให้เอง ไม่ต้องนำเข้าอีก</span>');
+    setTimeout(()=>{ const x=$("bnr"); if(x) x.style.display="none"; }, 7000);
+  } else {
+    box("var(--red)", "#FDF3F3",
+      '<b style="color:var(--red)">คุณกำลังเปิดไฟล์จากเครื่อง — ไม่ได้ต่อกับ Google Sheets</b>'
+      + '<p class="hint" style="margin:5px 0 0">ข้อมูลอยู่แค่เบราว์เซอร์เครื่องนี้ กรรมการคนอื่นไม่เห็น · '
+      + 'จะออนไลน์จริงต้อง<b>เปิดจากลิงก์ Apps Script</b> (ลงท้าย /exec) ไม่ใช่เปิดไฟล์นี้ · '
+      + 'หาลิงก์: หน้า Sheet → เมนู <b>กบข.นข. → เปิดหน้าเว็บระบบ</b></p>');
+  }
+}
 const EMPTY = {members:[], tx:[], acct:{}, anames:{}, contracts:[], wd:[], profile:{}};
 
 async function boot(){
+  DB = {...EMPTY}; S = freshS();          // มีของใช้เสมอ ต่อให้โหลดพัง ปุ่มก็ยังกดได้
   if(inGAS){
     setStatus("กำลังโหลดข้อมูลจาก Google Sheets…");
+    try{ draw(); }catch(e){}
     try{
       const r = JSON.parse(await gas("getData"));
       DB = Object.assign({}, EMPTY, r.db||{});
@@ -3763,11 +3795,20 @@ async function boot(){
         if(r.board.year) BOARD.year = r.board.year;
         if(r.board.meet) BOARD.meet = r.board.meet;
       }
-      setStatus("โหลดจาก Google Sheets แล้ว · " + DB.members.length + " สมาชิก"
-        + (r.user ? " · " + r.user : ""));
+      setStatus(DB.members.length
+        ? "โหลดจาก Google Sheets แล้ว · " + DB.members.length + " สมาชิก" + (r.user ? " · " + r.user : "")
+        : "ต่อ Sheets ได้ แต่ยังไม่มีข้อมูล — กด «นำเข้า»");
+      if($("saveNow")) $("saveNow").style.display = "";
     }catch(e){
-      DB = {...EMPTY}; S = freshS();
-      setStatus("⚠ อ่าน Google Sheets ไม่ได้: " + (e.message||e));
+      const msg = (e && (e.message || e.details)) || String(e) || "ไม่ทราบสาเหตุ";
+      setStatus("⚠ อ่าน Sheets ไม่ได้");
+      const b = $("bnr");
+      if(b){ b.style.display="block"; b.style.borderLeft="4px solid var(--red)"; b.style.background="#FDF3F3";
+        b.innerHTML = '<b style="color:var(--red)">ต่อกับ Apps Script ได้ แต่อ่าน Google Sheets ไม่สำเร็จ</b>'
+          + '<p class="hint" style="margin:5px 0 0">ข้อความจากเซิร์ฟเวอร์: <code>' + esc(msg) + '</code></p>'
+          + '<p class="hint" style="margin:5px 0 0">มักเกิดจาก<b>ยังไม่ได้สร้างชีท</b> — '
+          + 'หน้า Sheet → เมนู <b>กบข.นข. → 1) สร้างชีททั้งหมด</b> → รีเฟรชหน้านี้</p>'; }
+      draw(); return;
     }
   } else {
     DB = {...EMPTY}; S = freshS();
@@ -3780,16 +3821,42 @@ async function boot(){
     }
   }
   draw();
+  banner();
 }
-function draw(){ drawT1(); drawT2(); drawT3(); drawT4(); drawT5(); drawT6(); drawT7(); drawT8(); drawT9(); }
+function draw(){
+  // แท็บไหนพัง ให้พังแค่แท็บนั้น อย่าลากทั้งหน้าจอลงไปด้วย
+  [["tab1",drawT1],["tab2",drawT2],["tab3",drawT3],["tab4",drawT4],["tab5",drawT5],
+   ["tab6",drawT6],["tab7",drawT7],["tab8",drawT8],["tab9",drawT9]].forEach(([id,fn])=>{
+    try{ fn(); }
+    catch(err){ const el=$(id); if(el) el.innerHTML =
+      '<div class="card" style="border-left:3px solid var(--red)">'
+      + '<b style="color:var(--red)">แท็บนี้แสดงผลไม่ได้</b>'
+      + '<p class="hint" style="margin-top:5px">' + esc(err.message||String(err)) + '</p>'
+      + '<p class="hint">แท็บอื่นยังใช้ได้ตามปกติ</p></div>'; }
+  });
+}
 
 $("clr").onclick = () => {
   if(!confirm("ลบข้อมูลที่จำไว้ในเบราว์เซอร์เครื่องนี้?\n\nข้อมูลบน Google Sheets และไฟล์ JSON ที่ส่งออกไว้จะไม่ถูกลบ\nแต่ถ้ายังไม่เคยส่งออก/ยังไม่ได้ขึ้น Sheets ข้อมูลจะหายถาวร")) return;
   lsClear(); location.reload();
 };
 
+if($("saveNow")) $("saveNow").onclick = async () => {
+  if(!inGAS){ alert("ยังไม่ได้ต่อกับ Google Sheets — ต้องเปิดจากลิงก์ Apps Script (ลงท้าย /exec)"); return; }
+  const b = $("saveNow"); b.disabled = true; setStatus("กำลังบันทึกขึ้น Google Sheets…");
+  try{
+    await gas("saveState", JSON.stringify(pack()));
+    setStatus("บันทึกขึ้น Google Sheets แล้ว " + new Date().toLocaleTimeString("th-TH"));
+  }catch(e){
+    setStatus("⚠ บันทึกไม่สำเร็จ");
+    alert("บันทึกขึ้น Sheets ไม่สำเร็จ\n\n" + ((e&&(e.message||e.details))||String(e)) +
+          "\n\nข้อมูลยังอยู่ในหน้าจอ — กด «ส่งออก JSON» เก็บไว้ก่อนได้");
+  }
+  b.disabled = false;
+};
+
 /* ============ เดินระบบ ============ */
-function all(){ drawT1(); drawT2(); drawT3(); drawT4(); drawT5(); drawT6(); drawT7(); drawT8(); drawT9(); save(); }
+function all(){ draw(); save(); banner(); }
 document.querySelectorAll("nav b").forEach(b => b.onclick = () => {
   tab = +b.dataset.t;
   document.querySelectorAll("nav b").forEach(x=>x.classList.toggle("on", x===b));
