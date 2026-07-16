@@ -1061,7 +1061,9 @@ function runContract(c){
     const tn    = c.legacy ? (+c.t0||0) + PERIODS.indexOf(p) + 1
                            : PERIODS.indexOf(p) - PERIODS.indexOf(start) + 1;
     const baseDue  = +c.shareM||0;
-    const extraDue = c.mode==="calc" ? +((+c.inst||0)*extraRate(Math.max(1,tn))).toFixed(2) : 0;
+    const extraDue = c.mode==="old"  ? +(+c.exFix||0).toFixed(2)                                  // ตารางเดิม 2568 — คงที่
+                   : c.mode==="calc" ? +((+c.inst||0)*extraRate(Math.max(1,tn))).toFixed(2)       // สูตร 2569 — ขั้นบันได
+                   : 0;
     const shDue = +(baseDue + extraDue).toFixed(2);
     const int   = flatInt != null ? flatInt : +(bal * RATE).toFixed(2);
     // ประเมินได้ต่อเมื่อรู้ "งวดละ" จริง — ไม่มีก็ไม่เดา (ดูทะเบียนสัญญา แท็บ 1)
@@ -1252,9 +1254,11 @@ function drawT1(){
         <td><input type="number" data-e="${c.id}:terms" value="${c.terms||""}"${miss("terms")} style="width:52px;padding:3px 5px"></td>
         <td><input type="number" step="0.01" data-e="${c.id}:inst" value="${c.inst||""}"${miss("inst")} style="width:82px;padding:3px 5px"></td>
         <td><input type="number" step="0.01" data-e="${c.id}:shareM" value="${c.shareM||0}" style="width:64px;padding:3px 5px"></td>
-        <td class="l"><select data-e="${c.id}:mode" style="width:118px;padding:3px 5px;font-size:11px">
-          <option value="fixed" ${c.mode!=="calc"?"selected":""}>ประจำอย่างเดียว</option>
-          <option value="calc" ${c.mode==="calc"?"selected":""}>ประจำ + เพิ่มขั้นบันได</option></select></td>
+        <td class="l"><select data-e="${c.id}:mode" style="width:126px;padding:3px 5px;font-size:11px">
+          <option value="fixed" ${!c.mode||c.mode==="fixed"?"selected":""}>ประจำอย่างเดียว</option>
+          <option value="old" ${c.mode==="old"?"selected":""}>ตารางเดิม 2568 (คงที่)</option>
+          <option value="calc" ${c.mode==="calc"?"selected":""}>สูตร 2569 (ขั้นบันได)</option></select>
+          ${c.mode==="old"&&c.exFix?`<div class="hint" style="font-size:10px">ฝากเพิ่ม ${B(c.exFix)}/งวด</div>`:""}</td>
         <td><input type="number" data-e="${c.id}:t0" value="${c.t0||0}" title="งวดที่ชำระไปแล้วก่อน ม.ค.69" style="width:48px;padding:3px 5px"></td>
         <td class="amt">${c.legacy?B(c.open):"—"}</td>
         <td class="amt" style="font-weight:600">${B(r.bal)}</td>
@@ -1262,6 +1266,20 @@ function drawT1(){
         <td><button class="del" data-del="${c.id}">×</button></td></tr>`;
     }).join("")}
     </tbody></table></div>
+  <div class="keybox" style="margin-top:11px;border-left:3px solid var(--red)">
+    <b>สูตรปี 2568 กับ 2569 ไม่เหมือนกัน — เลือกให้ถูก</b>
+    <table style="margin-top:7px"><thead><tr><th class="l">วิธีคิดหุ้น</th><th class="l">ฝากเพิ่มต่องวด</th>
+      <th class="l">ใช้กับ</th></tr></thead><tbody>
+      <tr><td class="l"><b>ตารางเดิม 2568</b></td><td class="l">คงที่ทุกงวด = อัตรา × (วงเงิน ÷ จำนวนงวด)<br>
+        <span class="hint">อัตราเลือกจาก<b>จำนวนงวดทั้งหมด</b> เช่น 50 งวด → 16%</span></td>
+        <td class="l"><b>สัญญายกมา/ย้อนหลัง</b> — ตัวเลขที่แจ้งสมาชิกไปแล้ว · แนบ PDF แล้วกดยืนยัน ระบบตั้งให้เอง</td></tr>
+      <tr><td class="l"><b>สูตร 2569</b></td><td class="l">เปลี่ยนทุกช่วง = งวดละ × อัตราขั้นบันได<br>
+        <span class="hint">อัตราเลือกจาก<b>งวดที่กำลังผ่อน</b> 1–12→8% · 13–24→10% …</span></td>
+        <td class="l"><b>สัญญาใหม่เท่านั้น</b> ที่ทำหลังข้อตกลง 26 มี.ค. 69</td></tr>
+    </tbody></table>
+    <p class="hint" style="margin-top:6px">ใช้สูตร 2569 กับสัญญาย้อนหลัง = ตัวเลขไม่ตรงกับที่แจ้งสมาชิกไปแล้ว
+      · ผู้ค้ำอาจอ้าง ปพพ. ม.700 ว่าไม่ได้ยินยอมให้เปลี่ยนเงื่อนไข</p>
+  </div>
   <p class="hint" style="margin-top:10px"><b>วิธีคิดหุ้น</b> — “ประจำ + เพิ่มขั้นบันได” คือสูตร 2569 ของคุณ
   (หุ้นเพิ่ม = งวดละ × 8/10/12/14/16/18% ตามช่วงงวด) · <b>ชำระแล้ว</b> = จำนวนงวดที่ผ่อนไปแล้วก่อน ม.ค.69
   ใส่ให้ถูกระบบจะได้รู้ว่าตอนนี้อยู่ขั้นบันไดไหน<br>
@@ -1299,72 +1317,129 @@ function drawT1(){
 }
 
 
-/* ============ แนบตารางผ่อนเดิม (PDF) เป็นหลักฐานอ้างอิงของสัญญาย้อนหลัง ============ */
-// อ่านตัวเลขจาก PDF แล้วเดา "งวดละ" จากยอดที่ซ้ำมากที่สุด — แต่ไม่ยัดให้เอง ต้องกดยืนยัน
+/* ============ อ่านตารางผ่อนเดิม (รูปแบบเครื่องคำนวณ กบข.นข.) ============ */
+// ไม่เดาจากความถี่แล้ว — อ่านจากป้ายกำกับตรง ๆ
 function pdfGuess(txt){
-  const nums = (txt.match(/\d{1,3}(?:,\d{3})*\.\d{2}/g) || []).map(x=>+x.replace(/,/g,""));
-  const cnt = {};
-  nums.forEach(n=>{ if(n>=200 && n<=200000) cnt[n.toFixed(2)] = (cnt[n.toFixed(2)]||0)+1; });
-  const rep = Object.keys(cnt).filter(k=>cnt[k]>=3).sort((a,b)=>cnt[b]-cnt[a]);
-  const big = nums.filter(n=>n>=5000).sort((a,b)=>b-a);
-  // จำนวนงวด: หาเลขลำดับ 1..N ที่เรียงต่อกัน
-  const seq = (txt.match(/(?:^|\s)(\d{1,2})(?=\s)/gm)||[]).map(x=>+x);
-  let terms = 0; for(let i=1;i<=72;i++) if(seq.includes(i)) terms=i; else if(i>1) break;
-  return {
-    inst: rep.length ? {v:+rep[0], n:cnt[rep[0]]} : null,     // ยอดที่ซ้ำบ่อยสุด = น่าจะเป็นงวดละ
-    alts: rep.slice(1,5).map(k=>({v:+k, n:cnt[k]})),
-    amt: big.length ? big[0] : 0,                             // ยอดใหญ่สุด = น่าจะเป็นวงเงิน
-    terms, count: nums.length
+  const t = txt.replace(/\u00A0/g," ").replace(/\s+/g," ");
+  const N = re => { const m = t.match(re); return m ? +String(m[1]).replace(/,/g,"") : 0; };
+  const o = {
+    no:    (t.match(/เลขที่สมาชิก\s*:?\s*(\d{1,3})/)||[])[1] || "",
+    name:  ((t.match(/ชื่อ\s*:?\s*(?:คุณ|นาย|นาง|นางสาว)?\s*([^\d]{2,45}?)\s*(?:จำนวนงวด|อัตรา)/)||[])[1]||"").trim(),
+    terms: N(/จำนวนงวด\s*:?\s*([\d,]+)/),
+    rate:  N(/อัตราดอกเบี้ย\s*\/?\s*เดือน\s*:?\s*([\d.]+)/),
+    base:  N(/ฝาก(?:เงิน)?หุ้นประจำ\s*:?\s*([\d,]+(?:\.\d+)?)/),
+    exPct: N(/ฝากหุ้นเพิ่มเติม\s*\(\s*([\d.]+)\s*%/),
+    exAmt: N(/ฝากหุ้นเพิ่มเติม\s*\([^)]*\)\s*:?\s*([\d,]+(?:\.\d+)?)/),
+    pi:    N(/ยอดชำระ\s*\(\s*เงินต้น\s*\+\s*ดอกเบี้ย\s*\)\s*:?\s*([\d,]+(?:\.\d+)?)/),
+    inst:  N(/รวมยอดชำระต่อเดือน\s*:?\s*([\d,]+(?:\.\d+)?)/),
+    amt:   N(/วงเงินกู้สูงสุด\s*:?\s*([\d,]+(?:\.\d+)?)/),
+    totInt:N(/ดอกเบี้ยรวมทั้งหมด\s*:?\s*([\d,]+(?:\.\d+)?)/),
+    rows: []
   };
+  // ตารางรายงวด: งวด | ยอดส่ง | เงินต้น | ดอกเบี้ย | ฝากหุ้น | ฝากเพิ่ม | คงเหลือ
+  const rx = /(\d{1,2})\s+([\d,]+\.\d{2})\s+([\d,]+\.\d{2})\s+([\d,]+(?:\.\d{1,2})?)\s+([\d,]+(?:\.\d{1,2})?)\s+([\d,]+\.\d{2})\s+([\d,]+(?:\.\d{1,2})?)/g;
+  const f = x => +String(x).replace(/,/g,"");
+  let m;
+  while((m = rx.exec(t))){
+    const r = {t:+m[1], pay:f(m[2]), pri:f(m[3]), int:f(m[4]), base:f(m[5]), ex:f(m[6]), bal:f(m[7])};
+    // กันแถวมั่ว: ยอดส่งต้องตรงกับที่หัวตารางบอก
+    if(!o.inst || Math.abs(r.pay - o.inst) <= 1) o.rows.push(r);
+  }
+  o.ok = !!(o.inst && o.amt && o.terms);
+  return o;
+}
+
+// หาว่าผ่อนไปแล้วกี่งวด จากยอดยกมาที่มีอยู่ในระบบ
+function findT0(g, open){
+  if(!g.rows.length || !open) return null;
+  let best = null;
+  g.rows.forEach(r=>{ const d = Math.abs(r.bal - open);
+    if(d <= 2 && (!best || d < best.d)) best = {t:r.t, d, bal:r.bal}; });
+  return best;
 }
 
 function attachPanel(cid){
   const c = S.contracts.find(x=>x.id===cid); if(!c) return;
   const m = DB.members.find(z=>z.no===c.no) || {name:""};
   const g = S.pdfg && S.pdfg[cid];
+  const hit = g ? findT0(g, c.open) : null;
+  const warn = g && g.no && g.no !== c.no;
+
   $("atbox").innerHTML = `<div class="card" style="border-left:3px solid var(--gold)">
-    <div class="eyebrow">แนบตารางผ่อนเดิมของ ${esc(m.name)} — สัญญา${c.prod}
+    <div class="eyebrow">ตารางผ่อนเดิมของ <span class="no">${c.no}</span>${esc(m.name)} — สัญญา${c.prod}
       <button class="ghost sm" id="at_x" style="margin-left:auto">ปิด</button></div>
-    <p class="hint" style="margin-bottom:10px">สัญญาย้อนหลังต้องใช้<b>ตัวเลขเดิมที่แจ้งสมาชิกไปแล้ว</b> ไม่ใช่สูตรใหม่ปี 2569 —
-      แนบ PDF ตารางเดิมไว้เป็นหลักฐานว่าตัวเลขมาจากไหน · ไฟล์อ่านในเครื่องคุณ ไม่ได้อัปโหลดไปไหน</p>
+    <p class="hint" style="margin-bottom:10px"><b>สัญญาย้อนหลังต้องใช้ตัวเลขเดิมที่แจ้งสมาชิกไปแล้ว ไม่ใช่สูตรใหม่ปี 2569</b>
+      — แนบ PDF ตารางเดิมไว้เป็นหลักฐานว่าตัวเลขมาจากไหน · ไฟล์อ่านในเครื่องคุณ ไม่ได้อัปโหลดไปไหน</p>
     <div class="bar">
       <input type="file" id="at_f" accept="application/pdf" hidden>
-      <button id="at_b">เลือกไฟล์ PDF ตารางเดิม</button>
-      <span class="msg" id="at_m">${c.ref?`แนบไว้แล้ว: <b>${esc(c.ref.file)}</b> (${c.ref.d})`:""}</span>
+      <button id="at_b">${c.ref?"เปลี่ยนไฟล์ PDF":"เลือกไฟล์ PDF ตารางเดิม"}</button>
+      <span class="msg" id="at_m">${c.ref?`แนบไว้แล้ว: <b>${esc(c.ref.file)}</b> · ${c.ref.d}`:""}</span>
     </div>
-    ${g?`<div class="keybox" style="margin-top:11px">
-      <b>ตัวเลขที่พบในไฟล์ — โปรดตรวจแล้วกดยืนยัน ระบบจะไม่ใส่ให้เอง</b>
-      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(110px,1fr));margin-top:9px">
-        <div><label>งวดละ</label><input type="number" step="0.01" id="at_inst" value="${g.inst?g.inst.v:""}"></div>
-        <div><label>วงเงิน</label><input type="number" step="0.01" id="at_amt" value="${g.amt||""}"></div>
-        <div><label>จำนวนงวด</label><input type="number" id="at_terms" value="${g.terms||""}"></div>
+
+    ${g ? (g.ok ? `
+    ${warn?`<p class="msg bad" style="margin-top:9px">⚠ ไฟล์นี้เป็นของสมาชิก <b>${g.no} ${esc(g.name)}</b>
+      แต่กำลังแนบเข้าสัญญาของ <b>${c.no} ${esc(m.name)}</b> — โปรดตรวจว่าเลือกไฟล์ถูกคน</p>`:""}
+    <div class="keybox" style="margin-top:11px">
+      <b>อ่านจากไฟล์ได้ครบ — ตรวจแล้วกดยืนยัน ระบบจะไม่ใส่ให้เอง</b>
+      <table style="margin-top:8px"><tbody>
+        <tr><td class="l">สมาชิกในไฟล์</td><td class="l"><b>${g.no} ${esc(g.name)}</b></td>
+            <td class="l">อัตราดอกเบี้ย</td><td class="amt">${g.rate}% / เดือน</td></tr>
+        <tr><td class="l">วงเงินกู้</td><td class="amt"><b>${B(g.amt)}</b></td>
+            <td class="l">จำนวนงวด</td><td class="amt"><b>${g.terms}</b> งวด</td></tr>
+        <tr><td class="l">ยอดส่งต่อเดือน</td><td class="amt"><b>${B(g.inst)}</b></td>
+            <td class="l">เงินต้น+ดอกเบี้ย</td><td class="amt">${B(g.pi)}</td></tr>
+        <tr><td class="l">ฝากหุ้นประจำ</td><td class="amt"><b>${B(g.base)}</b></td>
+            <td class="l">ฝากหุ้นเพิ่ม (${g.exPct}%)</td><td class="amt"><b>${B(g.exAmt)}</b> · คงที่ทุกงวด</td></tr>
+      </tbody></table>
+      <p class="hint" style="margin-top:7px">ตรวจ: ${B(g.pi)} + ${B(g.base)} + ${B(g.exAmt)} =
+        <b>${B(g.pi+g.base+g.exAmt)}</b> ${Math.abs(g.pi+g.base+g.exAmt-g.inst)<=0.02?"✓ ตรงกับยอดส่ง":"⚠ ไม่ตรงกับยอดส่ง "+B(g.inst)}
+        · อ่านตารางได้ ${g.rows.length} / ${g.terms} งวด</p>
+
+      ${hit ? `<p class="msg ok" style="margin-top:8px">พบว่ายอดยกมาในระบบ <b>${B(c.open)}</b>
+        ตรงกับยอดคงเหลือหลัง<b>งวดที่ ${hit.t}</b> ในตาราง (${B(hit.bal)})
+        → <b>ผ่อนไปแล้ว ${hit.t} งวด</b> เหลืออีก ${g.terms-hit.t} งวด</p>`
+      : (c.open ? `<p class="msg bad" style="margin-top:8px">⚠ ยอดยกมาในระบบ <b>${B(c.open)}</b>
+        ไม่ตรงกับยอดคงเหลืองวดไหนเลยในตาราง — อาจเป็นคนละสัญญา หรือมีการชำระพิเศษ โปรดตรวจก่อนยืนยัน</p>`:"")}
+
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(104px,1fr));margin-top:10px">
+        <div><label>วงเงิน</label><input type="number" step="0.01" id="at_amt" value="${g.amt}"></div>
+        <div><label>จำนวนงวด</label><input type="number" id="at_terms" value="${g.terms}"></div>
+        <div><label>งวดละ</label><input type="number" step="0.01" id="at_inst" value="${g.inst}"></div>
+        <div><label>หุ้นประจำ</label><input type="number" step="0.01" id="at_base" value="${g.base}"></div>
+        <div><label>ฝากเพิ่ม/งวด</label><input type="number" step="0.01" id="at_ex" value="${g.exAmt}"></div>
+        <div><label>ชำระแล้ว (งวด)</label><input type="number" id="at_t0" value="${hit?hit.t:(c.t0||0)}"></div>
         <div><label>&nbsp;</label><button id="at_ok">ยืนยัน ใส่ลงสัญญา</button></div>
       </div>
-      <p class="hint" style="margin-top:8px">
-        ${g.inst?`ยอด <b>${B(g.inst.v)}</b> ปรากฏในไฟล์ <b>${g.inst.n} ครั้ง</b> — น่าจะเป็นยอดผ่อนต่องวด`:"ไม่พบยอดที่ซ้ำพอจะเดาได้"}
-        ${g.alts.length?`<br>ยอดอื่นที่ซ้ำ: ${g.alts.map(a=>`<b>${B(a.v)}</b> (${a.n} ครั้ง)`).join(" · ")}`:""}
-        <br>พบตัวเลขทั้งหมด ${g.count} ตัว · <b>ระบบเดาจากความถี่เท่านั้น ถ้าไม่ตรงให้พิมพ์ทับได้เลย</b></p>
-    </div>`:""}
+      <p class="hint" style="margin-top:7px">กดยืนยันแล้วระบบจะตั้ง <b>วิธีคิดหุ้น = ตารางเดิม 2568</b> ให้อัตโนมัติ
+        (ฝากเพิ่มคงที่ ${B(g.exAmt)} ทุกงวด ตามที่แจ้งสมาชิกไปแล้ว) <b>ไม่ใช้สูตรขั้นบันไดปี 2569</b></p>
+    </div>` : `<p class="msg bad" style="margin-top:9px">อ่านไฟล์ได้ แต่หาหัวข้อที่ต้องการไม่เจอ —
+      ไฟล์นี้อาจเป็นคนละรูปแบบ · ที่หาไม่เจอ: ${[!g.inst&&"รวมยอดชำระต่อเดือน",!g.amt&&"วงเงินกู้สูงสุด",!g.terms&&"จำนวนงวด"].filter(Boolean).join(" · ")}</p>`)
+    : ""}
   </div>`;
+
   $("at_x").onclick = () => { $("atbox").innerHTML = ""; };
   $("at_b").onclick = () => $("at_f").click();
   $("at_f").onchange = async e => {
     const f = e.target.files[0]; if(!f) return;
     if(typeof pdfjsLib === "undefined"){ $("at_m").className="msg bad";
-      $("at_m").textContent="โหลดตัวอ่าน PDF ไม่ได้ (ไม่มีเน็ต?)"; return; }
+      $("at_m").textContent="โหลดตัวอ่าน PDF ไม่ได้ — ต้องต่อเน็ตครั้งแรก"; return; }
     pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-    $("at_m").className="msg"; $("at_m").textContent = "กำลังอ่าน…";
+    $("at_m").className="msg"; $("at_m").textContent = "กำลังอ่าน " + f.name + " …";
     try{
       const txt = await pdfText(await f.arrayBuffer());
       S.pdfg = S.pdfg || {}; S.pdfg[cid] = pdfGuess(txt);
-      c.ref = {file:f.name, d:new Date().toISOString().slice(0,10), by:"แนบจากไฟล์"};
+      c.ref = {file:f.name, d:new Date().toISOString().slice(0,10)};
       attachPanel(cid); save();
     }catch(err){ $("at_m").className="msg bad"; $("at_m").textContent = "อ่านไม่สำเร็จ: " + err.message; }
   };
   if($("at_ok")) $("at_ok").onclick = () => {
-    c.inst  = +$("at_inst").value||0;
-    c.amt   = +$("at_amt").value||c.amt;
-    c.terms = +$("at_terms").value||c.terms;
+    c.amt    = +$("at_amt").value||0;
+    c.terms  = +$("at_terms").value||0;
+    c.inst   = +$("at_inst").value||0;
+    c.shareM = +$("at_base").value||0;
+    c.exFix  = +$("at_ex").value||0;
+    c.t0     = +$("at_t0").value||0;
+    c.mode   = "old";                       // ตารางเดิม 2568 — ฝากเพิ่มคงที่
     $("atbox").innerHTML = ""; all();
   };
 }
