@@ -781,11 +781,17 @@ function applyBackup(j){
   if(j.contracts) S.contracts = j.contracts;
   if(j.tx)        S.tx        = j.tx;
   ["profile","assign","per","rule","cut","pdfg"].forEach(k=>{ if(j[k]!==undefined) S[k]=j[k]; });
+  if(j.board && j.board.list && j.board.list.length){
+    BOARD.list = j.board.list;
+    if(j.board.year) BOARD.year = j.board.year;
+    if(j.board.meet) BOARD.meet = j.board.meet;
+  }
 }
 
 function pack(){ return {members:DB.members, anames:DB.anames, wd:DB.wd,
   contracts:S.contracts, tx:S.tx, acct:S.acct, assign:S.assign,
-  profile:S.profile, per:S.per, rule:S.rule, cut:S.cut, pdfg:S.pdfg}; }
+  profile:S.profile, per:S.per, rule:S.rule, cut:S.cut, pdfg:S.pdfg,
+  board:{list:BOARD.list, year:BOARD.year, meet:BOARD.meet}}; }
 async function doSave(){
   if(_saving){ _again = true; return; }
   _saving = true; setStatus("กำลังบันทึกขึ้น Google Sheets…");
@@ -931,6 +937,7 @@ function drawWarn(){
 /* ---------- หนังสือเตือน ---------- */
 function warnHTML(c, kind, no, d, days){
   const m = DB.members.find(z=>z.no===c.no)||{name:""}, x = runContract(c), P = PROD[c.prod];
+
   const gs = [c.g1,c.g2].filter(Boolean).slice(0,P.guar).map(g=>DB.members.find(z=>z.no===g)||{no:g,name:""});
   const arr = x.rows.filter(w=>!w.pre && w.short>0.005 && !w.relief);
   const totShort = +arr.reduce((s,w)=>s+w.short,0).toFixed(2);
@@ -971,7 +978,12 @@ function warnHTML(c, kind, no, d, days){
       : "แจ้งเตือนการค้างชำระหนี้ตามสัญญาเงินกู้"}</p>
     <p><b>เรียน</b> &nbsp; ${esc(who.name)} ${who.no?`(สมาชิกเลขที่ ${who.no})`:""}
       ${kind==="guar"?"&nbsp;— ในฐานะผู้ค้ำประกัน":""}</p>
-    <p>${wp.addr?`ที่อยู่ ${esc(wp.addr)}`:""}</p>
+    <p>${wp.addr?`ที่อยู่ ${esc(wp.addr)}`:'<b style="color:#B3261E">ไม่มีที่อยู่ในระบบ — กรอกที่แท็บ 8 ก่อนส่ง</b>'}</p>
+    ${wp.addr && wp.addrSrc ? `<p class="kh" style="color:#B3261E;border:1px solid #B3261E;padding:4px 7px;margin:0 0 6px">
+      ⚠ <b>ที่อยู่นี้ยังไม่ได้ยืนยันกับเจ้าตัว</b> (${esc(wp.addrSrc)}) —
+      ส่งผิดที่อยู่ ผู้รับอ้างได้ว่าไม่เคยได้รับ ทำให้ขั้นตอนตามสัญญาข้อ 3 เสียทั้งกระบวน ·
+      ควรตรวจก่อนส่ง หรือส่ง<b>ไปรษณีย์ลงทะเบียนตอบรับ</b> แล้วเก็บใบตอบรับไว้ ·
+      <i>เมื่อยืนยันแล้วให้ลบข้อความ “ที่มาของที่อยู่” ในแท็บ 8 บรรทัดนี้จะหายไปเอง</i></p>` : ""}
     <p><b>อ้างถึง</b> &nbsp; สัญญาเงินกู้เลขที่ <b>${esc(c.code)||"…………"}</b> ลงวันที่ ${thDate(c.d)}
       ${kind==="guar"?`· สัญญาค้ำประกันเลขที่ ผู้ค้ำ-${gs.indexOf(who)+1}- ${esc(c.code)||"…………"}`:""}
       · ${AGREE}</p>
@@ -3661,7 +3673,13 @@ async function boot(){
       const r = JSON.parse(await gas("getData"));
       DB = Object.assign({}, EMPTY, r.db||{});
       S  = Object.assign(freshS(), r.state||{});
-      setStatus("โหลดจาก Google Sheets แล้ว · " + DB.members.length + " สมาชิก");
+      if(r.board && r.board.list && r.board.list.length){
+        BOARD.list = r.board.list;
+        if(r.board.year) BOARD.year = r.board.year;
+        if(r.board.meet) BOARD.meet = r.board.meet;
+      }
+      setStatus("โหลดจาก Google Sheets แล้ว · " + DB.members.length + " สมาชิก"
+        + (r.user ? " · " + r.user : ""));
     }catch(e){
       DB = {...EMPTY}; S = freshS();
       setStatus("⚠ อ่าน Google Sheets ไม่ได้: " + (e.message||e));
