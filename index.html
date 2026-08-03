@@ -360,7 +360,7 @@ th.svcol{background:#FFF4D6!important}
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.08.03-14</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.08.03-15</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
@@ -413,6 +413,21 @@ const PROD = {
               note:"ฝากหุ้นอย่างเดียว — ไม่มีหนี้ ไม่มีดอกเบี้ย ไม่ต้องมีผู้ค้ำ ถอนคืนได้ตามข้อ 7"},
 };
 const NODEBT = p => PROD[p] && PROD[p].method === "none";
+
+/* ---- เพดานทุนเรือนหุ้น 60,000 -----------------------------------------
+   หุ้นสะสมของสมาชิก = ยกมา + ที่ฝากมาแล้วในปีนี้
+   ครบ 60,000 แล้วยังฝากต่อได้ แต่ส่วนเกินเรียกว่า «ฝากเพิ่มพิเศษ» แยกบัญชี */
+const SHARE_CAP = 60000;
+function shareTotal(no){
+  const m = DB.members.find(z=>z.no===no);
+  let t = +(m && m.share) || 0;                       // ยกมา 1/69
+  S.contracts.filter(c=>c.no===no).forEach(c=>{ t += +c.open||0; });
+  return +t.toFixed(2);
+}
+function capInfo(no){
+  const now = shareTotal(no), left = +(SHARE_CAP - now).toFixed(2);
+  return {now, left: left>0?left:0, full: now >= SHARE_CAP - 0.005};
+}
 const B  = n => (+n||0).toLocaleString("th-TH",{minimumFractionDigits:2,maximumFractionDigits:2});
 const B0 = n => (+n||0).toLocaleString("th-TH",{maximumFractionDigits:0});
 const $  = id => document.getElementById(id);
@@ -1667,19 +1682,37 @@ function shPanel(cid){
     <div class="eyebrow">หุ้นฝากของ <span class="no">${c.no}</span>${esc(m.name)} — สัญญา ${esc(c.code)||c.prod}
       <button class="ghost sm" id="sh_x" style="margin-left:auto">ปิด</button></div>
 
-    ${!pi ? `<p class="msg bad">ยังไม่รู้ “เงินต้น+ดอกเบี้ยต่องวด” ของสัญญานี้ — แนบ PDF ตารางเดิมก่อน
+    ${(!pi && !NODEBT(c.prod)) ? `<p class="msg bad">ยังไม่รู้ “เงินต้น+ดอกเบี้ยต่องวด” ของสัญญานี้ — แนบ PDF ตารางเดิมก่อน
       หรือกรอกงวดละ+หุ้นประจำ+ฝากเพิ่ม ในทะเบียน</p>` : `
+
+    ${(()=>{ const ci = capInfo(c.no);
+      return `<div class="keybox" style="border-left:3px solid ${ci.full?"var(--accent)":"var(--brand2)"};margin-bottom:11px">
+      <b>ทุนเรือนหุ้นสะสมของ ${esc(m.name)} — ${B(ci.now)} บาท</b>
+      <div style="margin-top:6px;background:var(--card);border-radius:999px;height:9px;overflow:hidden;border:1px solid var(--rule)">
+        <div style="height:100%;width:${Math.min(100, ci.now/SHARE_CAP*100).toFixed(1)}%;
+          background:${ci.full?"var(--accent)":"var(--brand2)"}"></div></div>
+      <p class="hint" style="margin:6px 0 0">${ci.full
+        ? `<b style="color:var(--accent-ink)">ครบเพดาน ${B0(SHARE_CAP)} แล้ว</b> — ฝากเพิ่มได้ ส่วนที่เกินเพดานถือเป็น
+           <b>«ฝากเพิ่มพิเศษ»</b> ใช้ช่องสีทองด้านล่าง`
+        : `ยังฝากได้อีก <b>${B(ci.left)}</b> บาท จึงจะครบเพดาน ${B0(SHARE_CAP)} ·
+           อยากเพิ่มยอดฝากรายเดือนให้แก้ช่อง «หุ้นประจำ/งวด» ด้านล่าง`}</p></div>`; })()}
     <div class="keybox" style="margin-bottom:11px">
-      <b>หนี้กับเงินฝาก เป็นคนละก้อน</b>
+      <b>${NODEBT(c.prod) ? "สมาชิกรายนี้ไม่มีหนี้ — เป็นเงินออมล้วน ๆ" : "หนี้กับเงินฝาก เป็นคนละก้อน"}</b>
       <table style="margin-top:7px"><tbody>
+        ${NODEBT(c.prod) ? "" : `
         <tr><td class="l">เงินต้น + ดอกเบี้ย / งวด</td><td class="amt"><b>${B(pi)}</b></td>
-            <td class="l hint">แกนของหนี้ — <b>ล็อกไว้ ไม่เปลี่ยนตลอดสัญญา</b> ต่อให้เพิ่มหุ้นก็ไม่ขยับ</td></tr>
-        <tr><td class="l">หุ้นประจำ + หุ้นเพิ่ม (บังคับ)</td><td class="amt">${B(nowRow.base+nowRow.extra)}</td>
-            <td class="l hint">ประจำ ${B(nowRow.base)} + เพิ่ม ${B(nowRow.extra)} — เงินของผู้กู้เอง แต่<b>บังคับตามสัญญา</b> มาจากสูตรวงเงินกู้</td></tr>
-        <tr><td class="l"><b>หุ้นเพิ่ม 2569</b> (สมัครใจ)</td><td class="amt svcol"><b>${B(nowRow.sv)}</b></td>
-            <td class="l hint"><b>ไม่เกี่ยวกับสูตรกู้เลย</b> — ผู้กู้ขอออมเพิ่มเอง · ไม่ฝากงวดไหนก็<b>ไม่ผิดนัด</b> · ยกเลิกได้ทุกเมื่อ · ผู้ค้ำไม่รับผิด</td></tr>
+            <td class="l hint">แกนของหนี้ — <b>ล็อกไว้ ไม่เปลี่ยนตลอดสัญญา</b> ต่อให้เพิ่มหุ้นก็ไม่ขยับ</td></tr>`}
+        <tr><td class="l">${NODEBT(c.prod)?"หุ้นประจำ / งวด":"หุ้นประจำ + หุ้นเพิ่ม (บังคับ)"}</td>
+            <td class="amt">${B(nowRow.base+nowRow.extra)}</td>
+            <td class="l hint">${NODEBT(c.prod)
+              ? "ยอดฝากประจำเดือน — ปรับขึ้นลงได้ตามที่สมาชิกต้องการ"
+              : `ประจำ ${B(nowRow.base)} + เพิ่ม ${B(nowRow.extra)} — เงินของผู้กู้เอง แต่<b>บังคับตามสัญญา</b> มาจากสูตรวงเงินกู้`}</td></tr>
+        <tr><td class="l"><b>ฝากเพิ่มพิเศษ 2569</b> (สมัครใจ)</td><td class="amt svcol"><b>${B(nowRow.sv)}</b></td>
+            <td class="l hint">${NODEBT(c.prod)
+              ? "เงินที่ฝากเพิ่มนอกเหนือยอดประจำ — <b>เลิกฝากเมื่อไหร่ก็ได้</b> ไม่มีผลผูกพัน"
+              : "<b>ไม่เกี่ยวกับสูตรกู้เลย</b> — ผู้กู้ขอออมเพิ่มเอง · ไม่ฝากงวดไหนก็<b>ไม่ผิดนัด</b> · ยกเลิกได้ทุกเมื่อ · ผู้ค้ำไม่รับผิด"}</td></tr>
         <tr class="tot"><td class="l">ยอดที่ต้องโอน/เดือน ตอนนี้</td><td class="amt"><b>${B(pi+nowRow.base+nowRow.extra+nowRow.sv)}</b></td>
-            <td class="l hint">เปลี่ยนตามหุ้นฝากเท่านั้น หนี้ไม่ขยับ</td></tr>
+            <td class="l hint">${NODEBT(c.prod)?"เป็นเงินออมทั้งจำนวน":"เปลี่ยนตามหุ้นฝากเท่านั้น หนี้ไม่ขยับ"}</td></tr>
       </tbody></table>
     </div>
 
@@ -1701,17 +1734,24 @@ function shPanel(cid){
     <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(112px,1fr))">
       <div><label>มีผลตั้งแต่งวด</label><select id="sh_from">
         ${PERIODS.map(p=>`<option value="${p}">${PLBL[p]}</option>`).join("")}</select></div>
-      <div><label>หุ้นประจำ/งวด</label><input type="number" step="0.01" id="sh_base" value="${nowRow.base}"></div>
-      <div><label>หุ้นเพิ่ม/งวด (สูตร)</label><input type="number" step="0.01" id="sh_ex" value="${nowRow.extra}"></div>
-      <div><label style="color:#8A6D1F"><b>หุ้นเพิ่ม 2569</b> (สมัครใจ)</label>
-        <input type="number" step="0.01" id="sh_sv" value="${nowRow.sv}" style="border-color:var(--gold);background:#FFFBEF"></div>
+      <div><label>หุ้นประจำ/งวด${NODEBT(c.prod)?"":' <span class="hint">(บังคับตามสัญญา)</span>'}</label>
+        <input type="number" step="0.01" id="sh_base" value="${nowRow.base}"></div>
+      <div${NODEBT(c.prod)?' style="display:none"':""}><label>หุ้นเพิ่ม/งวด (สูตร)</label>
+        <input type="number" step="0.01" id="sh_ex" value="${nowRow.extra}"></div>
+      <div><label style="color:var(--accent-ink)"><b>ฝากเพิ่มพิเศษ</b> (สมัครใจ)</label>
+        <input type="number" step="0.01" id="sh_sv" value="${nowRow.sv}" style="border-color:var(--accent);background:#FFFBEF"></div>
       <div><label>เลขที่บันทึกแนบท้าย</label><input id="sh_memo" placeholder="บันทึกแนบท้าย 1/2569"></div>
       <div><label>&nbsp;</label><button id="sh_add">เพิ่ม &amp; พิมพ์บันทึก</button></div>
     </div>
-    <p class="hint" style="margin-top:8px"><b>ไม่ต้องออกสัญญาใหม่ ไม่ต้องให้ผู้ค้ำเซ็นใหม่</b> —
+    <p class="hint" style="margin-top:8px">${NODEBT(c.prod)
+      ? `<b>สมาชิกรายนี้ไม่มีหนี้</b> — จะเพิ่มหรือลดยอดฝากเมื่อไหร่ก็ได้ ไม่มีข้อผูกพัน ·
+         ${capInfo(c.no).full
+           ? `ทุนเรือนหุ้นครบเพดาน ${B0(SHARE_CAP)} แล้ว เงินที่ฝากต่อจากนี้ให้ลงช่อง <b>«ฝากเพิ่มพิเศษ»</b> เพื่อแยกบัญชีให้ชัด`
+           : `ยังไม่ครบเพดาน — <b>เพิ่มยอดฝากประจำ</b> ที่ช่อง «หุ้นประจำ/งวด» ได้เลย`}`
+      : `<b>ไม่ต้องออกสัญญาใหม่ ไม่ต้องให้ผู้ค้ำเซ็นใหม่</b> —
       การฝากหุ้นเพิ่มไม่เพิ่มหนี้ ไม่เพิ่มภาระผู้ค้ำแม้แต่บาทเดียว
       · ออกสัญญาใหม่โดยผู้ค้ำไม่ได้เซ็น อาจถูกอ้างว่าสัญญาเดิมระงับ แล้ว<b>ผู้ค้ำหลุดจากภาระ</b> (ปพพ. ม.700)
-      · ผู้กู้ยกเลิกการฝากเพิ่มได้ทุกเมื่อ — ถ้าบังคับ มันจะกลายเป็นหนี้ ไม่ฝากแล้วผิดนัด ซึ่งผิดเจตนา</p>
+      · ผู้กู้ยกเลิกการฝากเพิ่มได้ทุกเมื่อ — ถ้าบังคับ มันจะกลายเป็นหนี้ ไม่ฝากแล้วผิดนัด ซึ่งผิดเจตนา`}</p>
     <div id="shdoc"></div>`}
   </div>`;
 
