@@ -360,7 +360,7 @@ th.svcol{background:#FFF4D6!important}
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.08.03-16</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.08.03-17</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
@@ -1168,7 +1168,10 @@ function drawT1(){
         <td><input type="number" data-e="${c.id}:t0" value="${c.t0||0}" title="งวดที่ชำระไปแล้วก่อน ม.ค.69" style="width:48px;padding:3px 5px"></td>
         <td class="amt" style="font-weight:600">${NODEBT(c.prod)
           ? `${B(c.open)} <span class="hint" style="font-size:9.5px">หุ้น</span>`
-          : noTable(c) ? '<span class="pill red" title="คงเหลือต้องอ่านจากตารางที่แนบ — ยังไม่ได้แนบ">ยังไม่แนบตาราง</span>'
+          : noTable(c) ? `<span class="pill red" data-fixrow="${c.id}" style="cursor:pointer"
+              title="${S.pdfg&&S.pdfg[c.id]&&S.pdfg[c.id].rows&&S.pdfg[c.id].rows.length
+                ? "อ่านไฟล์ไว้แล้ว "+S.pdfg[c.id].rows.length+" งวด — คลิกเพื่อล็อกเป็นตัวจริงทันที"
+                : "ยังไม่ได้แนบตาราง — คลิกเพื่อสร้างตารางจากตัวเลขในทะเบียน"}">ยังไม่แนบตาราง ⟳</span>`
           : `${B(r.bal)}${lockedRows(c)?` <span class="hint" style="font-size:9.5px" title="อ่านจากตาราง PDF บรรทัดงวดที่ ${+c.t0||0}">งวด ${+c.t0||0}</span>`:""}`}</td>
         <td class="l"><span class="pill ${st}">${r.status}</span></td>
         <td><button class="del" data-del="${c.id}">×</button></td></tr>`;
@@ -1265,6 +1268,21 @@ function drawT1(){
   document.querySelectorAll("[data-sh]").forEach(b => b.onclick = () => shPanel(b.dataset.sh));
   document.querySelectorAll("[data-rw]").forEach(b => b.onclick = () => rowPanel(b.dataset.rw));
   document.querySelectorAll("[data-st]").forEach(b => b.onclick = () => setPanel(b.dataset.st));
+  document.querySelectorAll("[data-fixrow]").forEach(b => b.onclick = () => {
+    const cc = S.contracts.find(x=>x.id===b.dataset.fixrow); if(!cc) return;
+    const g = S.pdfg && S.pdfg[cc.id];
+    if(g && g.rows && g.rows.length){          // มีไฟล์ที่อ่านไว้แล้ว → ล็อกเลย
+      if(!confirm("ล็อกตารางจากไฟล์ที่แนบไว้ "+g.rows.length+" งวด เป็นตัวจริงเลยไหม?")) return;
+      cc.rows = g.rows.map(r=>({t:+r.t, pri:+r.pri||0, int:+r.int||0,
+                                base:+r.base||0, extra:+r.ex||0, bal:+r.bal||0}));
+      if(!cc.terms) cc.terms = g.terms || cc.rows.length;
+      all(); return;
+    }
+    if(!piOf(cc) || !cc.terms){
+      alert("ยังสร้างตารางไม่ได้ — ต้องกรอก «งวดละ · หุ้นประจำ · หุ้นเพิ่ม · จำนวนงวด» ให้ครบก่อน\n"
+        + "หรือกดปุ่ม «แนบ PDF» เพื่อให้ระบบอ่านจากเอกสารจริง"); return; }
+    rowPanel(cc.id);
+  });
   document.querySelectorAll("[data-pr]").forEach(b => b.onclick = () => {
     S.pick = b.dataset.pr; all();
     document.querySelector('nav b[data-t="5"]').click();
@@ -1454,6 +1472,12 @@ function attachPanel(cid){
     c.t0     = +$("at_t0").value||0;
     c.mode   = "old";                       // ตารางเดิม 2568 — ฝากเพิ่มคงที่
     c.pi     = +(c.inst - c.shareM - c.exFix).toFixed(2);   // แกนหนี้ ล็อกไว้
+
+    // ★ ล็อกตารางจากไฟล์ให้เลย — อ่านได้แล้วก็ใช้เลย ไม่ต้องกดปุ่มซ้ำ
+    if(g && g.rows && g.rows.length){
+      c.rows = g.rows.map(r=>({t:+r.t, pri:+r.pri||0, int:+r.int||0,
+                               base:+r.base||0, extra:+r.ex||0, bal:+r.bal||0}));
+    }
 
     // ★ สะสมเพิ่ม 2569 — บันทึกเป็นบันทึกแนบท้าย ไม่กระทบหนี้
     const sv = +($("at_sv")||{}).value||0;
