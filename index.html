@@ -360,7 +360,7 @@ th.svcol{background:#FFF4D6!important}
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.08.03-13</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.08.03-14</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
@@ -2022,7 +2022,16 @@ function drawT2(){
         if(j.error){ $("aimsg").className="msg bad"; $("aimsg").textContent="AI: "+j.error; return; }
         (j.rows||[]).forEach(x=>all.push({...x, file:f.name}));
         if(j.used) $("aihint") && ($("aihint").placeholder=`ใช้ AI วันนี้ ${j.used}/${j.limit} ครั้ง`);
-      }catch(err){ $("aimsg").className="msg bad"; $("aimsg").textContent="เรียก AI ไม่สำเร็จ: "+err.message; return; }
+      }catch(err){
+        $("aimsg").className="msg bad"; $("aimsg").textContent="เรียก AI ไม่สำเร็จ";
+        if($("aibox")) $("aibox").innerHTML = `<div class="keybox" style="border-left:3px solid var(--danger);margin-top:10px">
+          <b style="color:var(--danger)">เรียก AI ไม่สำเร็จ</b>
+          <p class="hint" style="margin:5px 0 0">${esc(err.message)}</p>
+          <p class="hint" style="margin:6px 0 0"><b>ตรวจตามนี้:</b><br>
+            1. ใส่ <code>AI_KEY</code> ใน Code.gs แล้วหรือยัง<br>
+            2. หลังแก้ Code.gs ต้อง <b>Deploy → Manage deployments → ✏️ → New version → Deploy</b> ทุกครั้ง<br>
+            3. หน้า Sheet → เมนู <b>กบข.นข. → เช็คว่าระบบพร้อมใช้หรือยัง</b> ดูว่าขึ้น «AI พร้อมใช้» ไหม</p></div>`;
+        return; }
     }
     if(!all.length){ $("aimsg").className="msg bad"; $("aimsg").textContent="AI อ่านไม่พบรายการเงินเข้า"; return; }
     $("aimsg").className="msg ok"; $("aimsg").textContent=`AI อ่านได้ ${all.length} รายการ — ตรวจแล้วกดบันทึก`;
@@ -4073,7 +4082,17 @@ function gas(fn, ...a){
   if(REMOTE) return fetch(REMOTE.url, {
       method: "POST", headers: {"Content-Type":"text/plain;charset=utf-8"},
       body: JSON.stringify({token: REMOTE.token, action: fn, payload: a[0]})
-    }).then(r=>r.json()).then(r=>{
+    }).then(async r=>{
+      const txt = await r.text();
+      try{ return JSON.parse(txt); }
+      catch(e){
+        // Apps Script ตอบเป็นหน้า HTML = ยังไม่ได้ Deploy เวอร์ชันใหม่ หรือสิทธิ์ไม่ถูก
+        throw new Error(/DOCTYPE|<html/i.test(txt)
+          ? "Apps Script ตอบกลับเป็นหน้าเว็บ ไม่ใช่ข้อมูล — มักเกิดจากยังไม่ได้ Deploy เวอร์ชันใหม่หลังแก้ Code.gs "
+            + "(Deploy → Manage deployments → ✏️ → New version → Deploy) หรือ Who has access ไม่ได้ตั้งเป็น Anyone"
+          : "เซิร์ฟเวอร์ตอบกลับผิดรูปแบบ: " + txt.slice(0,120));
+      }
+    }).then(r=>{
       if(r && r.error) throw new Error(r.error);
       return fn==="getData" ? JSON.stringify(r) : r;   // ให้รูปแบบตรงกับ google.script.run
     });
