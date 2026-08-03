@@ -360,7 +360,7 @@ th.svcol{background:#FFF4D6!important}
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.08.03-11</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.08.03-13</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
@@ -1818,6 +1818,21 @@ function drawT2(){
       รายการซ้ำจะไม่ถูกนับซ้ำ · ไฟล์ไม่ได้ถูกอัปโหลดไปไหน อ่านในเครื่องคุณเท่านั้น</p>
   </div>
 
+  <div class="card" style="border-left:4px solid var(--brand2)">
+    <div class="eyebrow">ให้ AI อ่านให้ — สำหรับรูปภาพ หรือ PDF ที่อ่านเองไม่ออก</div>
+    <div class="bar">
+      <input type="file" id="aiin" accept="image/*,application/pdf" multiple hidden>
+      <button id="aibtn">เลือกรูปภาพ / PDF ให้ AI อ่าน</button>
+      <input id="aihint" placeholder="บอก AI เพิ่มเติม (ไม่บังคับ) เช่น «อ่านเฉพาะเดือน ก.ค.»" style="max-width:340px">
+      <span class="msg" id="aimsg"></span>
+    </div>
+    <p class="hint" style="margin-top:8px">ใช้เมื่อ<b>สลิปเป็นรูปถ่าย/จอแคป</b> หรือ PDF ที่ระบบอ่านแล้วเพี้ยน ·
+      AI จะอ่านทุกบรรทัดพร้อม<b>จับคู่ชื่อผู้โอนกับสมาชิกให้</b> ·
+      <b style="color:var(--brand)">ผลลัพธ์ให้คุณตรวจก่อนเสมอ ยังไม่บันทึกทันที</b> ·
+      ไฟล์ถูกส่งผ่าน Apps Script ของกองทุนเอง กุญแจไม่โผล่ในหน้าเว็บ</p>
+    <div id="aibox"></div>
+  </div>
+
   <div class="card">
     <div class="eyebrow">บันทึกการชำระด้วยมือ — กรณีที่สเตทเมนท์ยังไม่ออก</div>
     <p class="hint" style="margin-bottom:10px">สเตทเมนท์ออกสิ้นเดือน แต่กำหนดชำระคือวันที่ 5 —
@@ -1964,12 +1979,7 @@ function drawT2(){
   $("cut").onchange = e => { S.cut = +e.target.value; all(); };
   document.querySelectorAll("[data-map]").forEach(s => s.onchange = e => {
     S.acct[e.target.dataset.map] = e.target.value; all(); });
-  if($("matchAll")) $("matchAll").onclick = () => {
-    let n=0; document.querySelectorAll("[data-map]").forEach(sel=>{
-      const a=sel.dataset.map; if(!S.acct[a]){ const g=guessMember(a); if(g){S.acct[a]=g;n++;} }
-    });
-    all();
-  };
+  if($("matchAll")) $("matchAll").onclick = () => { autoMatch(); all(); };
   document.querySelectorAll("[data-as]").forEach(s => s.onchange = e => {
     S.assign[e.target.dataset.as] = e.target.value; all(); });
   const mopts = DB.members.map(m=>`<option value="${m.no}">${m.no} — ${esc(m.name)}</option>`).join("");
@@ -1989,6 +1999,36 @@ function drawT2(){
     $("msg").className="msg ok"; $("msg").textContent=`บันทึกแล้ว ${B(t.m)} บาท วันที่ ${d}`;
     all();
   };
+  /* ---- ให้ AI อ่านสลิป ---- */
+  if($("aibtn")) $("aibtn").onclick = () => $("aiin").click();
+  if($("aiin")) $("aiin").onchange = async e => {
+    const files=[...e.target.files]; if(!files.length) return;
+    e.target.value="";
+    if(!inGAS && !REMOTE){ $("aimsg").className="msg bad";
+      $("aimsg").textContent="ต้องต่อกับ Google Sheets ก่อน — AI ทำงานผ่าน Apps Script"; return; }
+    const b64 = f => new Promise((ok,no)=>{ const r=new FileReader();
+      r.onload=()=>ok(String(r.result).split(",")[1]); r.onerror=()=>no(new Error("อ่านไฟล์ไม่ได้")); r.readAsDataURL(f); });
+    let all=[];
+    for(let i=0;i<files.length;i++){
+      const f=files[i];
+      $("aimsg").className="msg"; $("aimsg").textContent=`AI กำลังอ่าน ${f.name} (${i+1}/${files.length}) …`;
+      try{
+        const r = await gas("ai", JSON.stringify({
+          kind: /pdf/i.test(f.type)?"pdf":"image", mime:f.type||"image/png",
+          data: await b64(f), hint: ($("aihint")&&$("aihint").value)||"",
+          members: DB.members.map(m=>({no:m.no,name:m.name}))
+        }));
+        const j = typeof r==="string"?JSON.parse(r):r;
+        if(j.error){ $("aimsg").className="msg bad"; $("aimsg").textContent="AI: "+j.error; return; }
+        (j.rows||[]).forEach(x=>all.push({...x, file:f.name}));
+        if(j.used) $("aihint") && ($("aihint").placeholder=`ใช้ AI วันนี้ ${j.used}/${j.limit} ครั้ง`);
+      }catch(err){ $("aimsg").className="msg bad"; $("aimsg").textContent="เรียก AI ไม่สำเร็จ: "+err.message; return; }
+    }
+    if(!all.length){ $("aimsg").className="msg bad"; $("aimsg").textContent="AI อ่านไม่พบรายการเงินเข้า"; return; }
+    $("aimsg").className="msg ok"; $("aimsg").textContent=`AI อ่านได้ ${all.length} รายการ — ตรวจแล้วกดบันทึก`;
+    AIROWS = all; drawAI();
+  };
+
   $("pdfbtn").onclick = () => $("pdfin").click();
   $("pdfin").onchange = async e => {
     const fs = [...e.target.files]; if(!fs.length) return;
@@ -2015,14 +2055,15 @@ function drawT2(){
   $("go").onclick = () => {
     const f = parse($("paste").value);
     if(!f.length){ $("msg").className="msg bad"; $("msg").textContent="อ่านไม่พบรายการรับโอน"; return; }
-    const seen = new Set(S.tx.map(txKey)); let add=0, dup=0;
+    const seen = new Set(S.tx.map(txKey)); let add=0, dup=0, named=0;
     f.forEach(x => {
-      if(x.nm && !DB.anames[x.a]) DB.anames[x.a] = x.nm;   // ★ จำชื่อผู้โอน
+      if(x.nm && !DB.anames[x.a]){ DB.anames[x.a] = x.nm; named++; }  // ★ จำชื่อผู้โอน (แม้ tx จะซ้ำ)
       if(seen.has(txKey(x))){dup++;return;} seen.add(txKey(x)); S.tx.push(x); add++;
     });
     const auto = autoMatch();                              // ★ จับคู่อัตโนมัติที่มั่นใจ
     $("msg").className="msg ok";
-    $("msg").textContent=`เพิ่ม ${add} · ซ้ำ ${dup}` + (auto? ` · จับคู่ให้อัตโนมัติ ${auto} บัญชี`:"");
+    $("msg").textContent=`เพิ่ม ${add} · ซ้ำ ${dup}`
+      + (named? ` · อ่านชื่อได้ ${named}`:"") + (auto? ` · จับคู่ให้อัตโนมัติ ${auto} บัญชี`:"");
     all();
   };
 }
@@ -2086,24 +2127,99 @@ const EN2TH = {SARAWUT:"ศราวุธ",PRAERUNG:"แพรรุ้ง",PON
   TADSA:"ทัศนา",HOMD:"หอมดอก",SACH:"สาชิน",PHUKH:"ภู่คล้าย",THONGY:"ทองอยู่",BOONK:"บุญกล้า",
   KAEW:"แก้วกุลธร",CHOMCH:"ชมชื่น",PATTAW:"ปัถวี",WANNAK:"วรรณคำ",SALEEP:"สาลีผล",TRONGJ:"ตรองจิตร"};
 
-/* ★ เดาว่าบัญชีนี้น่าจะเป็นสมาชิกคนไหน — คืนเลขสมาชิก หรือ "" ถ้าเดาไม่ได้ */
+/* ★ ตารางคำอังกฤษในสลิป → เลขสมาชิก (ตรวจนามสกุลตรงแล้ว) */
+const SLIP2NO = {SARAWUT:"001",PIMMASO:"001",KANPHITCHA:"002",KH:"002",PONGSAK:"014",SALEEP:"014",SUWAT:"039",TADSA:"039",PIMWISUT:"041",HOMD:"041",ORNUMA:"011",TRONGJ:"011",NONTAKORN:"044",PIEPK:"044",KANYAVEE:"037",SACH:"037",WUTTHINAN:"009",SEED:"009",WISARAT:"010",PHUKH:"010",PHAI:"023",PRAERUNG:"024",SIRILAK:"032",BUAKO:"032",PANNITA:"007",BOONK:"007",SUPAKANDA:"012",KAEW:"012",SUTAWAN:"019",KONGAI:"019",PAPHITCHAYA:"022",KUMDOK:"022",JITTIPAN:"022",WANWISA:"005",CHOMCH:"005",SUWANNA:"025",PATTAW:"025",WEERA:"026",WANNAK:"026",DUANGRUDEE:"020",POOMIP:"020",DOUNGDUEN:"008",THEERAPON:"031",BUTR:"031",NAMVAN:"017",SAYN:"017",PATTAMON:"006",NGAMYINGY:"006"};
+
+/* ★ เดาว่าบัญชีนี้น่าจะเป็นสมาชิกคนไหน — คืนเลขสมาชิก หรือ "" */
 function guessMember(acct){
   const nm = (DB.anames[acct]||"").trim(); if(!nm) return "";
   const up = nm.toUpperCase();
-  // 1) ชื่อไทยตรง ๆ
+  // 1) คำอังกฤษในสลิป → เลขสมาชิกโดยตรง (แม่นสุด เพราะตรวจนามสกุลแล้ว)
+  for(const wd of up.split(/[^A-Z]+/)){
+    if(wd.length>=4 && SLIP2NO[wd]){
+      const no = SLIP2NO[wd];
+      if(DB.members.some(m=>m.no===no)) return no;
+    }
+  }
+  // 2) ชื่อไทยตรง ๆ
   const byTh = DB.members.find(m => m.name && nm.length>=2 &&
     (m.name.replace(/\s/g,"").includes(nm.replace(/\s/g,"")) ||
      nm.replace(/\s/g,"").includes(m.name.split(" ")[0])));
   if(byTh) return byTh.no;
-  // 2) คำอังกฤษ → คำไทย → หาสมาชิก
+  // 3) คำอังกฤษ → คำไทย → หาสมาชิก
   for(const en in EN2TH){
     if(up.includes(en)){
-      const th = EN2TH[en];
-      const m = DB.members.find(x => x.name && x.name.includes(th));
+      const m = DB.members.find(x => x.name && x.name.includes(EN2TH[en]));
       if(m) return m.no;
     }
   }
   return "";
+}
+
+/* ============ ตารางตรวจผลที่ AI อ่านได้ — ยังไม่บันทึกจนกว่าจะกดยืนยัน ============ */
+let AIROWS = [];
+function drawAI(){
+  const box = $("aibox"); if(!box) return;
+  if(!AIROWS.length){ box.innerHTML=""; return; }
+  const seen = new Set(S.tx.map(txKey));
+  const rows = AIROWS.map((x,i)=>{
+    const dup = seen.has(txKey(x));
+    const m = x.no ? DB.members.find(z=>z.no===x.no) : null;
+    return {...x, i, dup, mname: m?m.name:""};
+  });
+  const nDup = rows.filter(r=>r.dup).length, nNew = rows.length-nDup;
+  const nUnk = rows.filter(r=>!r.dup && !r.no).length;
+  const opts = DB.members.map(m=>`<option value="${m.no}">${m.no} · ${esc(m.name)}</option>`).join("");
+
+  box.innerHTML = `<div style="margin-top:12px">
+    <div class="keybox" style="border-left:3px solid ${nUnk?"var(--accent)":"var(--green)"}">
+      <b>AI อ่านได้ ${rows.length} รายการ</b> — ใหม่ <b>${nNew}</b> · ซ้ำของเดิม <b>${nDup}</b>
+      ${nUnk?` · <b style="color:var(--accent-ink)">จับคู่ไม่ได้ ${nUnk}</b>`:""}
+      <p class="hint" style="margin:5px 0 0">ตรวจให้ครบก่อนกดบันทึก — <b>AI อาจอ่านผิดได้</b> โดยเฉพาะตัวเลขและวันที่ ·
+        รายการซ้ำจะไม่ถูกบันทึกอีก · แถวที่จับคู่ไม่ได้ให้เลือกสมาชิกเอง หรือปล่อยไว้แล้วไปจับทีหลัง</p>
+    </div>
+    <div class="tbl" style="max-height:380px;overflow:auto;margin-top:9px"><table><thead><tr>
+      <th class="l">วันที่</th><th>เวลา</th><th>ยอด</th><th class="l">บัญชี</th>
+      <th class="l">ชื่อในสลิป</th><th class="l">สมาชิก</th><th class="l">ไฟล์</th><th></th>
+    </tr></thead><tbody>
+      ${rows.map(r=>`<tr${r.dup?' style="opacity:.45"':""}>
+        <td class="l">${esc(r.d||"")}</td><td>${esc(r.t||"")}</td>
+        <td class="amt"><b>${B(r.m)}</b></td>
+        <td class="l"><code style="font-family:'IBM Plex Mono',monospace">${esc(r.a||"—")}</code></td>
+        <td class="l" style="white-space:normal;max-width:190px">${esc(r.nm||"")}</td>
+        <td class="l">${r.dup?'<span class="pill">ซ้ำ</span>'
+          :`<select data-ai="${r.i}" style="width:auto;font-size:12px">
+             <option value="">— เลือก —</option>
+             ${DB.members.map(m=>`<option value="${m.no}" ${m.no===r.no?"selected":""}>${m.no} · ${esc(m.name)}</option>`).join("")}
+           </select>`}</td>
+        <td class="l hint">${esc(r.file||"")}</td>
+        <td>${r.dup?"":`<button class="del" data-aidel="${r.i}">×</button>`}</td></tr>`).join("")}
+    </tbody></table></div>
+    <div class="bar" style="margin-top:10px">
+      <button id="aiSave">บันทึก ${nNew} รายการใหม่</button>
+      <button class="ghost" id="aiCancel">ยกเลิก ทิ้งผลนี้</button>
+    </div></div>`;
+
+  document.querySelectorAll("[data-ai]").forEach(sel=>sel.onchange=ev=>{
+    AIROWS[+ev.target.dataset.ai].no = ev.target.value; });
+  document.querySelectorAll("[data-aidel]").forEach(b=>b.onclick=()=>{
+    AIROWS.splice(+b.dataset.aidel,1); drawAI(); });
+  $("aiCancel").onclick = () => { AIROWS=[]; drawAI(); if($("aimsg")) $("aimsg").textContent=""; };
+  $("aiSave").onclick = () => {
+    const seen2 = new Set(S.tx.map(txKey)); let add=0;
+    AIROWS.forEach(x=>{
+      const t = {a:x.a||"", d:x.d, t:x.t||"00:00", m:+x.m||0};
+      if(!t.d || !t.m || seen2.has(txKey(t))) return;
+      seen2.add(txKey(t));
+      if(x.nm && t.a && !DB.anames[t.a]) DB.anames[t.a] = x.nm;
+      if(x.no) t.no = x.no;                       // ผูกสมาชิกที่ยืนยันแล้ว
+      if(x.no && t.a && !S.acct[t.a]) S.acct[t.a] = x.no;
+      S.tx.push(t); add++;
+    });
+    AIROWS=[];
+    if($("aimsg")){ $("aimsg").className="msg ok"; $("aimsg").textContent=`บันทึกแล้ว ${add} รายการ`; }
+    all();
+  };
 }
 
 /* ============ แท็บ 3 — สรุป & ใบเสร็จ ============ */
