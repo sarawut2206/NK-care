@@ -360,7 +360,7 @@ th.svcol{background:#FFF4D6!important}
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.08.03-21</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.08.03-23</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
@@ -439,7 +439,7 @@ function freshS(){ return { contracts: DB.contracts.map(c=>({...c})), tx: DB.tx.
           acct: {...DB.acct}, assign: {}, cut: 20, profile: {}, pick: null, per: {}, watch: null, rule: {}, fprod: "", fper: "" }; }
 let sel = null, tab = 1;
 const txKey = t => `${t.a}|${t.d}|${t.t}|${t.m}`;
-const memOf = t => t.no || S.acct[t.a] || "";
+const memOf = t => t.fixNo || t.no || S.acct[t.a] || "";   // ★ fixNo = ระบุเจ้าของเอง (ฝากชำระแทน)
 
 /* ============ บันทึกขึ้น Google Sheets ============ */
 let _saveT = null, _saving = false, _again = false;
@@ -500,7 +500,9 @@ async function doSave(){
 
 /* ============ งวด ============ */
 function periodOf(d){
+  if(!d || typeof d !== "string" || d.indexOf("-") < 0) return PERIODS[0];   // ★ ไม่มีวันที่ = งวดแรก
   let [y,m,dd] = d.split("-").map(Number);
+  if(!y || !m) return PERIODS[0];
   if (dd >= S.cut){ m++; if(m>12){m=1;y++;} }
   return `${y+543}-${String(m).padStart(2,"0")}`;
 }
@@ -1807,6 +1809,8 @@ function svOf(c){ return shareOn(c, PERIODS[PERIODS.length-1]).sv; }
 
 /* งวดที่ t ของสัญญา = เดือนไหน — ตรงข้ามกับสูตรที่ใช้ในบัญชีรายงวด */
 function periodAtTerm(c,t){
+  if(!c) return null;
+  if(!c.legacy && !c.d) return null;            // ★ สัญญาชั่วคราว (เครื่องคำนวณ) ยังไม่มีวันที่
   const i = c.legacy ? (+t) - (+c.t0||0) - 1
                      : (+t) - 1 + PERIODS.indexOf(periodOf(c.d));
   if(i < 0) return null;                                   // งวดก่อนเริ่มเก็บข้อมูล ม.ค.69
@@ -2190,7 +2194,19 @@ function drawT2(){
         const no=memOf(t), m=DB.members.find(z=>z.no===no), a=autoAssign(t);
         const c = S.contracts.find(x=>x.id===a);
         return `<tr${a===null?' style="background:#FFF6F5"':""}><td class="l">${t.d}</td><td class="l hint">${t.t}</td>
-          <td class="amt">${B(t.m)}</td><td class="l hint">${t.a}</td><td class="l">${esc(m?m.name:"—")}</td>
+          <td class="amt">${B(t.m)}</td><td class="l hint">${t.a}</td>
+          <td class="l" style="white-space:normal;min-width:200px">
+            ${S.editTx===txKey(t)
+              ? `<select data-txno="${esc(txKey(t))}" style="width:auto;font-size:12px">
+                   <option value="">— เลือกสมาชิก —</option>
+                   ${DB.members.map(z=>`<option value="${z.no}" ${z.no===no?"selected":""}>${z.no} · ${esc(z.name)}</option>`).join("")}
+                 </select>
+                 <button class="ghost sm" data-txcancel="1" style="padding:2px 7px;font-size:10.5px;margin-left:3px">ยกเลิก</button>`
+              : `${esc(m?m.name:"—")}
+                 ${t.fixNo?'<span class="pill" style="font-size:10px;margin-left:4px" title="ระบุเจ้าของเอง (ฝากชำระแทน)">✎ แก้แล้ว</span>':""}
+                 <button class="ghost sm" data-txedit="${esc(txKey(t))}"
+                   style="padding:2px 7px;font-size:10.5px;margin-left:4px"
+                   title="ยอดนี้เป็นการชำระแทนคนอื่น — กดเพื่อเลือกเจ้าของตัวจริง">แก้ไข</button>`}</td>
           <td class="l hint">${PLBL[periodOf(t.d)]||"—"}</td>
           <td class="l">${a==="share"?'<span class="pill grn">ฝากหุ้น</span>'
             : c?`<span class="pill ${c.prod==="ดูแลกัน"?"yel":""}">${c.prod}</span>` : '<span class="pill red">ยังไม่ระบุ</span>'}</td>
@@ -2204,6 +2220,22 @@ function drawT2(){
   $("ftail").innerHTML = S._flist>60 ? `แสดง 60 รายการแรก · ใช้ตัวกรองด้านบนเพื่อดูรายการอื่น` : "";
   document.querySelectorAll("[data-delrule]").forEach(b=>b.onclick=()=>{
     delete S.rule[b.dataset.delrule]; all(); });
+
+  // ★ แก้ไขเจ้าของรายการ — กรณีฝากชำระแทนกัน
+  document.querySelectorAll("[data-txedit]").forEach(b=>b.onclick=()=>{
+    S.editTx = b.dataset.txedit; drawT2(); });
+  document.querySelectorAll("[data-txcancel]").forEach(b=>b.onclick=()=>{
+    S.editTx = null; drawT2(); });
+  document.querySelectorAll("[data-txno]").forEach(sel=>sel.onchange=e=>{
+    const k = e.target.dataset.txno, v = e.target.value;
+    const t = S.tx.find(x=>txKey(x)===k);
+    if(t){
+      const auto = t.no || S.acct[t.a] || "";
+      if(!v || v===auto) delete t.fixNo;        // เลือกคนเดิม = เลิกระบุเอง
+      else t.fixNo = v;
+      delete S.assign[k];                        // ให้จับคู่สัญญาใหม่ตามเจ้าของใหม่
+    }
+    S.editTx = null; all(); });
   $("fprod").onchange = e => { S.fprod = e.target.value; drawT2(); };
   $("fper").onchange  = e => { S.fper  = e.target.value; drawT2(); };
   $("cut").onchange = e => { S.cut = +e.target.value; all(); };
