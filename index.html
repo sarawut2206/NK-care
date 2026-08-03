@@ -360,7 +360,7 @@ th.svcol{background:#FFF4D6!important}
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.08.03-20</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.08.03-21</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
@@ -523,18 +523,19 @@ function feeOf(c,p,got,due,txs){
   const m = per(c.id,p);
   if(m.fee!=null) return +m.fee;                      // แก้ด้วยมือ / ยกเว้น
   if(m.relief) return 0;
-  if(m.paidOK) return 0;                             // ★ ประธานยืนยันว่าชำระแล้ว — ไม่คิดค่าทวงถาม
+  if(m.paidOK || m.kindFix==="ชำระแล้ว" || m.kindFix==="ชำระครบ") return 0;   // ★ ยืนยันแล้ว — ไม่คิดค่าทวงถาม
   const late = (got<due-0.005) || lateOf(c,p,txs);
   return late && due>0 ? +Math.min(due*FEE_PCT, FEE_MAX).toFixed(2) : 0;
 }
+const KINDS = ["ชำระแล้ว","ชำระครบ","ชำระเกิน","ชำระบางส่วน","ชำระเฉพาะดอกเบี้ย","ไม่พอดอกเบี้ย","ไม่ชำระ"];
 function kindOf(got,int,due,paidOK){
-  if(paidOK) return "ยืนยันชำระแล้ว";        // ★ ประธานยืนยันด้วยตัวเอง
+  if(paidOK) return "ชำระแล้ว";              // ★ ประธานยืนยันด้วยตัวเอง
   if(got<=0.005) return "ไม่ชำระ";
   if(got < int-0.005) return "ไม่พอดอกเบี้ย";
   if(got < due-0.005) return Math.abs(got-int)<=50 ? "ชำระเฉพาะดอกเบี้ย" : "ชำระบางส่วน";
   return got > due+0.005 ? "ชำระเกิน" : "ชำระครบ";
 }
-const KIND_CLS = {"ชำระครบ":"grn","ชำระเกิน":"grn","ยืนยันชำระแล้ว":"grn","ชำระเฉพาะดอกเบี้ย":"yel",
+const KIND_CLS = {"ชำระครบ":"grn","ชำระเกิน":"grn","ชำระแล้ว":"grn","ชำระเฉพาะดอกเบี้ย":"yel",
                   "ชำระบางส่วน":"yel","ไม่พอดอกเบี้ย":"red","ไม่ชำระ":"red","รับชำระแล้ว":"","ไม่มีเงินเข้า":""};
 
 /* ============ แท็บ 7 — ติดตามหนี้ & หนังสือเตือน ============ */
@@ -569,8 +570,22 @@ function drawT7(){
         <td class="amt"${w.short>0.005?' style="color:var(--red);font-weight:600"':""}>${w.short>0.005?B(w.short):"—"}</td>
         <td class="amt">${B(w.int)}</td><td class="amt">${B(w.sh)}</td><td class="amt">${B(w.pri)}</td>
         <td><input type="number" step="0.01" data-fee="${cur.id}:${w.p}" value="${w.fee||0}" style="width:64px;padding:2px 4px"></td>
-        <td class="l"><span class="pill ${KIND_CLS[w.kind]||""}">${w.kind}</span>${w.relief?' <span class="pill grn">ผ่อนผัน</span>':""}
-          ${md.gotFix!==undefined?'<br><span class="pill" style="font-size:10px">แก้ยอดเอง</span>':""}</td>
+        <td class="l" style="white-space:normal;min-width:170px">
+          <select data-kind="${cur.id}:${w.p}" style="width:auto;font-size:11.5px;padding:3px 5px;font-weight:600;
+            ${KIND_CLS[w.kind]==="grn"?"color:var(--green);border-color:var(--green)"
+             :KIND_CLS[w.kind]==="red"?"color:var(--danger);border-color:var(--danger)"
+             :KIND_CLS[w.kind]==="yel"?"color:var(--accent-ink);border-color:var(--accent)":""}">
+            <option value="">${esc(w.kind)}${md.kindFix?"":" (อัตโนมัติ)"}</option>
+            ${KINDS.filter(k=>k!==w.kind).map(k=>`<option value="${k}">${k}</option>`).join("")}
+            ${md.kindFix?'<option value="__auto">↺ กลับไปคำนวณเอง</option>':""}
+          </select>
+          ${md.kindFix?'<span class="pill" style="font-size:10px;margin-left:3px">ตั้งเอง</span>':""}
+          ${w.relief?' <span class="pill grn">ผ่อนผัน</span>':""}
+          ${md.gotFix!==undefined?'<br><span class="pill" style="font-size:10px">แก้ยอดเอง</span>':""}
+          ${w.movedOut>0.005?`<br><span class="hint" style="font-size:10.5px;color:var(--brand)">
+            ↗ ยอดเกิน ${B(w.movedOut)} ชำระให้ <b>${esc(w.overTo)} ${esc((DB.members.find(z=>z.no===w.overTo)||{}).name||"")}</b></span>`:""}
+          ${w.over>0.005?`<br><span class="hint" style="font-size:10.5px;color:var(--accent-ink)">
+            ⏳ ยอดเกิน ${B(w.over)} รอระบุเจ้าของ (แท็บรับชำระ)</span>`:""}</td>
         <td class="l">${md.paidOK
           ? `<span class="pill grn" title="ยืนยันเมื่อ ${esc(md.paidAt||"")}">✓ ชำระแล้ว</span>
              <button class="ghost sm" data-paid="${cur.id}:${w.p}:0" style="padding:2px 6px;font-size:10.5px;margin-left:4px">ยกเลิก</button>`
@@ -643,6 +658,21 @@ function drawT7(){
     else setPer(id,p,"gotFix",+v.toFixed(2));
     all(); });
   // ★ ยืนยันว่างวดนี้ชำระแล้ว
+  // ★ ตั้งสถานะเอง
+  document.querySelectorAll("[data-kind]").forEach(sel=>sel.onchange=e=>{
+    const [id,p]=e.target.dataset.kind.split(":"); const v=e.target.value;
+    if(!v) return;
+    if(v==="__auto"){ setPer(id,p,"kindFix",undefined);
+      setPer(id,p,"paidOK",false); setPer(id,p,"paidAt",""); }
+    else{
+      setPer(id,p,"kindFix",v);
+      // ตั้งเป็นชำระแล้ว/ชำระครบ = ถือว่ายืนยันการชำระด้วย
+      if(v==="ชำระแล้ว"||v==="ชำระครบ"){
+        setPer(id,p,"paidOK",true);
+        setPer(id,p,"paidAt", new Date().toLocaleDateString("th-TH"));
+      }
+    }
+    all(); });
   document.querySelectorAll("[data-paid]").forEach(b=>b.onclick=()=>{
     const [id,p,v]=b.dataset.paid.split(":");
     if(v==="1"){
@@ -895,15 +925,18 @@ function runContract(c){
     const known = D.pi > 0;
     const due   = known ? D.due : 0;
     // ★ ประธานยืนยันแล้วว่างวดนี้ชำระเรียบร้อย → ไม่นับขาด ไม่นับผิดนัด
-    const short = (md.paidOK || !known) ? 0 : +Math.max(0, due - got).toFixed(2);
-    const kind  = md.paidOK ? "ยืนยันชำระแล้ว"
+    const okFix = md.paidOK || md.kindFix==="ชำระแล้ว" || md.kindFix==="ชำระครบ";
+    const short = (okFix || !known) ? 0 : +Math.max(0, due - got).toFixed(2);
+    const kind  = md.kindFix ? md.kindFix          // ★ ตั้งสถานะเอง
+                : md.paidOK  ? "ชำระแล้ว"           // ★ ยืนยันการชำระแล้ว
+                : md.overOK === "moved" ? "ชำระครบ"   // ★ ยอดเกินย้ายให้คนอื่นแล้ว = ครบพอดี
                 : known ? kindOf(got, int, due) : (got > 0 ? "รับชำระแล้ว" : "ไม่มีเงินเข้า");
     const fee   = known ? feeOf(c, p, got, due, txs) : 0;
     const late  = known && got > 0 && lateOf(c, p, txs);
 
     // ชำระปิดบัญชี — จ่ายพอสำหรับเงินต้น+ดอกเบี้ยทั้งก้อน → ปิดหนี้ ไม่หักหุ้นก่อนเงินต้น
     const payoff = got >= bal + int - 1 && got > 0 && bal > 0;
-    let rest = got, note = "", over = 0;
+    let rest = got, note = "", over = 0, movedOut = 0;
     let gInt, shB, shE, shV, pri;
     if (payoff){
       gInt = Math.min(rest, int); rest -= gInt;
@@ -931,8 +964,10 @@ function runContract(c){
           if (ok === "y"){                             // ยืนยันแล้ว → ให้โปะเงินต้นตามจริง
             note = "เกิน " + B(raw) + " · ยืนยันแล้ว";
           } else if (ok === "moved"){                   // ย้ายไปเป็นของสมาชิกอื่นแล้ว
-            pri = capPri;
-            note = "เกิน " + B(raw) + " · ย้ายให้ " + (md.overTo||"สมาชิกอื่น") + " แล้ว";
+            pri = capPri; movedOut = raw;
+            const toM = DB.members.find(z=>z.no===md.overTo);
+            note = "ยอดเกิน " + B(raw) + " ชำระให้ " + (md.overTo||"?")
+                 + (toM ? " " + toM.name : "") + " แล้ว";
           } else {
             over = raw; pri = capPri;
             note = "เกิน " + B(raw) + " · อยู่ระหว่างตรวจสอบ";
@@ -954,7 +989,8 @@ function runContract(c){
     if (got > 0) last = p;
     if (bal <= 0.005 && !closed) closed = p;
     rows.push({p, got, due, short, int:+gInt.toFixed(2), sh, shB, shE, shV, shDue, baseDue, extraDue, svDue,
-               pri, bal, over, overOK: md.overOK||"", fee, kind, relief, late, tn, known, shMemo:D.memo, shChanged:D.changed,
+               pri, bal, over, movedOut, overTo: md.overTo||"", overOK: md.overOK||"",
+               fee, kind, relief, late, tn, known, shMemo:D.memo, shChanged:D.changed,
                memo:md.memo||"", note, opens:!!nl, nl, txs});
   });
 
