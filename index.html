@@ -360,7 +360,7 @@ th.svcol{background:#FFF4D6!important}
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.08.03-10</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.08.03-11</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
@@ -1852,12 +1852,16 @@ function drawT2(){
 
   ${unk.length ? `<div class="card" style="border-left:3px solid var(--red)">
     <div class="eyebrow">บัญชีที่ยังไม่รู้ว่าเป็นของใคร — ${unk.length} บัญชี</div>
-    <p class="hint" style="margin-bottom:10px">เงินจากบัญชีเหล่านี้เข้ามาแล้วแต่ยังไม่ถูกนับให้สมาชิกคนไหน ต้องยืนยันก่อน</p>
+    <p class="hint" style="margin-bottom:10px">เงินจากบัญชีเหล่านี้เข้ามาแล้วแต่ยังไม่ถูกนับให้สมาชิกคนไหน ·
+      <b>ระบบเดาชื่อให้แล้ว</b> — ตรวจแล้วกดยืนยัน ${unk.some(a=>guessMember(a))?`<button class="cta sm" id="matchAll" style="margin-left:6px">ยืนยันที่เดาให้ทั้งหมด</button>`:""}</p>
     ${unk.map(a=>{const n=DB.anames[a]||"", tot=S.tx.filter(t=>t.a===a).reduce((s,t)=>s+t.m,0), cnt=S.tx.filter(t=>t.a===a).length;
-      return `<div class="bar" style="margin:0 0 7px"><code style="font-family:'IBM Plex Mono',monospace">${a}</code>
-      <span style="font-size:12.5px">${esc(n)}</span>
+      const g=guessMember(a), gm=g?DB.members.find(m=>m.no===g):null;
+      const optSel=DB.members.map(m=>`<option value="${m.id||m.no}" ${m.no===g?"selected":""}>${m.no} · ${esc(m.name)}</option>`).join("");
+      return `<div class="bar" style="margin:0 0 7px"><code style="font-family:'IBM Plex Mono',monospace;font-size:13px">${a}</code>
+      <span style="font-size:13px;font-weight:600">${esc(n)}</span>
       <span class="hint">${cnt} รายการ · รวม ${B(tot)}</span>
-      <select data-map="${a}" style="width:auto;margin-left:auto"><option value="">— เลือกสมาชิก —</option>${opts}</select></div>`;
+      ${gm?`<span class="pill grn" title="ระบบเดาว่าน่าจะเป็นคนนี้">เดา: ${gm.no} ${esc(gm.name.split(" ")[0])}</span>`:`<span class="pill red">เดาไม่ได้</span>`}
+      <select data-map="${a}" style="width:auto;margin-left:auto"><option value="">— เลือกสมาชิก —</option>${optSel}</select></div>`;
     }).join("")}</div>` : ""}
 
   ${(()=>{ const g = {};
@@ -1960,6 +1964,12 @@ function drawT2(){
   $("cut").onchange = e => { S.cut = +e.target.value; all(); };
   document.querySelectorAll("[data-map]").forEach(s => s.onchange = e => {
     S.acct[e.target.dataset.map] = e.target.value; all(); });
+  if($("matchAll")) $("matchAll").onclick = () => {
+    let n=0; document.querySelectorAll("[data-map]").forEach(sel=>{
+      const a=sel.dataset.map; if(!S.acct[a]){ const g=guessMember(a); if(g){S.acct[a]=g;n++;} }
+    });
+    all();
+  };
   document.querySelectorAll("[data-as]").forEach(s => s.onchange = e => {
     S.assign[e.target.dataset.as] = e.target.value; all(); });
   const mopts = DB.members.map(m=>`<option value="${m.no}">${m.no} — ${esc(m.name)}</option>`).join("");
@@ -2006,10 +2016,31 @@ function drawT2(){
     const f = parse($("paste").value);
     if(!f.length){ $("msg").className="msg bad"; $("msg").textContent="อ่านไม่พบรายการรับโอน"; return; }
     const seen = new Set(S.tx.map(txKey)); let add=0, dup=0;
-    f.forEach(x => { if(seen.has(txKey(x))){dup++;return;} seen.add(txKey(x)); S.tx.push(x); add++; });
-    $("msg").className="msg ok"; $("msg").textContent=`เพิ่ม ${add} · ซ้ำ ${dup}`;
+    f.forEach(x => {
+      if(x.nm && !DB.anames[x.a]) DB.anames[x.a] = x.nm;   // ★ จำชื่อผู้โอน
+      if(seen.has(txKey(x))){dup++;return;} seen.add(txKey(x)); S.tx.push(x); add++;
+    });
+    const auto = autoMatch();                              // ★ จับคู่อัตโนมัติที่มั่นใจ
+    $("msg").className="msg ok";
+    $("msg").textContent=`เพิ่ม ${add} · ซ้ำ ${dup}` + (auto? ` · จับคู่ให้อัตโนมัติ ${auto} บัญชี`:"");
     all();
   };
+}
+
+/* ★ จับคู่บัญชี→สมาชิกอัตโนมัติ เฉพาะที่ชื่อชัดเจน · คืนจำนวนที่จับได้ */
+function autoMatch(){
+  let n = 0;
+  Object.keys(DB.anames).forEach(a => {
+    if(S.acct[a]) return;                    // จับแล้วข้าม
+    const guess = guessMember(a);
+    // จับให้เฉพาะเมื่อชื่อสมาชิกไม่ซ้ำกับคนอื่น (กันจับผิด)
+    if(guess){
+      const nm = DB.anames[a];
+      const dupNames = DB.members.filter(m => guessMember(a)===m.no).length;
+      S.acct[a] = guess; n++;
+    }
+  });
+  return n;
 }
 
 async function pdfText(buf){
@@ -2033,9 +2064,46 @@ function parse(text){
     if(!d||!t||!a) return;
     const n = [...ln.matchAll(/(\d{1,3}(?:,\d{3})*\.\d{2})/g)].map(x=>parseFloat(x[1].replace(/,/g,"")));
     if(!n.length) return;
-    out.push({a:a[1], d:`20${d[3]}-${d[2]}-${d[1]}`, t:t[1], m:n[0]});
+    // ★ ดึงชื่อผู้โอนที่อยู่หลังเลขบัญชี — ทั้งอังกฤษและไทย
+    let nm = "";
+    const after = ln.slice(ln.indexOf(a[1]) + a[1].length);
+    const mEn = after.match(/([A-Z][A-Z. ]{2,}?)(?:\+|$)/);       // ชื่ออังกฤษพิมพ์ใหญ่
+    const mTh = after.match(/([ก-๙][ก-๙. ]{1,}?)(?:\+|$)/);        // ชื่อไทย
+    if(mEn) nm = mEn[1].replace(/^(MR|MRS|MISS|MS)\.?\s+/i,"").trim();
+    else if(mTh) nm = mTh[1].replace(/^(นาย|นาง|น\.ส\.|นางสาว)\s*/,"").trim();
+    out.push({a:a[1], d:`20${d[3]}-${d[2]}-${d[1]}`, t:t[1], m:n[0], nm});
   });
   return out;
+}
+
+/* ★ ตารางแปลงชื่ออังกฤษในสลิป → คำไทยในชื่อสมาชิก */
+const EN2TH = {SARAWUT:"ศราวุธ",PRAERUNG:"แพรรุ้ง",PONGSAK:"พงษ์ศักดิ์",SUWAT:"สุวัฒน์",
+  PIMWISUT:"ภิมวิสุธ",ORNUMA:"อรอุมา",NONTAKORN:"นนทกร",KANYAVEE:"กัญญาวีร์",WUTTHINAN:"วุฒินันท์",
+  WISARAT:"วิสารัช",PHAI:"ไผ่",SIRILAK:"สิริลักษณ์",PANNITA:"พรรณิตา",SUPAKANDA:"ศุภกานดา",
+  SUTAWAN:"สุธาวัลย์",PAPHITCHAYA:"ปพิชญา",WANWISA:"วันวิสา",SUWANNA:"สุวรรณา",KANPHITCHA:"กานต์พิชชา",
+  WEERA:"วีระ",DUANGRUDEE:"ดวงฤดี",DOUNGDUEN:"ดวงเดือน",THEERAPON:"ธีรพร",NAMVAN:"น้ำหวาน",
+  PATTAMON:"พัทธมน",KONGAI:"คงเอียด",BUAKO:"บัวคง",PIEPK:"เพียบขุนทด",SEED:"สีดีจริง",
+  TADSA:"ทัศนา",HOMD:"หอมดอก",SACH:"สาชิน",PHUKH:"ภู่คล้าย",THONGY:"ทองอยู่",BOONK:"บุญกล้า",
+  KAEW:"แก้วกุลธร",CHOMCH:"ชมชื่น",PATTAW:"ปัถวี",WANNAK:"วรรณคำ",SALEEP:"สาลีผล",TRONGJ:"ตรองจิตร"};
+
+/* ★ เดาว่าบัญชีนี้น่าจะเป็นสมาชิกคนไหน — คืนเลขสมาชิก หรือ "" ถ้าเดาไม่ได้ */
+function guessMember(acct){
+  const nm = (DB.anames[acct]||"").trim(); if(!nm) return "";
+  const up = nm.toUpperCase();
+  // 1) ชื่อไทยตรง ๆ
+  const byTh = DB.members.find(m => m.name && nm.length>=2 &&
+    (m.name.replace(/\s/g,"").includes(nm.replace(/\s/g,"")) ||
+     nm.replace(/\s/g,"").includes(m.name.split(" ")[0])));
+  if(byTh) return byTh.no;
+  // 2) คำอังกฤษ → คำไทย → หาสมาชิก
+  for(const en in EN2TH){
+    if(up.includes(en)){
+      const th = EN2TH[en];
+      const m = DB.members.find(x => x.name && x.name.includes(th));
+      if(m) return m.no;
+    }
+  }
+  return "";
 }
 
 /* ============ แท็บ 3 — สรุป & ใบเสร็จ ============ */
