@@ -360,7 +360,7 @@ th.svcol{background:#FFF4D6!important}
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.08.03-23</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.08.03-24</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
@@ -2782,17 +2782,29 @@ function slipHTML(m){
   <div class="eyebrow" style="margin:18px 0 8px">รายการโอนเข้าบัญชีที่ตรวจพบ — ${mtx.length} รายการ</div>
   ${mtx.length ? `<table><thead><tr><th class="l">วันที่ชำระ</th><th class="l">เวลา</th><th>ยอดโอน</th>
     <th class="l">บัญชีผู้โอน</th><th class="l">นับเป็นงวด</th><th class="l">ประเภท</th>
-    <th class="l">เลขทะเบียนสัญญา</th></tr></thead><tbody>
+    <th class="l">เลขทะเบียนสัญญา</th><th class="l noprint">แก้ไข</th></tr></thead><tbody>
     ${mtx.map(t=>{const a=autoAssign(t), c=S.contracts.find(x=>x.id===a);
       return `<tr><td class="l">${t.d}${t.man?' <span class="pill">✎</span>':""}</td><td class="l hint">${t.t}</td><td class="amt">${B(t.m)}</td>
       <td class="l hint">${t.a} ${esc((DB.anames[t.a]||"").slice(0,20))}</td>
       <td class="l">${PLBL[periodOf(t.d)]||"—"}</td>
       <td class="l">${a==="share"?'<span class="pill grn">ฝากหุ้น</span>'
         :(c?`<span class="pill ${c.prod==="ดูแลกัน"?"yel":""}">ผ่อนสินเชื่อ${c.prod}</span>`:'<span class="pill red">ยังไม่ระบุ</span>')}</td>
-      <td class="l hint" style="font-family:'IBM Plex Mono',monospace">${c?(esc(c.code)||"—"):"—"}</td></tr>`;
+      <td class="l hint" style="font-family:'IBM Plex Mono',monospace">${c?(esc(c.code)||"—"):"—"}</td>
+      <td class="l noprint" style="white-space:normal">
+        ${S.editTx===txKey(t)
+          ? `<select data-txno="${esc(txKey(t))}" style="width:auto;font-size:11.5px">
+               <option value="">— เลือกสมาชิก —</option>
+               ${DB.members.map(z=>`<option value="${z.no}" ${z.no===memOf(t)?"selected":""}>${z.no} · ${esc(z.name)}</option>`).join("")}
+             </select>
+             <button class="ghost sm" data-txcancel="1" style="padding:2px 6px;font-size:10.5px">ยกเลิก</button>`
+          : `${t.fixNo?'<span class="pill" style="font-size:10px">✎ แก้แล้ว</span> ':""}
+             <button class="ghost sm" data-txedit="${esc(txKey(t))}" style="padding:2px 7px;font-size:10.5px"
+               title="ยอดนี้เป็นการชำระแทนคนอื่น — เลือกเจ้าของตัวจริง">ย้ายให้คนอื่น</button>
+             <button class="del" data-txdel="${esc(txKey(t))}" style="font-size:15px"
+               title="ยกเลิกรายการนี้ — ลบออกจากระบบ">×</button>`}</td></tr>`;
     }).join("")}
     <tr class="tot"><td class="l" colspan="2">รวมเงินเข้า</td><td class="amt">${B(mtx.reduce((s,t)=>s+t.m,0))}</td>
-      <td class="l" colspan="4" style="font-weight:400;font-size:11px;color:var(--soft)">ในจำนวนนี้เข้าทุนเรือนหุ้นโดยตรง ${B(shareIn)} บาท</td></tr>
+      <td class="l" colspan="5" style="font-weight:400;font-size:11px;color:var(--soft)">ในจำนวนนี้เข้าทุนเรือนหุ้นโดยตรง ${B(shareIn)} บาท</td></tr>
     </tbody></table>
     <p class="hint" style="margin-top:7px"><b>กรุณาตรวจสอบรายการนี้กับสลิปของท่าน</b> —
     หากมีรายการที่ท่านโอนแล้วแต่ไม่ปรากฏ โปรดแจ้งกรรมการฝ่ายการเงินพร้อมสลิปทันที (สัญญาข้อ 2.6 ผู้กู้ต้องเก็บหลักฐานการชำระทุกครั้ง)</p>`
@@ -2840,13 +2852,35 @@ function slip(){
   try{ $("slip").scrollIntoView({behavior:"smooth", block:"start"}); }catch(e){}
 }
 
-/* ★ ปุ่มยืนยัน/ปฏิเสธเงินส่วนเกิน — ประธานเป็นคนตัดสิน */
+/* ★ ปุ่มยืนยัน/ปฏิเสธเงินส่วนเกิน + แก้ไขเจ้าของรายการ (ในใบเสร็จ) */
 function bindOver(){
   document.querySelectorAll("[data-ovok]").forEach(b => b.onclick = () => {
     const [cid, p, v] = b.dataset.ovok.split("|");
     setPer(cid, p, "overOK", v);
     all(); slip();
   });
+  // ย้ายรายการให้สมาชิกคนอื่น (ฝากเพื่อนจ่าย)
+  document.querySelectorAll("#slip [data-txedit]").forEach(b => b.onclick = () => {
+    S.editTx = b.dataset.txedit; slip(); });
+  document.querySelectorAll("#slip [data-txcancel]").forEach(b => b.onclick = () => {
+    S.editTx = null; slip(); });
+  document.querySelectorAll("#slip [data-txno]").forEach(sel => sel.onchange = e => {
+    const k = e.target.dataset.txno, v = e.target.value;
+    const t = S.tx.find(x => txKey(x) === k);
+    if(t){
+      const auto = t.no || S.acct[t.a] || "";
+      if(!v || v === auto) delete t.fixNo; else t.fixNo = v;
+      delete S.assign[k];
+    }
+    S.editTx = null; all(); slip(); });
+  // ยกเลิกรายการ
+  document.querySelectorAll("#slip [data-txdel]").forEach(b => b.onclick = () => {
+    const k = b.dataset.txdel, t = S.tx.find(x => txKey(x) === k); if(!t) return;
+    if(!confirm(`ยกเลิกรายการนี้?\n\nวันที่ ${t.d} · ยอด ${B(t.m)} บาท · บัญชี ${t.a}\n\n`
+      + `รายการจะถูกลบออกจากระบบ · ถ้านำเข้าสลิปเดิมอีกครั้งจะกลับมา`)) return;
+    S.tx = S.tx.filter(x => txKey(x) !== k);
+    delete S.assign[k];
+    all(); slip(); });
 }
 
 function rprint(){ document.body.classList.add("rprint");
