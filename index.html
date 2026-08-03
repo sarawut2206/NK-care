@@ -360,7 +360,7 @@ th.svcol{background:#FFF4D6!important}
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.08.03-24</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.08.03-25</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
@@ -893,7 +893,7 @@ function runContract(c){
     if (!c.legacy && p < start){ rows.push({p, pre:true}); return; }
 
     // ยังไม่ได้แนบตาราง → ไม่รู้ยอดหนี้ ห้ามเดา ห้ามบอกว่าปิดแล้ว
-    if (NT){
+    if (NT && !txs.some(z=>z.payoff)){          // ★ ถ้าระบุยอดปิดหนี้เอง ให้คิดต่อได้แม้ยังไม่แนบตาราง
       if (got > 0) last = p;
       rows.push({p, got, due:0, short:0, int:0, sh:0, shB:0, shE:0, shV:0, pri:0, bal:0, fee:0,
                  done:false, unknown:true, kind: got>0?"รับชำระแล้ว":"ไม่มีเงินเข้า", relief, late:false, txs});
@@ -976,6 +976,16 @@ function runContract(c){
           }
         }
       }
+    }
+    // ★ ประธานระบุเองว่าเป็น «ยอดปิดหนี้» — ใช้ตัวเลขที่กรอก แทนการคำนวณทุกกรณี
+    const po = txs.find(z=>z.payoff);
+    if (po){
+      gInt = +(+po.payoff.int||0).toFixed(2);
+      shB  = +(+po.payoff.share||0).toFixed(2); shE = 0; shV = 0;
+      pri  = +Math.min(+(+po.payoff.pri||0).toFixed(2), bal).toFixed(2);
+      over = 0;
+      note = "ยอดปิดหนี้ (ระบุเอง) — เงินต้น " + B(po.payoff.pri)
+           + " · หุ้น " + B(po.payoff.share) + " · ดอกเบี้ยและชดเชย " + B(po.payoff.int);
     }
     const sh = +(shB + shE + shV).toFixed(2);
     bal = +(bal - pri).toFixed(2);
@@ -2176,6 +2186,7 @@ function drawT2(){
 
   <div class="bar" style="margin:0 0 10px">
     <span class="eyebrow" style="margin:0;flex:0 0 auto">รายการรับชำระ</span>
+    <span id="txbox" style="display:none"></span>
     <select id="fprod" style="width:auto"><option value="">— ทุกประเภท —</option>
       ${["สามัญ","ดูแลกัน","ฝากหุ้น","ยังไม่ระบุ"].map(k=>`<option ${S.fprod===k?"selected":""}>${k}</option>`).join("")}</select>
     <select id="fper" style="width:auto"><option value="">— ทุกงวด —</option>
@@ -2196,17 +2207,13 @@ function drawT2(){
         return `<tr${a===null?' style="background:#FFF6F5"':""}><td class="l">${t.d}</td><td class="l hint">${t.t}</td>
           <td class="amt">${B(t.m)}</td><td class="l hint">${t.a}</td>
           <td class="l" style="white-space:normal;min-width:200px">
-            ${S.editTx===txKey(t)
-              ? `<select data-txno="${esc(txKey(t))}" style="width:auto;font-size:12px">
-                   <option value="">— เลือกสมาชิก —</option>
-                   ${DB.members.map(z=>`<option value="${z.no}" ${z.no===no?"selected":""}>${z.no} · ${esc(z.name)}</option>`).join("")}
-                 </select>
-                 <button class="ghost sm" data-txcancel="1" style="padding:2px 7px;font-size:10.5px;margin-left:3px">ยกเลิก</button>`
-              : `${esc(m?m.name:"—")}
-                 ${t.fixNo?'<span class="pill" style="font-size:10px;margin-left:4px" title="ระบุเจ้าของเอง (ฝากชำระแทน)">✎ แก้แล้ว</span>':""}
-                 <button class="ghost sm" data-txedit="${esc(txKey(t))}"
-                   style="padding:2px 7px;font-size:10.5px;margin-left:4px"
-                   title="ยอดนี้เป็นการชำระแทนคนอื่น — กดเพื่อเลือกเจ้าของตัวจริง">แก้ไข</button>`}</td>
+            ${esc(m?m.name:"—")}
+            ${t.fixNo?'<span class="pill" style="font-size:10px;margin-left:4px" title="ระบุเจ้าของเอง">✎ แก้แล้ว</span>':""}
+            ${t.part?`<span class="pill yel" style="font-size:10px;margin-left:4px" title="${esc(t.part)}">แยกยอด</span>`:""}
+            ${t.payoff?'<span class="pill grn" style="font-size:10px;margin-left:4px">ปิดหนี้</span>':""}
+            <button class="ghost sm" data-txopen="${esc(txKey(t))}"
+              style="padding:2px 7px;font-size:10.5px;margin-left:4px"
+              title="แก้ไขรายละเอียด — ระบุเจ้าของ แยกยอด หรือระบุว่าเป็นยอดปิดหนี้">แก้ไข</button></td>
           <td class="l hint">${PLBL[periodOf(t.d)]||"—"}</td>
           <td class="l">${a==="share"?'<span class="pill grn">ฝากหุ้น</span>'
             : c?`<span class="pill ${c.prod==="ดูแลกัน"?"yel":""}">${c.prod}</span>` : '<span class="pill red">ยังไม่ระบุ</span>'}</td>
@@ -2221,21 +2228,8 @@ function drawT2(){
   document.querySelectorAll("[data-delrule]").forEach(b=>b.onclick=()=>{
     delete S.rule[b.dataset.delrule]; all(); });
 
-  // ★ แก้ไขเจ้าของรายการ — กรณีฝากชำระแทนกัน
-  document.querySelectorAll("[data-txedit]").forEach(b=>b.onclick=()=>{
-    S.editTx = b.dataset.txedit; drawT2(); });
-  document.querySelectorAll("[data-txcancel]").forEach(b=>b.onclick=()=>{
-    S.editTx = null; drawT2(); });
-  document.querySelectorAll("[data-txno]").forEach(sel=>sel.onchange=e=>{
-    const k = e.target.dataset.txno, v = e.target.value;
-    const t = S.tx.find(x=>txKey(x)===k);
-    if(t){
-      const auto = t.no || S.acct[t.a] || "";
-      if(!v || v===auto) delete t.fixNo;        // เลือกคนเดิม = เลิกระบุเอง
-      else t.fixNo = v;
-      delete S.assign[k];                        // ให้จับคู่สัญญาใหม่ตามเจ้าของใหม่
-    }
-    S.editTx = null; all(); });
+  // ★ เปิดแผงแก้ไขรายการ — ระบุเจ้าของ · แยกยอด · ยอดปิดหนี้
+  document.querySelectorAll("[data-txopen]").forEach(b=>b.onclick=()=>txOpen(b.dataset.txopen));
   $("fprod").onchange = e => { S.fprod = e.target.value; drawT2(); };
   $("fper").onchange  = e => { S.fper  = e.target.value; drawT2(); };
   $("cut").onchange = e => { S.cut = +e.target.value; all(); };
@@ -2516,6 +2510,145 @@ function drawAI(){
     AIROWS=[];
     if($("aimsg")){ $("aimsg").className="msg ok"; $("aimsg").textContent=`บันทึกแล้ว ${add} รายการ`; }
     all();
+  };
+}
+
+/* ============ แผงแก้ไขรายการรับชำระ — ระบุเจ้าของ · แยกยอด · ยอดปิดหนี้ ============ */
+let TXEDIT = null;          // {key, rows:[{no,kind,cid,amt}], payoff:{pri,share,int}|null}
+
+function txOpen(key){
+  const t = S.tx.find(x=>txKey(x)===key); if(!t) return;
+  const no = memOf(t) || (DB.members[0]||{}).no || "";
+  TXEDIT = {
+    key,
+    payoffOn: !!t.payoff,
+    payoff: t.payoff ? {...t.payoff} : {pri:0, share:0, int:0},
+    rows: [{no, kind: autoAssign(t)==="share" ? "share" : "loan",
+            cid: (autoAssign(t)!=="share" && autoAssign(t)) || "", amt:+t.m}]
+  };
+  txDraw();
+}
+function txClose(){ TXEDIT=null; const b=$("txbox"); if(b){b.style.display="none"; b.innerHTML="";} }
+
+function txDraw(){
+  const box = $("txbox"); if(!box || !TXEDIT) return;
+  const t = S.tx.find(x=>txKey(x)===TXEDIT.key); if(!t){ txClose(); return; }
+  const P = TXEDIT.payoff, on = TXEDIT.payoffOn;
+  const sumRows = +TXEDIT.rows.reduce((a,r)=>a+(+r.amt||0),0).toFixed(2);
+  const sumPay  = +((+P.pri||0)+(+P.share||0)+(+P.int||0)).toFixed(2);
+  const total   = +(+t.m).toFixed(2);
+  const diff    = +(total - (on ? sumPay : sumRows)).toFixed(2);
+  const mOpts = (selNo) => DB.members.map(z=>
+    `<option value="${z.no}" ${z.no===selNo?"selected":""}>${z.no} · ${esc(z.name)}</option>`).join("");
+
+  box.style.display = "block";
+  box.innerHTML = `<div class="card" style="border-left:4px solid var(--brand2);margin:12px 0 0;
+      position:relative;display:block;white-space:normal">
+    <div class="eyebrow">แก้ไขรายการรับชำระ — ${t.d} ${t.t} · <b>${B(t.m)}</b> บาท · บัญชี ${esc(t.a)}
+      ${esc((DB.anames[t.a]||"").slice(0,24))}
+      <button class="ghost sm" id="tx_x" style="margin-left:auto">ปิด</button></div>
+
+    <label style="display:flex;gap:7px;align-items:center;font-weight:600;margin-bottom:10px">
+      <input type="checkbox" id="tx_po" ${on?"checked":""} style="width:15px;height:15px;accent-color:var(--green)">
+      ยอดนี้เป็น <b>«ยอดปิดหนี้»</b> — ต้องแยกเป็น เงินต้น · เงินฝากหุ้น · ดอกเบี้ยและชดเชย
+    </label>
+
+    ${on ? `
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr))">
+      <div><label>สมาชิก</label><select id="tx_pono">${mOpts(TXEDIT.rows[0].no)}</select></div>
+      <div><label>① เงินต้น</label><input type="number" step="0.01" id="tx_pri" value="${P.pri||""}"></div>
+      <div><label>② เงินฝากหุ้น</label><input type="number" step="0.01" id="tx_share" value="${P.share||""}"></div>
+      <div><label>③ ดอกเบี้ยและชดเชย</label><input type="number" step="0.01" id="tx_int" value="${P.int||""}"></div>
+    </div>
+    <p class="hint" style="margin-top:8px">รวม 3 ช่อง = <b>${B(sumPay)}</b> · ยอดโอนจริง <b>${B(total)}</b> ·
+      ${Math.abs(diff)<0.005
+        ? '<b style="color:var(--green)">ตรงกันพอดี ✓</b>'
+        : `<b style="color:var(--danger)">${diff>0?"ยังขาด "+B(diff):"เกินมา "+B(-diff)}</b>`}
+      <button class="ghost sm" id="tx_fill" style="margin-left:6px">เติมส่วนที่เหลือลงดอกเบี้ย</button></p>`
+    : `
+    <div class="tbl"><table><thead><tr>
+      <th class="l">เป็นเงินของ</th><th class="l">ประเภท</th><th class="l">เข้าสัญญา</th><th>ยอด</th><th></th>
+    </tr></thead><tbody>
+      ${TXEDIT.rows.map((r,i)=>{
+        const cs = contractsOf(r.no).filter(c=>!NODEBT(c.prod));
+        return `<tr>
+        <td class="l"><select data-txr="${i}:no" style="width:auto;font-size:12px">${mOpts(r.no)}</select></td>
+        <td class="l"><select data-txr="${i}:kind" style="width:auto;font-size:12px">
+          <option value="loan" ${r.kind==="loan"?"selected":""}>ผ่อนชำระเงินกู้</option>
+          <option value="share" ${r.kind==="share"?"selected":""}>ฝากหุ้น</option></select></td>
+        <td class="l">${r.kind==="share" ? '<span class="hint">— ไม่ต้องระบุ —</span>'
+          : `<select data-txr="${i}:cid" style="width:auto;font-size:12px">
+               <option value="">— ให้ระบบเลือกให้ —</option>
+               ${cs.map(c=>`<option value="${c.id}" ${c.id===r.cid?"selected":""}>${esc(c.code)||c.prod}${c.inst?` (งวดละ ${B(c.inst)})`:""}</option>`).join("")}
+             </select>`}</td>
+        <td><input type="number" step="0.01" data-txr="${i}:amt" value="${r.amt}" style="width:96px;text-align:right"></td>
+        <td>${TXEDIT.rows.length>1?`<button class="del" data-txrdel="${i}">×</button>`:""}</td></tr>`;
+      }).join("")}
+    </tbody></table></div>
+    <div class="bar" style="margin-top:9px">
+      <button class="ghost sm" id="tx_add">+ แยกอีกยอด</button>
+      <span class="hint">รวม <b>${B(sumRows)}</b> / ยอดโอนจริง <b>${B(total)}</b> ·
+        ${Math.abs(diff)<0.005 ? '<b style="color:var(--green)">ตรงกันพอดี ✓</b>'
+          : `<b style="color:var(--danger)">${diff>0?"ยังขาด "+B(diff):"เกินมา "+B(-diff)}</b>`}</span>
+      ${Math.abs(diff)>=0.005?`<button class="ghost sm" id="tx_fill2">เติมส่วนที่เหลือลงบรรทัดสุดท้าย</button>`:""}
+    </div>
+    <p class="hint" style="margin-top:7px">ใช้ <b>«+ แยกอีกยอด»</b> เมื่อโอนรวมกันมา เช่น ผ่อนของตัวเอง + ฝากหุ้นให้เพื่อน ·
+      ไม่แก้อะไร = ใช้ตามที่ระบบจับให้</p>`}
+
+    <div class="bar" style="margin-top:12px;border-top:1px solid var(--rule);padding-top:11px">
+      <button id="tx_save" ${Math.abs(diff)>=0.005?"disabled":""}>บันทึก</button>
+      <button class="ghost" id="tx_cancel">ยกเลิก</button>
+      ${Math.abs(diff)>=0.005?'<span class="hint" style="color:var(--danger)">ยอดรวมต้องเท่ากับยอดโอนจริงก่อนจึงบันทึกได้</span>':""}
+    </div>
+  </div>`;
+
+  $("tx_x").onclick = $("tx_cancel").onclick = () => { txClose(); drawT2(); };
+  $("tx_po").onchange = e => { TXEDIT.payoffOn = e.target.checked; txDraw(); };
+
+  if(on){
+    $("tx_pono").onchange = e => { TXEDIT.rows[0].no = e.target.value; };
+    ["pri","share","int"].forEach(k=>{ const el=$("tx_"+k); if(el) el.onchange = e => {
+      TXEDIT.payoff[k] = +e.target.value||0; txDraw(); }; });
+    $("tx_fill").onclick = () => { TXEDIT.payoff.int = +((+TXEDIT.payoff.int||0)+diff).toFixed(2); txDraw(); };
+  } else {
+    document.querySelectorAll("[data-txr]").forEach(el=>el.onchange = e => {
+      const [i,f] = e.target.dataset.txr.split(":");
+      TXEDIT.rows[+i][f] = (f==="amt") ? +e.target.value||0 : e.target.value;
+      if(f==="no") TXEDIT.rows[+i].cid = "";
+      txDraw(); });
+    document.querySelectorAll("[data-txrdel]").forEach(b=>b.onclick=()=>{
+      TXEDIT.rows.splice(+b.dataset.txrdel,1); txDraw(); });
+    $("tx_add").onclick = () => {
+      TXEDIT.rows.push({no:TXEDIT.rows[0].no, kind:"share", cid:"", amt: diff>0?diff:0});
+      txDraw(); };
+    if($("tx_fill2")) $("tx_fill2").onclick = () => {
+      const last = TXEDIT.rows[TXEDIT.rows.length-1];
+      last.amt = +((+last.amt||0)+diff).toFixed(2); txDraw(); };
+  }
+
+  $("tx_save").onclick = () => {
+    const orig = S.tx.find(x=>txKey(x)===TXEDIT.key); if(!orig) return;
+    const oldKey = TXEDIT.key;
+    if(TXEDIT.payoffOn){
+      orig.fixNo  = TXEDIT.rows[0].no;
+      orig.payoff = {pri:+TXEDIT.payoff.pri||0, share:+TXEDIT.payoff.share||0, int:+TXEDIT.payoff.int||0};
+      delete orig.part;
+    } else {
+      delete orig.payoff;
+      const rs = TXEDIT.rows.filter(r=>(+r.amt||0) > 0.005);
+      if(!rs.length){ alert("ต้องมีอย่างน้อย 1 บรรทัดที่มียอด"); return; }
+      S.tx = S.tx.filter(x=>txKey(x)!==oldKey);        // เอาของเดิมออก
+      delete S.assign[oldKey];
+      rs.forEach((r,i)=>{
+        const nt = {a:orig.a, d:orig.d, t:orig.t, m:+(+r.amt).toFixed(2), fixNo:r.no};
+        if(orig.man) nt.man = 1;
+        if(rs.length>1) nt.part = `แยกจากยอด ${B(orig.m)} (${i+1}/${rs.length})`;
+        if(S.tx.some(x=>txKey(x)===txKey(nt))) nt.t = (nt.t||"00:00").replace(/:(\d\d)$/, (a,b)=>":"+String((+b+i+1)%60).padStart(2,"0"));
+        S.tx.push(nt);
+        S.assign[txKey(nt)] = (r.kind==="share") ? "share" : (r.cid || autoAssign(nt) || "share");
+      });
+    }
+    txClose(); all();
   };
 }
 
