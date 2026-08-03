@@ -360,7 +360,7 @@ th.svcol{background:#FFF4D6!important}
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.08.03-18</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.08.03-19</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
@@ -893,12 +893,13 @@ function runContract(c){
           const raw = +(pri - capPri).toFixed(2);
           const ok  = md.overOK;                       // "y" = ยืนยันแล้ว · "n" = ไม่ใช่ของคนนี้
           if (ok === "y"){                             // ยืนยันแล้ว → ให้โปะเงินต้นตามจริง
-            note = "รับเกิน " + B(raw) + " — ยืนยันแล้ว โปะเงินต้น";
+            note = "เกิน " + B(raw) + " · ยืนยันแล้ว";
+          } else if (ok === "moved"){                   // ย้ายไปเป็นของสมาชิกอื่นแล้ว
+            pri = capPri;
+            note = "เกิน " + B(raw) + " · ย้ายให้ " + (md.overTo||"สมาชิกอื่น") + " แล้ว";
           } else {
             over = raw; pri = capPri;
-            note = ok === "n"
-              ? "รับเกิน " + B(raw) + " — ระบุว่าไม่ใช่ของคนนี้ รอตรวจสอบ"
-              : "รับเกิน " + B(raw) + " — รอประธานยืนยัน";
+            note = "เกิน " + B(raw) + " · อยู่ระหว่างตรวจสอบ";
           }
         }
       }
@@ -1986,6 +1987,42 @@ function drawT2(){
     กำหนดชำระวันที่ 5 คนส่วนใหญ่จึงโอนปลายเดือนก่อนหน้า</p>
   </div>
 
+  ${(()=>{
+    // ---- ยอดที่รับเข้ามาเกินกว่าที่ต้องชำระ — ต้องระบุว่าเป็นของใคร ----
+    const ov = [];
+    S.contracts.forEach(cc=>{
+      const rr = runContract(cc);
+      rr.rows.forEach(w=>{ if((w.over||0) > 0.05)
+        ov.push({c:cc, p:w.p, tn:w.tn, over:w.over, got:w.got, due:w.due}); });
+    });
+    if(!ov.length) return "";
+    const tot = +ov.reduce((a,x)=>a+x.over,0).toFixed(2);
+    const opts2 = DB.members.map(m=>`<option value="${m.no}">${m.no} · ${esc(m.name)}</option>`).join("");
+    return `<div class="card" style="border-left:4px solid var(--accent)">
+    <div class="eyebrow">ยอดที่รับเกิน — ต้องระบุว่าเป็นเงินของใคร (${ov.length} รายการ · รวม ${B(tot)} บาท)</div>
+    <p class="hint" style="margin-bottom:10px">เงินที่โอนเข้ามา<b>มากกว่ายอดที่ต้องชำระ</b> ·
+      ส่วนที่พอดีถูกบันทึกเป็น «ชำระแล้ว» ให้เรียบร้อยแล้ว · เหลือแต่<b>ส่วนเกิน</b>ที่ต้องตัดสินตรงนี้ ·
+      <b style="color:var(--accent-ink)">ยอดคงเหลือยังตรงตาราง PDF จนกว่าจะยืนยัน</b></p>
+    <div class="tbl"><table><thead><tr>
+      <th class="l">งวด</th><th class="l">สมาชิก</th><th>ต้องชำระ</th><th>รับเข้าจริง</th>
+      <th>ส่วนเกิน</th><th class="l">ระบุว่าเป็นของ</th><th class="l"></th>
+    </tr></thead><tbody>
+      ${ov.map(x=>`<tr>
+        <td class="l"><b>${PLBL[x.p]||x.p}</b>${x.tn?` <span class="hint">(งวดที่ ${x.tn})</span>`:""}</td>
+        <td class="l"><span class="no">${x.c.no}</span>${esc((DB.members.find(m=>m.no===x.c.no)||{}).name||"")}</td>
+        <td class="amt">${B(x.due)}</td><td class="amt">${B(x.got)}</td>
+        <td class="amt"><b style="color:var(--accent-ink)">${B(x.over)}</b></td>
+        <td class="l"><button class="ghost sm" data-ovok="${x.c.id}|${x.p}|y"
+              style="padding:3px 9px;font-size:11.5px;border-color:var(--green);color:var(--green)"
+              title="เป็นเงินของสมาชิกรายนี้เอง — จะนำไปโปะเงินต้นให้">✓ ของคนนี้เอง</button></td>
+        <td class="l"><select data-ovto="${x.c.id}|${x.p}" style="width:auto;font-size:12px">
+            <option value="">— เป็นของสมาชิกอื่น —</option>${opts2}</select></td></tr>`).join("")}
+    </tbody></table></div>
+    <p class="hint" style="margin-top:8px"><b>✓ ของคนนี้เอง</b> = โปะเงินต้นให้ หนี้ลดจริง ·
+      <b>เลือกสมาชิกอื่น</b> = ย้ายเงินก้อนนี้ไปเป็นของคนนั้น (กรณีฝากชำระแทน) ·
+      ไม่ตัดสินตอนนี้ก็ได้ — เงินยังอยู่ครบ ไม่หายไปไหน</p>
+  </div>`; })()}
+
   ${unk.length ? `<div class="card" style="border-left:3px solid var(--red)">
     <div class="eyebrow">บัญชีที่ยังไม่รู้ว่าเป็นของใคร — ${unk.length} บัญชี</div>
     <p class="hint" style="margin-bottom:10px">เงินจากบัญชีเหล่านี้เข้ามาแล้วแต่ยังไม่ถูกนับให้สมาชิกคนไหน ·
@@ -2100,6 +2137,32 @@ function drawT2(){
   $("cut").onchange = e => { S.cut = +e.target.value; all(); };
   document.querySelectorAll("[data-map]").forEach(s => s.onchange = e => {
     S.acct[e.target.dataset.map] = e.target.value; all(); });
+
+  // ★ ยอดที่รับเกิน — «ของคนนี้เอง» / ย้ายไปให้สมาชิกอื่น
+  document.querySelectorAll("[data-ovok]").forEach(b => b.onclick = () => {
+    const [cid, p, v] = b.dataset.ovok.split("|");
+    setPer(cid, p, "overOK", v);
+    all();
+  });
+  document.querySelectorAll("[data-ovto]").forEach(sel => sel.onchange = ev => {
+    const to = ev.target.value; if(!to) return;
+    const [cid, p] = ev.target.dataset.ovto.split("|");
+    const cc = S.contracts.find(x=>x.id===cid); if(!cc) return;
+    const r  = runContract(cc);
+    const wrow = r.rows.find(x=>x.p===p); if(!wrow) return;
+    const amt  = +(wrow.over||0).toFixed(2);
+    const toM  = DB.members.find(m=>m.no===to);
+    if(!confirm(`ย้ายเงินส่วนเกิน ${B(amt)} บาท ของงวด ${PLBL[p]||p}\n`
+      + `ไปเป็นเงินของ ${to} ${toM?toM.name:""} ใช่หรือไม่?\n\n`
+      + `ระบบจะสร้างรายการรับชำระใหม่ให้ และหักออกจากยอดของคนเดิม`)){ ev.target.value=""; return; }
+    // สร้างรายการใหม่ให้เจ้าของตัวจริง + ตัดออกจากคนเดิม
+    const d = (p.length===7 ? p.replace("2569","2026").replace("2568","2025") + "-01" : p);
+    S.tx.push({a:"MOVE"+to, d, t:"--:--", m:amt, no:to, man:1,
+               note:`ย้ายจากส่วนเกินของ ${cc.no} งวด ${PLBL[p]||p}`});
+    setPer(cid, p, "overOK", "moved");     // ตัดออกจากคนเดิม ไม่ให้โปะเงินต้น
+    setPer(cid, p, "overTo", to);
+    all();
+  });
   if($("matchAll")) $("matchAll").onclick = () => { autoMatch(); all(); };
   document.querySelectorAll("[data-as]").forEach(s => s.onchange = e => {
     S.assign[e.target.dataset.as] = e.target.value; all(); });
@@ -2513,15 +2576,7 @@ function slipHTML(m){
     ${x.rows.map(w => w.pre||w.done ? "" :
       `<tr class="${w.opens?"newloan":(K&&w.short>0.005&&!w.relief?"miss":"")}">
          <td class="l">${PLBL[w.p]}${w.tn?` <span class="hint">(งวดที่ ${w.tn})</span>`:""}${w.opens?` <span class="pill yel">รับเงินกู้ ${B(w.nl)}</span>`:""}${w.note?` <span class="pill ${w.over>0.005?(w.overOK==="n"?"red":"yel"):"grn"}">${w.note}</span>`:""}${w.late?' <span class="pill yel">ชำระล่าช้า</span>':""}
-           ${w.over>0.005||w.overOK ? `<div class="bar" style="margin-top:4px;gap:4px">
-             <button class="ghost sm" data-ovok="${c.id}|${w.p}|y"
-               style="padding:2px 7px;font-size:10.5px${w.overOK==="y"?";border-color:var(--green);color:var(--green);font-weight:700":""}"
-               title="ยืนยันว่าเงินส่วนเกินนี้เป็นของสมาชิกรายนี้ — จะนำไปโปะเงินต้นให้">✓ ยืนยัน</button>
-             <button class="ghost sm" data-ovok="${c.id}|${w.p}|n"
-               style="padding:2px 7px;font-size:10.5px${w.overOK==="n"?";border-color:var(--danger);color:var(--danger);font-weight:700":""}"
-               title="ไม่ใช่เงินของคนนี้ / ยังไม่รู้ที่มา — ส่งไปหน้าตรวจสอบ">✗ ไม่ใช่ของคนนี้</button>
-             ${w.overOK?`<button class="ghost sm" data-ovok="${c.id}|${w.p}|" style="padding:2px 7px;font-size:10.5px">ล้าง</button>`:""}
-           </div>`:""}</td>
+</td>
          <td class="l hint" style="font-family:'IBM Plex Mono',monospace">${(w.txs||[]).map(t=>t.d.slice(5)+(t.man?" ✎":"")).join("<br>")||"—"}</td>
          ${K?`<td class="amt">${B(w.due)}</td>`:""}
          <td class="amt">${w.got>0?B(w.got):"ไม่มีเงินเข้า"}</td>
