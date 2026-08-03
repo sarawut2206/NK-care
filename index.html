@@ -360,7 +360,7 @@ th.svcol{background:#FFF4D6!important}
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.08.03-19</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.08.03-20</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
@@ -523,17 +523,19 @@ function feeOf(c,p,got,due,txs){
   const m = per(c.id,p);
   if(m.fee!=null) return +m.fee;                      // แก้ด้วยมือ / ยกเว้น
   if(m.relief) return 0;
+  if(m.paidOK) return 0;                             // ★ ประธานยืนยันว่าชำระแล้ว — ไม่คิดค่าทวงถาม
   const late = (got<due-0.005) || lateOf(c,p,txs);
   return late && due>0 ? +Math.min(due*FEE_PCT, FEE_MAX).toFixed(2) : 0;
 }
-function kindOf(got,int,due){
+function kindOf(got,int,due,paidOK){
+  if(paidOK) return "ยืนยันชำระแล้ว";        // ★ ประธานยืนยันด้วยตัวเอง
   if(got<=0.005) return "ไม่ชำระ";
   if(got < int-0.005) return "ไม่พอดอกเบี้ย";
   if(got < due-0.005) return Math.abs(got-int)<=50 ? "ชำระเฉพาะดอกเบี้ย" : "ชำระบางส่วน";
   return got > due+0.005 ? "ชำระเกิน" : "ชำระครบ";
 }
-const KIND_CLS = {"ชำระครบ":"grn","ชำระเกิน":"grn","ชำระเฉพาะดอกเบี้ย":"yel","ชำระบางส่วน":"yel",
-                  "ไม่พอดอกเบี้ย":"red","ไม่ชำระ":"red","รับชำระแล้ว":"","ไม่มีเงินเข้า":""};
+const KIND_CLS = {"ชำระครบ":"grn","ชำระเกิน":"grn","ยืนยันชำระแล้ว":"grn","ชำระเฉพาะดอกเบี้ย":"yel",
+                  "ชำระบางส่วน":"yel","ไม่พอดอกเบี้ย":"red","ไม่ชำระ":"red","รับชำระแล้ว":"","ไม่มีเงินเข้า":""};
 
 /* ============ แท็บ 7 — ติดตามหนี้ & หนังสือเตือน ============ */
 function drawT7(){
@@ -555,14 +557,26 @@ function drawT7(){
       <div class="eyebrow">บัญชีรายงวด — ${esc(m.name)} · สัญญา${cur.prod} ${cur.code?`· ${esc(cur.code)}`:""}</div>
       <div class="tbl"><table><thead><tr><th class="l">งวด</th><th>ต้องชำระ</th><th>รับจริง</th><th>ขาด</th>
         <th>ดอกเบี้ย</th><th>ฝากหุ้น</th><th>เงินต้น</th><th>ค่าทวงถาม</th><th class="l">สถานะ</th>
+        <th class="l">ยืนยันการชำระ</th>
         <th class="l">ผ่อนผันเป็นหนังสือ (ข้อ 2.2)</th></tr></thead><tbody>
       ${rows.map(w=>{ const md = per(cur.id,w.p);
         return `<tr><td class="l">${PLBL[w.p]}${w.opens?' <span class="pill yel">รับเงินกู้</span>':""}</td>
-        <td class="amt">${B(w.due)}</td><td class="amt">${B(w.got)}</td>
+        <td class="amt">${B(w.due)}</td>
+        <td><input type="number" step="0.01" data-got="${cur.id}:${w.p}"
+              value="${md.gotFix!==undefined?md.gotFix:w.got.toFixed(2)}"
+              title="ยอดที่รับจริง — แก้ได้ถ้าตัวเลขจากสลิปไม่ตรงกับที่รับจริง"
+              style="width:86px;padding:3px 5px;text-align:right${md.gotFix!==undefined?";border-color:var(--brand2);background:#F4F8FF;font-weight:600":""}"></td>
         <td class="amt"${w.short>0.005?' style="color:var(--red);font-weight:600"':""}>${w.short>0.005?B(w.short):"—"}</td>
         <td class="amt">${B(w.int)}</td><td class="amt">${B(w.sh)}</td><td class="amt">${B(w.pri)}</td>
         <td><input type="number" step="0.01" data-fee="${cur.id}:${w.p}" value="${w.fee||0}" style="width:64px;padding:2px 4px"></td>
-        <td class="l"><span class="pill ${KIND_CLS[w.kind]||""}">${w.kind}</span>${w.relief?' <span class="pill grn">ผ่อนผัน</span>':""}</td>
+        <td class="l"><span class="pill ${KIND_CLS[w.kind]||""}">${w.kind}</span>${w.relief?' <span class="pill grn">ผ่อนผัน</span>':""}
+          ${md.gotFix!==undefined?'<br><span class="pill" style="font-size:10px">แก้ยอดเอง</span>':""}</td>
+        <td class="l">${md.paidOK
+          ? `<span class="pill grn" title="ยืนยันเมื่อ ${esc(md.paidAt||"")}">✓ ชำระแล้ว</span>
+             <button class="ghost sm" data-paid="${cur.id}:${w.p}:0" style="padding:2px 6px;font-size:10.5px;margin-left:4px">ยกเลิก</button>`
+          : `<button class="ghost sm" data-paid="${cur.id}:${w.p}:1"
+               style="padding:3px 9px;font-size:11px;border-color:var(--green);color:var(--green)"
+               title="ยืนยันว่างวดนี้ชำระเรียบร้อยแล้ว">ยืนยันชำระ</button>`}</td>
         <td class="l"><label style="margin:0;font-weight:400;display:flex;gap:5px;align-items:center;font-size:11.5px">
           <input type="checkbox" data-rel="${cur.id}:${w.p}" ${w.relief?"checked":""} style="width:13px;height:13px;accent-color:var(--green)">
           <input data-relm="${cur.id}:${w.p}" value="${esc(md.memo||"")}" placeholder="เลขที่มติ / วันที่" style="width:130px;padding:2px 5px"></label></td></tr>`;
@@ -570,7 +584,7 @@ function drawT7(){
       <tr class="tot"><td class="l">รวม</td><td class="amt">${B(rows.reduce((s,w)=>s+w.due,0))}</td>
         <td class="amt">${B(x.totGot)}</td><td class="amt" style="color:var(--red)">${B(rows.reduce((s,w)=>s+w.short,0))}</td>
         <td class="amt">${B(x.totInt)}</td><td class="amt">${B(x.totSh)}</td><td class="amt">${B(x.totPri)}</td>
-        <td class="amt">${B(x.totFee)}</td><td colspan="2"></td></tr>
+        <td class="amt">${B(x.totFee)}</td><td colspan="3"></td></tr>
       </tbody></table></div>
       <p class="hint" style="margin-top:9px">ค่าทวงถามคิดอัตโนมัติ 5% ของยอดงวด ไม่เกิน 100 บาท เมื่อชำระไม่ครบหรือเกินวันที่ 10 —
       <b>แก้เป็น 0 ได้ถ้ากรรมการยกเว้น</b> · ติ๊ก «ผ่อนผัน» เมื่อคณะกรรมการอนุมัติเป็นหนังสือให้ชำระบางส่วนได้ตามข้อ 2.2
@@ -619,6 +633,26 @@ function drawT7(){
     const [id,p]=e.target.dataset.rel.split(":"); setPer(id,p,"relief",e.target.checked); all(); });
   document.querySelectorAll("[data-relm]").forEach(i=>i.onchange=e=>{
     const [id,p]=e.target.dataset.relm.split(":"); setPer(id,p,"memo",e.target.value.trim()); all(); });
+  // ★ แก้ยอดรับจริงของงวดนั้นเอง (กรณีสลิปไม่ตรง / มีเงินสด)
+  document.querySelectorAll("[data-got]").forEach(i=>i.onchange=e=>{
+    const [id,p]=e.target.dataset.got.split(":");
+    const cc=S.contracts.find(x=>x.id===id);
+    const auto=+(runContract(cc).rows.find(w=>w.p===p)||{}).got||0;
+    const v=+e.target.value||0;
+    if(Math.abs(v-auto)<0.005) setPer(id,p,"gotFix",undefined);   // เท่าค่าอัตโนมัติ = เลิกแก้
+    else setPer(id,p,"gotFix",+v.toFixed(2));
+    all(); });
+  // ★ ยืนยันว่างวดนี้ชำระแล้ว
+  document.querySelectorAll("[data-paid]").forEach(b=>b.onclick=()=>{
+    const [id,p,v]=b.dataset.paid.split(":");
+    if(v==="1"){
+      setPer(id,p,"paidOK",true);
+      setPer(id,p,"paidAt", new Date().toLocaleDateString("th-TH"));
+    } else {
+      if(!confirm("ยกเลิกการยืนยันงวดนี้?")) return;
+      setPer(id,p,"paidOK",false); setPer(id,p,"paidAt","");
+    }
+    all(); });
   $("w_print").onclick = () => { document.body.classList.add("wprint");
     setTimeout(()=>{ window.print(); document.body.classList.remove("wprint"); },250); };
   drawWarn();
@@ -820,9 +854,9 @@ function runContract(c){
   const rows = []; let missed = 0, last = null, closed = null;
 
   PERIODS.forEach(p => {
-    const got = +(recv[p]||0).toFixed(2);
-    const txs = txp[p] || [];
     const md  = per(c.id, p), relief = !!md.relief;
+    const got = md.gotFix !== undefined ? +(+md.gotFix).toFixed(2) : +(recv[p]||0).toFixed(2);
+    const txs = txp[p] || [];
     const nl  = (!c.legacy && p === start) ? +(+c.amt||0) : 0;
     if (!c.legacy && p < start){ rows.push({p, pre:true}); return; }
 
@@ -860,8 +894,10 @@ function runContract(c){
     // ประเมินได้ต่อเมื่อรู้ "เงินต้น+ดอกเบี้ยต่องวด" จริง — ไม่มีก็ไม่เดา (ดูทะเบียนสัญญา แท็บ 1)
     const known = D.pi > 0;
     const due   = known ? D.due : 0;
-    const short = known ? +Math.max(0, due - got).toFixed(2) : 0;
-    const kind  = known ? kindOf(got, int, due) : (got > 0 ? "รับชำระแล้ว" : "ไม่มีเงินเข้า");
+    // ★ ประธานยืนยันแล้วว่างวดนี้ชำระเรียบร้อย → ไม่นับขาด ไม่นับผิดนัด
+    const short = (md.paidOK || !known) ? 0 : +Math.max(0, due - got).toFixed(2);
+    const kind  = md.paidOK ? "ยืนยันชำระแล้ว"
+                : known ? kindOf(got, int, due) : (got > 0 ? "รับชำระแล้ว" : "ไม่มีเงินเข้า");
     const fee   = known ? feeOf(c, p, got, due, txs) : 0;
     const late  = known && got > 0 && lateOf(c, p, txs);
 
