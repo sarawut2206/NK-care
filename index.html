@@ -5,89 +5,126 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@400;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-:root{--ink:#16213C;--soft:#5A6480;--paper:#FBF9F4;--card:#fff;--rule:#DCD8CE;
---red:#C8281E;--gold:#E8B22A;--green:#1F6B4A;--faint:#F1EEE7}
+:root{
+  /* โทนหลัก — น้ำเงินติดล้อ */
+  --ink:#0B2C6B;            /* น้ำเงินเข้ม — ตัวหนังสือหลัก + เส้นขอบเน้น */
+  --brand:#0B2C6B;          /* น้ำเงินแบรนด์ (เท่ากับ ink) */
+  --brand2:#1E5BC6;         /* ฟ้าสด — ไฮไลต์ ลิงก์ ปุ่มรอง */
+  --accent:#F2B01E;         /* เหลืองทอง — สีตัด (แทนที่ส้ม/แดงของติดล้อ) */
+  --accent-ink:#7A5200;     /* เหลืองเข้ม — ตัวหนังสือบนพื้นเหลือง */
+  --soft:#5A6B8C;           /* เทาน้ำเงิน — ตัวหนังสือรอง */
+  --paper:#F4F7FC;          /* ฟ้าอ่อนมาก — พื้นหลัง */
+  --card:#fff;
+  --rule:#D3DEEF;           /* เส้นขอบ โทนฟ้า */
+  --faint:#EAF1FB;          /* เส้นแบ่งจาง */
+  --gold:#F2B01E;           /* คงชื่อเดิมไว้ให้โค้ดที่อ้าง var(--gold) ยังทำงาน */
+  --green:#1B7A4B;          /* เขียว — ผ่าน/ปิดหนี้ */
+  --danger:#C0202E;         /* แดง — ผิดพลาด/ค้างชำระ (แยกจากสีตัด) */
+  --red:#C0202E;            /* คงชื่อเดิม = danger เพื่อไม่ให้โค้ดเก่าพัง */
+}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--paper);color:var(--ink);font-family:"IBM Plex Sans Thai",system-ui,sans-serif;
-font-size:14px;padding:20px 16px 70px}
-.wrap{max-width:1240px;margin:0 auto}
-.mast{display:flex;align-items:flex-end;gap:13px;border-bottom:2px solid var(--ink);padding-bottom:10px}
+font-size:15.5px;line-height:1.5;padding:0 0 70px}
+.wrap{max-width:1240px;margin:0 auto;padding:0 16px}
+.topbar{background:linear-gradient(120deg,#0B2C6B 0%,#12439E 55%,#1E5BC6 100%);color:#fff;
+  padding:16px 0 15px;box-shadow:0 2px 14px rgba(11,44,107,.22);margin-bottom:0}
+.topbar .wrap{display:flex;align-items:center;gap:14px}
+.mast{display:flex;align-items:center;gap:13px}
 .flag{display:flex;gap:3px;align-items:flex-end}
-.flag i{display:block;width:8px;border-radius:8px 8px 2px 2px}
-.flag i:nth-child(1){height:21px;background:var(--red)}
-.flag i:nth-child(2){height:29px;background:var(--gold)}
-.flag i:nth-child(3){height:25px;background:var(--ink)}
-h1{font-family:"Bai Jamjuree",sans-serif;font-weight:700;font-size:21px;line-height:1.15}
-.mast small{display:block;font-weight:400;font-size:11.5px;color:var(--soft);margin-top:2px}
-.tools{margin-left:auto;display:flex;gap:7px;align-items:center}
-.saved{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--soft)}
+.flag i{display:block;width:9px;border-radius:9px 9px 2px 2px}
+.flag i:nth-child(1){height:22px;background:var(--accent)}
+.flag i:nth-child(2){height:31px;background:#fff}
+.flag i:nth-child(3){height:26px;background:var(--brand2)}
+h1{font-family:"Bai Jamjuree",sans-serif;font-weight:700;font-size:22px;line-height:1.12;color:#fff}
+.topbar small{display:block;font-weight:400;font-size:12px;color:#BFD3F5;margin-top:2px}
+.topbar small b{color:#fff}
+.tools{margin-left:auto;display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.tools button{background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.28);color:#fff}
+.tools button:hover{background:rgba(255,255,255,.22)}
+.saved{font-family:"IBM Plex Mono",monospace;font-size:11px;color:#BFD3F5}
 
-button{font-family:"Bai Jamjuree",sans-serif;font-weight:600;font-size:13px;background:var(--ink);color:#fff;
-border:0;border-radius:7px;padding:8px 13px;cursor:pointer}
-button.ghost{background:transparent;color:var(--ink);border:1px solid var(--rule)}
-button.sm{font-size:11.5px;padding:5px 9px}
-button:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+button{font-family:"Bai Jamjuree",sans-serif;font-weight:600;font-size:14px;background:var(--brand);color:#fff;
+border:0;border-radius:9px;padding:9px 16px;cursor:pointer;transition:filter .12s,background .12s}
+button:hover{filter:brightness(1.12)}
+button.ghost{background:#fff;color:var(--brand);border:1.5px solid var(--rule)}
+button.ghost:hover{filter:none;border-color:var(--brand2);background:var(--faint)}
+button.sm{font-size:12.5px;padding:6px 11px;border-radius:7px}
+button.cta{background:var(--accent);color:var(--brand);font-weight:700}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 button:disabled{opacity:.4;cursor:default}
 
-nav{display:flex;gap:4px;margin:16px 0 14px;border-bottom:1px solid var(--rule);flex-wrap:wrap}
-nav b{font-family:"Bai Jamjuree",sans-serif;font-weight:600;font-size:13.5px;padding:9px 15px;cursor:pointer;
-color:var(--soft);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
-nav b.on{color:var(--ink);border-bottom-color:var(--red)}
-nav b .dot{display:inline-block;min-width:17px;height:17px;line-height:17px;border-radius:9px;background:var(--red);
-color:#fff;font-size:10px;text-align:center;margin-left:5px;padding:0 4px;font-family:"IBM Plex Mono",monospace}
-section{display:none} section.on{display:block}
+nav{display:flex;gap:5px;margin:0 0 18px;flex-wrap:wrap;
+  background:#fff;border-bottom:1px solid var(--rule);padding:7px 16px 0;
+  position:sticky;top:0;z-index:20;box-shadow:0 2px 10px rgba(11,44,107,.05)}
+nav .wrap{display:flex;gap:5px;flex-wrap:wrap;padding:0}
+nav b{font-family:"Bai Jamjuree",sans-serif;font-weight:600;font-size:14.5px;padding:11px 17px;cursor:pointer;
+color:var(--soft);border:1px solid transparent;border-bottom:none;border-radius:9px 9px 0 0;
+margin-bottom:-1px;white-space:nowrap;display:flex;align-items:center;gap:7px;transition:color .12s,background .12s}
+nav b:hover{color:var(--brand);background:var(--faint)}
+nav b.on{color:var(--brand);background:var(--paper);border-color:var(--rule);
+  box-shadow:inset 0 3px 0 var(--accent)}
+nav b .grp-ic{font-size:15px;opacity:.85}
+nav b .dot{display:inline-block;min-width:19px;height:19px;line-height:19px;border-radius:10px;
+background:var(--danger);color:#fff;font-size:11px;text-align:center;padding:0 5px;font-family:"IBM Plex Mono",monospace}
+section{display:none} section.on{display:block;animation:fade .2s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 
-.card{background:var(--card);border:1px solid var(--rule);border-radius:9px;padding:14px;margin-bottom:14px}
-.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.13em;text-transform:uppercase;
-color:var(--soft);display:flex;align-items:center;gap:8px;margin:0 0 11px}
+.card{background:var(--card);border:1px solid var(--rule);border-radius:12px;padding:17px 18px;margin-bottom:15px;
+box-shadow:0 1px 3px rgba(11,44,107,.05)}
+.eyebrow{font-family:"Bai Jamjuree",sans-serif;font-weight:700;font-size:14px;letter-spacing:.01em;
+color:var(--brand);display:flex;align-items:center;gap:9px;margin:0 0 13px;padding-left:11px;
+border-left:4px solid var(--accent)}
 .eyebrow::after{content:"";flex:1;height:1px;background:var(--rule)}
 .eyebrow>button{order:9}
-.hint{font-size:11.5px;color:var(--soft);line-height:1.55}
-.hint b{color:var(--ink)}
+.hint{font-size:12.5px;color:var(--soft);line-height:1.6}
+.hint b{color:var(--brand)}
 
-.grid{display:grid;gap:9px;align-items:end}
-label{display:block;font-size:11px;font-weight:600;color:var(--soft);margin-bottom:4px}
-input,select,textarea{width:100%;font-family:"IBM Plex Sans Thai",sans-serif;font-size:13px;color:var(--ink);
-background:var(--paper);border:1px solid var(--rule);border-radius:6px;padding:7px 8px}
+.grid{display:grid;gap:11px;align-items:end}
+label{display:block;font-size:12.5px;font-weight:600;color:var(--soft);margin-bottom:5px}
+input,select,textarea{width:100%;font-family:"IBM Plex Sans Thai",sans-serif;font-size:14.5px;color:var(--ink);
+background:#fff;border:1.5px solid var(--rule);border-radius:8px;padding:9px 11px}
 input[type=number]{font-family:"IBM Plex Mono",monospace;text-align:right}
-input:focus,select:focus,textarea:focus{outline:2px solid var(--ink);outline-offset:1px}
-input.bad{border-color:var(--red);background:#FFF6F5}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--brand2);
+box-shadow:0 0 0 3px rgba(30,91,198,.15)}
+input.bad{border-color:var(--danger);background:#FEF4F4}
 textarea{min-height:92px;font-family:"IBM Plex Mono",monospace;font-size:11.5px;line-height:1.5;resize:vertical}
 
-table{border-collapse:collapse;width:100%;font-size:12.5px}
-.tbl{background:var(--card);border:1px solid var(--rule);border-radius:9px;overflow:auto}
-th,td{padding:6px 8px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--faint)}
-th{position:sticky;top:0;background:var(--card);font-family:"IBM Plex Mono",monospace;font-size:9.5px;
-letter-spacing:.05em;color:var(--soft);font-weight:500;border-bottom:1.5px solid var(--ink);z-index:2}
-td.l,th.l{text-align:left}
-tr.grp td{background:var(--paper);font-family:"Bai Jamjuree",sans-serif;font-weight:600;text-align:left;
-font-size:12px;color:var(--soft)}
-tbody tr:hover td{background:#FCFAF5}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+.tbl{background:var(--card);border:1px solid var(--rule);border-radius:11px;overflow:auto}
+th,td{padding:8px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--faint)}
+th{position:sticky;top:0;background:var(--brand);font-family:"Bai Jamjuree",sans-serif;font-size:11.5px;
+letter-spacing:.01em;color:#fff;font-weight:600;border-bottom:2px solid var(--brand);z-index:2}
+th.l,td.l{text-align:left}
+tr.grp td{background:var(--faint);font-family:"Bai Jamjuree",sans-serif;font-weight:700;text-align:left;
+font-size:13px;color:var(--brand)}
+tbody tr:hover td{background:var(--faint)}
 .no{font-family:"IBM Plex Mono",monospace;color:var(--soft);margin-right:5px;font-size:11px}
 .amt{font-family:"IBM Plex Mono",monospace}
-.pill{display:inline-block;font-size:10px;padding:1px 7px;border-radius:999px;border:1px solid var(--rule);color:var(--soft)}
-.pill.red{border-color:rgba(200,40,30,.45);color:var(--red);font-weight:600}
-.pill.grn{border-color:rgba(31,107,74,.4);color:var(--green)}
-.pill.yel{border-color:rgba(232,178,42,.7);color:#8A6400;font-weight:600}
-.del{background:none;border:0;color:var(--red);cursor:pointer;font-size:15px;padding:0 3px}
+.pill{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:999px;border:1.3px solid var(--rule);color:var(--soft);font-weight:500}
+.pill.red{border-color:rgba(192,32,46,.4);background:#FEF4F4;color:var(--danger);font-weight:600}
+.pill.grn{border-color:rgba(27,122,75,.4);background:#F0FAF4;color:var(--green);font-weight:600}
+.pill.yel{border-color:rgba(242,176,30,.6);background:#FFF8E8;color:var(--accent-ink);font-weight:600}
+.del{background:none;border:0;color:var(--danger);cursor:pointer;font-size:17px;padding:0 3px;font-weight:700}
+.del:hover{filter:none;transform:scale(1.2)}
 
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:9px;margin-bottom:14px}
-.stat{background:var(--card);border:1px solid var(--rule);border-radius:9px;padding:10px 12px}
-.stat .k{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--soft)}
-.stat .v{font-family:"Bai Jamjuree",sans-serif;font-weight:700;font-size:19px;margin-top:2px}
-.stat .v small{font-size:11px;font-weight:400;color:var(--soft)}
+.stat{background:var(--card);border:1px solid var(--rule);border-radius:11px;padding:13px 15px;
+border-top:3px solid var(--brand2);box-shadow:0 1px 3px rgba(11,44,107,.05)}
+.stat .k{font-family:"Bai Jamjuree",sans-serif;font-weight:600;font-size:12px;letter-spacing:0;color:var(--soft)}
+.stat .v{font-family:"Bai Jamjuree",sans-serif;font-weight:700;font-size:23px;margin-top:3px;color:var(--brand)}
+.stat .v small{font-size:12.5px;font-weight:400;color:var(--soft)}
 
-.chk{background:var(--card);border:1px solid var(--rule);border-left:3px solid var(--green);
-border-radius:0 8px 8px 0;padding:11px 14px;margin-bottom:9px}
-.chk.fail{border-left-color:var(--red)}
-.chk.warn{border-left-color:var(--gold)}
-.chk h4{font-family:"Bai Jamjuree",sans-serif;font-size:13.5px;display:flex;align-items:center;gap:8px}
-.chk h4 .mk{font-family:"IBM Plex Mono",monospace;font-size:11px}
-.chk.pass h4 .mk{color:var(--green)} .chk.fail h4 .mk{color:var(--red)} .chk.warn h4 .mk{color:#8A6400}
-.chk p{font-size:12px;color:var(--soft);margin-top:3px;line-height:1.55}
+.chk{background:var(--card);border:1px solid var(--rule);border-left:4px solid var(--green);
+border-radius:0 10px 10px 0;padding:13px 16px;margin-bottom:10px;box-shadow:0 1px 3px rgba(11,44,107,.04)}
+.chk.fail{border-left-color:var(--danger)}
+.chk.warn{border-left-color:var(--accent)}
+.chk h4{font-family:"Bai Jamjuree",sans-serif;font-weight:600;font-size:15px;display:flex;align-items:center;gap:9px}
+.chk h4 .mk{font-size:15px}
+.chk.pass h4 .mk{color:var(--green)} .chk.fail h4 .mk{color:var(--danger)} .chk.warn h4 .mk{color:var(--accent-ink)}
+.chk p{font-size:13px;color:var(--soft);margin-top:4px;line-height:1.6}
 .chk code{font-family:"IBM Plex Mono",monospace;font-size:11px;background:rgba(22,33,60,.06);padding:1px 5px;border-radius:4px}
-.msg{font-size:12.5px;font-weight:600}
-.msg.ok{color:var(--green)} .msg.bad{color:var(--red)}
+.msg{font-size:13.5px;font-weight:600}
+.msg.ok{color:var(--green)} .msg.bad{color:var(--danger)}
 .bar{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:10px}
 
 .receipt{background:#fff;border:1px solid var(--rule);border-radius:9px;padding:20px;margin-top:16px}
@@ -182,7 +219,7 @@ th.svcol{background:#FFF4D6!important}
 .kt2 td{width:25%}
 .kt3 tr.hl td{background:#FDF6E3}
 .kh{font-size:10px;color:var(--soft)}
-.keybox{border:1px solid var(--rule);border-radius:5px;padding:7px 10px;background:#FBF9F4;margin:7px 0;font-size:10.5px}
+.keybox{border:1px solid var(--rule);border-radius:8px;padding:10px 13px;background:var(--faint);margin:9px 0;font-size:12.5px;line-height:1.55}
 .keybox ol{margin:4px 0 0 16px} .keybox li{margin-bottom:1px}
 .ack{border:1px solid var(--ink);border-radius:5px;padding:8px 10px;margin:8px 0;font-size:10.5px}
 .ack div{margin-bottom:3px}
@@ -317,13 +354,13 @@ th.svcol{background:#FFF4D6!important}
 }
 </style>
 
+<div class="topbar">
 <div class="wrap">
-<div class="mast">
   <div class="flag"><i></i><i></i><i></i></div>
-  <div><h1>ระบบทะเบียนสัญญาและรับชำระ</h1>
-    <small>กบข.นข. · โรงเรียนมัธยมวัดหนองแขม · บัญชี 206-2-63177-8 ·
+  <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
+    <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0">v2569.07.16-9</b></small></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.08.03-10</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
@@ -334,18 +371,20 @@ th.svcol{background:#FFF4D6!important}
     <input type="file" id="imp" accept=".json" hidden>
   </div>
 </div>
+</div>
 
-<nav>
-  <b data-t="1" class="on">1 · ทะเบียนสัญญา</b>
-  <b data-t="2">2 · รับชำระ</b>
-  <b data-t="3">3 · สรุป &amp; ใบเสร็จ</b>
-  <b data-t="4">4 · ตรวจสอบ <span class="dot" id="ndot">0</span></b>
-  <b data-t="5">5 · พิมพ์สัญญา</b>
-  <b data-t="6">6 · คำนวณวงเงิน</b>
-  <b data-t="7">7 · ติดตามหนี้ &amp; หนังสือเตือน</b>
-  <b data-t="8">8 · ทะเบียนคุม</b>
-</nav>
+<nav><div class="wrap">
+  <b data-t="1" class="on"><span class="grp-ic">📋</span>ทะเบียนสัญญา</b>
+  <b data-t="2"><span class="grp-ic">💵</span>รับชำระ</b>
+  <b data-t="3"><span class="grp-ic">🧾</span>สรุป &amp; ใบเสร็จ</b>
+  <b data-t="5"><span class="grp-ic">🖨️</span>พิมพ์สัญญา</b>
+  <b data-t="6"><span class="grp-ic">🧮</span>คำนวณวงเงิน</b>
+  <b data-t="7"><span class="grp-ic">📨</span>ติดตามหนี้</b>
+  <b data-t="8"><span class="grp-ic">📚</span>ทะเบียนคุม</b>
+  <b data-t="4"><span class="grp-ic">✔️</span>ตรวจสอบ <span class="dot" id="ndot">0</span></b>
+</div></nav>
 
+<div class="wrap">
 <div id="bnr" style="display:none;padding:10px 13px;border-radius:0 6px 6px 0;margin:0 0 14px"></div>
 <section id="tab1" class="on"></section>
 <section id="tab2"></section>
@@ -355,7 +394,6 @@ th.svcol{background:#FFF4D6!important}
 <section id="tab6"></section>
 <section id="tab7"></section>
 <section id="tab8"></section>
-
 </div>
 
 <script>
