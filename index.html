@@ -360,7 +360,7 @@ th.svcol{background:#FFF4D6!important}
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.09.04-28</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.09.04-29</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
@@ -433,7 +433,7 @@ function rebuildPeriods(){
   for(let n = start; n <= end + 36; n++){ const p = pFrom(n); PLBL[p] = pLabel(p); }
 }
 const PROD = {
-  "สามัญ":   {method:"reduce", maxAmt:0,     maxTerms:48, guar:2, quota:0,      slots:0,
+  "สามัญ":   {method:"reduce", maxAmt:0,     maxTerms:72, guar:2, quota:0,      slots:0,
               note:"ลดต้นลดดอก · ดอกเบี้ยคิดจากเงินต้นคงเหลือ (สัญญาข้อ 2.5)"},
   "ดูแลกัน": {method:"flat",   maxAmt:35000, maxTerms:36, guar:1, quota:150000, slots:10,
               note:"Flat · ดอกเบี้ยคงที่ทุกงวด = วงเงิน × 1% (สัญญาข้อ 2.3)"},
