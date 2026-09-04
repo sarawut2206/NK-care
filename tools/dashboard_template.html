@@ -1,0 +1,294 @@
+<title>ทะเบียนเงินเข้ารายคน กบข.นข.</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0B2C6B; --text:#12234A; --soft:#5A6B8C; --brand2:#1E5BC6; --accent:#F2B01E; --accent-ink:#7A5200;
+  --paper:#F4F7FC; --card:#FFFFFF; --rule:#D3DEEF; --faint:#EAF1FB; --green:#1B7A4B; --danger:#C0202E;
+  --miss:#FCEBEC; --miss-ink:#A81B27;
+  --s1:#EAF1FB; --s2:#C9DBF5; --s3:#9DBDEB; --s4:#6A9BDD; --s5:#2F63BE; --s-ink-dark:#12234A; --s-ink-light:#FFFFFF;
+  --head:#0B2C6B; --head-ink:#FFFFFF; --shadow:0 1px 3px rgba(11,44,107,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#E6EDF9; --text:#E6EDF9; --soft:#9FB0CF; --brand2:#7FA9F2; --accent:#F2B01E; --accent-ink:#FFD874;
+    --paper:#0E1626; --card:#16213A; --rule:#2A3A5C; --faint:#1D2A48; --green:#5CC98B; --danger:#F27B86;
+    --miss:#3A1B22; --miss-ink:#F2A2AA;
+    --s1:#1D2A48; --s2:#243B6B; --s3:#2E4F91; --s4:#3D69BE; --s5:#6F9BEA; --s-ink-dark:#E6EDF9; --s-ink-light:#0B1120;
+    --head:#0F2A5E; --head-ink:#E6EDF9; --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#E6EDF9; --text:#E6EDF9; --soft:#9FB0CF; --brand2:#7FA9F2; --accent:#F2B01E; --accent-ink:#FFD874;
+  --paper:#0E1626; --card:#16213A; --rule:#2A3A5C; --faint:#1D2A48; --green:#5CC98B; --danger:#F27B86;
+  --miss:#3A1B22; --miss-ink:#F2A2AA;
+  --s1:#1D2A48; --s2:#243B6B; --s3:#2E4F91; --s4:#3D69BE; --s5:#6F9BEA; --s-ink-dark:#E6EDF9; --s-ink-light:#0B1120;
+  --head:#0F2A5E; --head-ink:#E6EDF9; --shadow:none;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--paper);color:var(--text);font-family:"IBM Plex Sans Thai",system-ui,sans-serif;font-size:14.5px;line-height:1.5;padding:0 0 60px}
+.wrap{max-width:1280px;margin:0 auto;padding:0 16px}
+.top{background:linear-gradient(120deg,#0B2C6B 0%,#12439E 55%,#1E5BC6 100%);color:#fff;padding:18px 0 16px}
+.top .wrap{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.flag{display:flex;gap:3px;align-items:flex-end;margin-bottom:6px}
+.flag i{display:block;width:9px;border-radius:9px 9px 2px 2px}
+.flag i:nth-child(1){height:22px;background:#F2B01E}.flag i:nth-child(2){height:31px;background:#fff}.flag i:nth-child(3){height:26px;background:#7FA9F2}
+h1{font-family:"Bai Jamjuree",sans-serif;font-weight:700;font-size:22px;line-height:1.15;color:#fff;text-wrap:balance}
+.top small{display:block;font-size:12.5px;color:#BFD3F5;margin-top:3px}
+.top .meta{margin-left:auto;font-family:"IBM Plex Mono",monospace;font-size:11px;color:#BFD3F5;text-align:right}
+h2{font-family:"Bai Jamjuree",sans-serif;font-weight:700;font-size:15px;color:var(--ink);display:flex;align-items:center;gap:10px;margin:22px 0 12px;padding-left:11px;border-left:4px solid var(--accent)}
+h2::after{content:"";flex:1;height:1px;background:var(--rule)}
+h2 .sub{font-family:"IBM Plex Sans Thai",sans-serif;font-weight:400;font-size:12.5px;color:var(--soft)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:16px}
+.stat{background:var(--card);border:1px solid var(--rule);border-top:3px solid var(--brand2);border-radius:10px;padding:12px 14px;box-shadow:var(--shadow)}
+.stat .k{font-family:"Bai Jamjuree",sans-serif;font-weight:600;font-size:12px;color:var(--soft)}
+.stat .v{font-family:"Bai Jamjuree",sans-serif;font-weight:700;font-size:24px;color:var(--ink);margin-top:2px;font-variant-numeric:tabular-nums}
+.stat .v small{font-size:12px;font-weight:400;color:var(--soft)}
+.card{background:var(--card);border:1px solid var(--rule);border-radius:12px;padding:15px 16px;box-shadow:var(--shadow)}
+.bar{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.hint{font-size:12.5px;color:var(--soft);line-height:1.6}
+input,select{font-family:inherit;font-size:14px;color:var(--text);background:var(--card);border:1.5px solid var(--rule);border-radius:8px;padding:7px 10px}
+input:focus,select:focus,button:focus-visible{outline:3px solid rgba(242,176,30,.55);outline-offset:1px;border-color:var(--brand2)}
+button{font-family:"Bai Jamjuree",sans-serif;font-weight:600;font-size:13px;background:var(--card);color:var(--brand2);border:1.5px solid var(--rule);border-radius:8px;padding:7px 12px;cursor:pointer}
+button:hover{background:var(--faint);border-color:var(--brand2)}
+button.on{background:var(--ink);color:var(--head-ink);border-color:var(--ink)}
+.seg{display:inline-flex;border:1.5px solid var(--rule);border-radius:9px;overflow:hidden}
+.seg button{border:0;border-radius:0;padding:7px 12px}
+.seg button+button{border-left:1.5px solid var(--rule)}
+.tbl{overflow:auto;border:1px solid var(--rule);border-radius:11px;background:var(--card);max-height:70vh}
+table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
+th,td{padding:6px 9px;white-space:nowrap;border-bottom:1px solid var(--faint);text-align:right;font-variant-numeric:tabular-nums}
+th{position:sticky;top:0;z-index:3;background:var(--head);color:var(--head-ink);font-family:"Bai Jamjuree",sans-serif;font-weight:600;font-size:11.5px}
+th.l,td.l{text-align:left}
+th.name,td.name{position:sticky;left:0;z-index:2;background:var(--card);min-width:210px;border-right:1px solid var(--rule)}
+th.name{z-index:4;background:var(--head)}
+td.num{font-family:"IBM Plex Mono",monospace}
+tr.p{cursor:pointer}
+tr.p:hover td{background:var(--faint)}
+tr.p:hover td.name{background:var(--faint)}
+tr.sel td{box-shadow:inset 0 -2px 0 var(--accent)}
+td.c{text-align:center;font-family:"IBM Plex Mono",monospace;font-size:12px;min-width:74px}
+td.c.s1{background:var(--s1);color:var(--s-ink-dark)}td.c.s2{background:var(--s2);color:var(--s-ink-dark)}
+td.c.s3{background:var(--s3);color:var(--s-ink-dark)}td.c.s4{background:var(--s4);color:var(--s-ink-light)}
+td.c.s5{background:var(--s5);color:var(--s-ink-light)}
+td.c.miss{background:var(--miss);color:var(--miss-ink);font-weight:500}
+td.c.multi::after{content:"·" attr(data-n);font-size:10px;opacity:.75;margin-left:3px}
+.no{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--soft);margin-right:6px}
+.pill{display:inline-block;font-size:11px;padding:1px 8px;border-radius:999px;border:1.3px solid var(--rule);color:var(--soft);font-weight:500;margin-left:5px}
+.pill.g{border-color:rgba(27,122,75,.45);color:var(--green)}
+.pill.r{border-color:rgba(192,32,46,.45);color:var(--danger)}
+.legend{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--soft);margin:8px 0 0}
+.legend i{display:inline-block;width:22px;height:13px;border-radius:3px;border:1px solid var(--rule)}
+.detail{display:grid;grid-template-columns:minmax(280px,1fr) minmax(300px,1.4fr);gap:14px;align-items:start}
+@media (max-width:900px){.detail{grid-template-columns:1fr}}
+.dname{font-family:"Bai Jamjuree",sans-serif;font-weight:700;font-size:19px;color:var(--ink)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px;margin-top:8px}
+.kv b{font-weight:600;color:var(--soft)}
+.kv span{font-family:"IBM Plex Mono",monospace}
+svg text{font-family:"IBM Plex Mono",monospace;font-size:10.5px;fill:var(--soft)}
+svg .gl{stroke:var(--rule);stroke-width:1}
+svg .b{fill:var(--brand2)}
+svg .b.hi{fill:var(--accent)}
+.tip{position:fixed;pointer-events:none;background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:6px 10px;font-size:12.5px;box-shadow:0 4px 14px rgba(0,0,0,.14);z-index:50;display:none}
+.ok{color:var(--green)}.bad{color:var(--danger)}
+.empty{padding:26px;text-align:center;color:var(--soft)}
+@media (prefers-reduced-motion:no-preference){tr.p td{transition:background .12s}}
+</style>
+
+<div class="top"><div class="wrap">
+  <div class="flag"><i></i><i></i><i></i></div>
+  <div><h1>ทะเบียนเงินเข้ารายคน กบข.นข.</h1>
+    <small>อ่านจากสเตทเมนท์บัญชี 206-2-63177-8 · โรงเรียนมัธยมวัดหนองแขม · ทุกบรรทัดตรวจด้วยยอดคงเหลือแล้ว</small></div>
+  <div class="meta" id="meta"></div>
+</div></div>
+
+<div class="wrap">
+  <div class="stats" id="stats"></div>
+
+  <h2>ใครโอนมาบ้าง · งวดไหน · เท่าไร <span class="sub">คลิกชื่อเพื่อดูทุกรายการของคนนั้น</span></h2>
+  <div class="card" style="margin-bottom:10px">
+    <div class="bar">
+      <input id="q" placeholder="ค้นชื่อ / เลขบัญชี / เลขสมาชิก" style="min-width:250px">
+      <div class="seg" id="mode"><button class="on" data-m="period">ตามงวด (ตัดวันที่ <span id="cut"></span>)</button><button data-m="month">ตามเดือนที่โอนจริง</button></div>
+      <select id="sort"><option value="total">เรียงตามยอดรวม</option><option value="name">เรียงตามชื่อ</option><option value="no">เรียงตามเลขสมาชิก</option><option value="last">เรียงตามโอนล่าสุด</option></select>
+      <span class="hint" id="cnt" style="margin-left:auto"></span>
+    </div>
+    <div class="legend">ความเข้มของช่อง = ยอดในงวดนั้น
+      <i style="background:var(--s1)"></i>&lt;1,000 <i style="background:var(--s2)"></i>&lt;2,500 <i style="background:var(--s3)"></i>&lt;5,000
+      <i style="background:var(--s4)"></i>&lt;10,000 <i style="background:var(--s5)"></i>≥10,000
+      <i style="background:var(--miss)"></i>ไม่มีเงินเข้า (ระหว่างครั้งแรกถึงครั้งล่าสุด) · ตัวเลขเล็ก ·2 = โอนมา 2 ครั้งในงวดนั้น</div>
+  </div>
+  <div class="tbl" id="matrix"></div>
+
+  <h2 id="dh">รายละเอียดรายคน <span class="sub" id="dsub">เลือกชื่อจากตารางด้านบน</span></h2>
+  <div id="detail"><div class="card empty">ยังไม่ได้เลือกใคร — คลิกที่ชื่อในตารางด้านบน</div></div>
+
+  <h2>รายการเดินบัญชีทั้งหมด <span class="sub">ทุกบรรทัดที่อ่านได้จากสเตทเมนท์ รวมรายการถอนและดอกเบี้ย</span></h2>
+  <div class="card" style="margin-bottom:10px">
+    <div class="bar">
+      <input id="lq" placeholder="ค้นชื่อ / บัญชี / ยอดเงิน / วันที่" style="min-width:250px">
+      <div class="seg" id="ldir"><button class="on" data-d="">ทั้งหมด</button><button data-d="in">เงินเข้า</button><button data-d="out">เงินออก</button></div>
+      <select id="lper"><option value="">— ทุกงวด —</option></select>
+      <span class="hint" id="lcnt" style="margin-left:auto"></span>
+    </div>
+  </div>
+  <div class="tbl" id="ledger"></div>
+
+  <h2>ผลการตรวจสอบสเตทเมนท์ <span class="sub">ยอดที่อ่านได้ต้องเท่ากับหัวกระดาษของธนาคาร</span></h2>
+  <div class="tbl" id="check" style="max-height:none"></div>
+  <p class="hint" style="margin-top:8px">ไฟล์นี้สร้างโดย <code>tools/nk_statement.py</code> — รันใหม่ทุกครั้งที่มีสเตทเมนท์เดือนใหม่ แล้วเปิดไฟล์นี้อีกครั้ง</p>
+</div>
+<div class="tip" id="tip"></div>
+
+<script>
+const DATA = /*__DATA__*/null;
+const $ = id => document.getElementById(id);
+const B = n => (+n||0).toLocaleString("th-TH",{minimumFractionDigits:2,maximumFractionDigits:2});
+const B0 = n => (+n||0).toLocaleString("th-TH",{maximumFractionDigits:0});
+const esc = s => String(s??"").replace(/[<>&"]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[c]));
+const MTH = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+const thDate = iso => { const [y,m,d]=iso.split("-").map(Number); return `${d} ${MTH[m-1]} ${String(y+543).slice(2)}`; };
+let mode = "period", sel = null;
+
+function init(){
+  if(!DATA){ document.body.innerHTML = '<div class="wrap"><div class="card empty">ไม่มีข้อมูล — รัน tools/nk_statement.py ก่อน</div></div>'; return; }
+  const M = DATA.meta, P = DATA.persons, T = DATA.tx.filter(t=>t.in);
+  $("cut").textContent = M.cut_day;
+  $("meta").innerHTML = `สร้าง ${esc(M.generated.replace("T"," ").slice(0,16))}<br>${esc(M.statements.filter(s=>!s.unreadable).length)} หน้าสเตทเมนท์ · ${DATA.tx.length} รายการ`;
+  const tot = T.reduce((s,t)=>s+t.amount,0), named = P.filter(p=>p.member_no).length;
+  const d0 = T[0].date, d1 = T[T.length-1].date;
+  const missing = M.statements.filter(s=>s.unreadable).length, errs = M.statements.filter(s=>s.errors&&s.errors.length).length;
+  $("stats").innerHTML = `
+    <div class="stat"><div class="k">เงินเข้ารวมทั้งช่วง</div><div class="v">${B0(tot)} <small>บาท</small></div></div>
+    <div class="stat"><div class="k">รายการโอนเข้า</div><div class="v">${T.length} <small>รายการ</small></div></div>
+    <div class="stat"><div class="k">ผู้โอน (บัญชีต้นทาง)</div><div class="v">${P.length} <small>บัญชี · จับคู่สมาชิกได้ ${named}</small></div></div>
+    <div class="stat"><div class="k">ช่วงข้อมูล</div><div class="v" style="font-size:17px">${thDate(d0)} – ${thDate(d1)}</div></div>
+    <div class="stat" style="border-top-color:${errs||missing?"var(--danger)":"var(--green)"}"><div class="k">การตรวจสอบ</div>
+      <div class="v" style="font-size:17px;color:${errs||missing?"var(--danger)":"var(--green)"}">${errs||missing?`⚠ ${errs+missing} หน้าต้องดู`:"✓ ตรงทุกหน้า"}</div></div>`;
+  $("q").oninput = draw; $("sort").onchange = draw;
+  document.querySelectorAll("#mode button").forEach(b=>b.onclick=()=>{ mode=b.dataset.m;
+    document.querySelectorAll("#mode button").forEach(x=>x.classList.toggle("on",x===b)); draw(); if(sel) detail(sel); });
+  $("lper").innerHTML = '<option value="">— ทุกงวด —</option>'
+    + M.periods.map(p=>`<option value="${p}">${M.period_labels[p]}</option>`).join("");
+  $("lq").oninput = ledger; $("lper").onchange = ledger;
+  document.querySelectorAll("#ldir button").forEach(b=>b.onclick=()=>{ LDIR=b.dataset.d;
+    document.querySelectorAll("#ldir button").forEach(x=>x.classList.toggle("on",x===b)); ledger(); });
+  draw(); ledger(); checks();
+}
+
+function cls(v){ return v<=0?"" : v<1000?"s1" : v<2500?"s2" : v<5000?"s3" : v<10000?"s4" : "s5"; }
+
+function draw(){
+  const M = DATA.meta, cols = mode==="period" ? M.periods : M.months, lbl = mode==="period" ? M.period_labels : M.month_labels;
+  const q = $("q").value.trim().toLowerCase(), sort = $("sort").value;
+  let P = DATA.persons.filter(p => !q || [p.name, ...p.names, p.key, p.account, p.member_no, p.member_name].join(" ").toLowerCase().includes(q));
+  P = P.slice().sort((a,b)=> sort==="name" ? a.name.localeCompare(b.name,"th") : sort==="no" ? ((a.member_no||"zzz").localeCompare(b.member_no||"zzz")) : sort==="last" ? b.last.localeCompare(a.last) : b.total-a.total);
+  $("cnt").textContent = `${P.length} บัญชี`;
+  const colTot = {}; cols.forEach(c=>colTot[c]=0);
+  const rows = P.map(p=>{
+    const by = mode==="period" ? p.by_period : p.by_month;
+    const cnt = {}; p.tx.forEach(t=>{ const k = mode==="period"?t.period:t.month; cnt[k]=(cnt[k]||0)+1; });
+    const keys = Object.keys(by).sort(), k0 = keys[0], k1 = keys[keys.length-1];
+    const cells = cols.map(c=>{ const v = by[c]||0; colTot[c]+=v;
+      if(v>0) return `<td class="c ${cls(v)} ${cnt[c]>1?"multi":""}" data-n="${cnt[c]||0}" title="${lbl[c]} · ${B(v)} บาท · ${cnt[c]} ครั้ง">${B0(v)}</td>`;
+      return (c>k0 && c<k1) ? `<td class="c miss" title="${lbl[c]} · ไม่มีเงินเข้า">—</td>` : `<td class="c"></td>`; }).join("");
+    return `<tr class="p ${sel===p.key?"sel":""}" data-k="${esc(p.key)}">
+      <td class="name l"><span class="no">${p.member_no||"—"}</span><b>${esc(p.name)}</b>${p.member_name?`<span class="pill g">${esc(p.member_name)}</span>`:""}
+        <div class="hint" style="font-size:11px">${esc(p.key)}${p.names.length>1?" · "+esc(p.names.slice(1).join(", ")):""}</div></td>
+      <td class="num">${p.count}</td><td class="num"><b>${B(p.total)}</b></td>${cells}</tr>`; }).join("");
+  $("matrix").innerHTML = `<table><thead><tr><th class="name l">ผู้โอน</th><th>ครั้ง</th><th>รวม (บาท)</th>${cols.map(c=>`<th>${lbl[c]}</th>`).join("")}</tr></thead>
+    <tbody>${rows || `<tr><td colspan="${cols.length+3}" class="empty">ไม่พบ</td></tr>`}</tbody>
+    <tfoot><tr><th class="name l">รวม ${P.length} บัญชี</th><th>${P.reduce((s,p)=>s+p.count,0)}</th><th>${B0(P.reduce((s,p)=>s+p.total,0))}</th>${cols.map(c=>`<th>${B0(colTot[c])}</th>`).join("")}</tr></tfoot></table>`;
+  document.querySelectorAll("tr.p").forEach(tr=>tr.onclick=()=>{ sel=tr.dataset.k; draw(); detail(sel); $("dh").scrollIntoView({behavior:"smooth",block:"start"}); });
+}
+
+function detail(key){
+  const p = DATA.persons.find(x=>x.key===key); if(!p) return;
+  const M = DATA.meta, cols = mode==="period" ? M.periods : M.months, lbl = mode==="period" ? M.period_labels : M.month_labels;
+  const by = mode==="period" ? p.by_period : p.by_month;
+  $("dsub").textContent = `${p.name} · ${p.key}`;
+  // กราฟแท่ง — ยอดต่อคอลัมน์
+  const W = 560, H = 190, L = 54, R = 10, T = 14, BT = 30, iw = W-L-R, ih = H-T-BT;
+  const vals = cols.map(c=>by[c]||0), mx = Math.max(...vals, 1);
+  const nice = Math.pow(10, Math.floor(Math.log10(mx))); const top = Math.ceil(mx/nice*2)/2*nice;
+  const bw = iw/cols.length, ticks = [0, .5, 1].map(f=>f*top);
+  const bars = cols.map((c,i)=>{ const v=vals[i], h=v/top*ih, x=L+i*bw+bw*0.18, y=T+ih-h;
+    return v>0 ? `<rect class="b ${v===mx?"hi":""}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${(bw*0.64).toFixed(1)}" height="${h.toFixed(1)}" rx="3" data-t="${lbl[c]} · ${B(v)} บาท"/>` : ""; }).join("");
+  const svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="ยอดโอนของ ${esc(p.name)} แยกตาม${mode==="period"?"งวด":"เดือน"}">
+    ${ticks.map(t=>`<line class="gl" x1="${L}" x2="${W-R}" y1="${(T+ih-t/top*ih).toFixed(1)}" y2="${(T+ih-t/top*ih).toFixed(1)}"/><text x="${L-6}" y="${(T+ih-t/top*ih+3.5).toFixed(1)}" text-anchor="end">${B0(t)}</text>`).join("")}
+    ${bars}
+    ${cols.map((c,i)=>`<text x="${(L+i*bw+bw/2).toFixed(1)}" y="${H-10}" text-anchor="middle">${lbl[c]}</text>`).join("")}</svg>`;
+  const lines = p.tx.map(t=>`${t.date.slice(8)}-${t.date.slice(5,7)}-${t.date.slice(2,4)}  ${t.time}  รับโอนเงิน  ${B(t.amount)}  0.00  ${t.channel}  จาก ${p.bank && t.channel!=="K PLUS" ? p.bank+" " : ""}${p.account} ${p.names[0]}++`).join("\n");
+  $("detail").innerHTML = `<div class="detail">
+    <div class="card">
+      <div class="dname"><span class="no">${p.member_no||"—"}</span>${esc(p.name)}</div>
+      ${p.member_name?`<div class="hint">สมาชิก: ${esc(p.member_name)} (เดาจากชื่อในสลิป — ตรวจอีกครั้งในโปรแกรม)</div>`:`<div class="hint">ยังจับคู่กับเลขสมาชิกไม่ได้ — ไประบุในโปรแกรม แท็บ «รับชำระ»</div>`}
+      <div class="kv">
+        <b>บัญชีต้นทาง</b><span>${esc(p.key)}</span>
+        <b>ชื่อในสเตทเมนท์</b><span style="font-family:inherit">${esc(p.names.join(" / "))}</span>
+        <b>โอนมาแล้ว</b><span>${p.count} ครั้ง</span>
+        <b>รวมทั้งสิ้น</b><span><b>${B(p.total)}</b> บาท</span>
+        <b>ครั้งแรก</b><span>${thDate(p.first)}</span>
+        <b>ครั้งล่าสุด</b><span>${thDate(p.last)}</span>
+        <b>เฉลี่ยต่อครั้ง</b><span>${B(p.total/p.count)}</span>
+      </div>
+      <div style="margin-top:12px">${svg}</div>
+      <div class="bar" style="margin-top:8px"><button id="cp">คัดลอกรายการนี้ไปวางในโปรแกรม</button><span class="hint" id="cpmsg"></span></div>
+    </div>
+    <div class="tbl" style="max-height:520px"><table><thead><tr><th class="l">วันที่โอน</th><th>เวลา</th><th>ยอด (บาท)</th><th>ยอดคงเหลือบัญชี</th><th class="l">งวด</th><th class="l">ช่องทาง</th><th class="l">ที่มา</th></tr></thead><tbody>
+      ${p.tx.map(t=>`<tr${t.suspect?' style="background:var(--miss)"':""}><td class="l">${thDate(t.date)}</td><td class="num">${t.time}</td><td class="num"><b>${B(t.amount)}</b></td>
+        <td class="num hint">${B(t.balance)}</td>
+        <td class="l">${M.period_labels[t.period]||t.period}</td><td class="l hint">${esc(t.channel)}</td><td class="l hint">${esc(t.file)} หน้า ${t.page}${t.suspect?' <span class="pill r">ต้องตรวจ</span>':""}</td></tr>`).join("")}
+    </tbody><tfoot><tr><th class="l">รวม</th><th>${p.count}</th><th>${B(p.total)}</th><th colspan="4"></th></tr></tfoot></table></div>
+  </div>`;
+  $("cp").onclick = async () => { try{ await navigator.clipboard.writeText(lines); $("cpmsg").textContent = `คัดลอกแล้ว ${p.count} บรรทัด — ไปวางที่แท็บ «รับชำระ» → «วางข้อความจากหน้าบุ๊คแบงค์»`; }
+    catch(e){ $("cpmsg").textContent = "คัดลอกไม่ได้ — ใช้ไฟล์ out/paste_for_app.txt แทน"; } };
+  const tip = $("tip");
+  document.querySelectorAll("#detail rect.b").forEach(r=>{ r.onmousemove = e => { tip.style.display="block"; tip.textContent=r.dataset.t; tip.style.left=(e.clientX+12)+"px"; tip.style.top=(e.clientY+12)+"px"; };
+    r.onmouseleave = () => tip.style.display="none"; });
+}
+
+let LDIR = "";
+function ledger(){
+  const M = DATA.meta;
+  const q = $("lq").value.trim().toLowerCase(), per = $("lper").value;
+  const rows = DATA.tx.filter(t =>
+    (!LDIR || (LDIR === "in" ? t.in : !t.in)) &&
+    (!per || t.period === per) &&
+    (!q || [t.date, thDate(t.date), t.name, t.account, t.member_no, t.member_name, t.kind, t.channel, t.amount.toFixed(2)]
+            .join(" ").toLowerCase().includes(q)));
+  const sIn = rows.filter(t=>t.in).reduce((a,t)=>a+t.amount,0), sOut = rows.filter(t=>!t.in).reduce((a,t)=>a+t.amount,0);
+  $("lcnt").innerHTML = `${rows.length} รายการ · เข้า <b>${B(sIn)}</b> · ออก <b>${B(sOut)}</b>`;
+  $("ledger").innerHTML = `<table><thead><tr>
+    <th class="l">วันที่</th><th>เวลา</th><th class="l">รายการ</th><th>เงินเข้า</th><th>เงินออก</th>
+    <th>ยอดคงเหลือ</th><th class="l">ช่องทาง</th><th class="l">ผู้โอน / รายละเอียด</th><th class="l">สมาชิก</th>
+    <th class="l">งวด</th><th class="l">ที่มา</th></tr></thead><tbody>
+    ${rows.map(t=>`<tr${t.suspect?' style="background:var(--miss)"':""}>
+      <td class="l">${thDate(t.date)}</td><td class="num">${esc(t.time)}</td><td class="l">${esc(t.kind)}</td>
+      <td class="num">${t.in?`<b>${B(t.amount)}</b>`:""}</td>
+      <td class="num" style="color:var(--danger)">${t.in?"":B(t.amount)}</td>
+      <td class="num hint">${B(t.balance)}</td><td class="l hint">${esc(t.channel)}</td>
+      <td class="l">${t.account?`<code class="no">${esc(t.bank)} ${esc(t.account)}</code>${esc(t.name)}`:`<span class="hint">${esc(t.ref||"")}</span>`}</td>
+      <td class="l">${t.member_no?`<span class="no">${esc(t.member_no)}</span>${esc(t.member_name||"")}`:'<span class="hint">—</span>'}</td>
+      <td class="l">${esc(M.period_labels[t.period]||t.period)}</td>
+      <td class="l hint">${esc(t.file)} หน้า ${t.page}${t.suspect?' <span class="pill r">ต้องตรวจ</span>':""}</td></tr>`).join("")
+      || `<tr><td colspan="11" class="empty">ไม่พบรายการ</td></tr>`}
+    </tbody><tfoot><tr><th class="l" colspan="3">รวม ${rows.length} รายการ</th>
+      <th>${B(sIn)}</th><th>${B(sOut)}</th><th colspan="6"></th></tr></tfoot></table>`;
+}
+
+function checks(){
+  const S = DATA.meta.statements;
+  $("check").innerHTML = `<table><thead><tr><th class="l">ไฟล์</th><th>หน้า</th><th class="l">รอบสเตทเมนท์</th><th>ฝากเข้า (อ่านได้)</th><th>หัวกระดาษ</th><th>ถอน (อ่านได้)</th><th>หัวกระดาษ</th><th class="l">ผล</th></tr></thead><tbody>
+    ${S.map(s=> s.unreadable ? `<tr><td class="l">${esc(s.file)}</td><td>${s.page}</td><td class="l" colspan="5"></td><td class="l bad">⚠ หน้านี้เป็นรูปภาพและยังไม่ได้ถอดข้อความ</td></tr>`
+      : `<tr><td class="l">${esc(s.file)}</td><td>${s.page}</td><td class="l">${s.period?`${s.period[0]} – ${s.period[1]}`:'<span class="hint">(ต่อจากหน้าก่อน)</span>'}</td>
+        <td class="num">${s.n_in} รายการ · ${B(s.sum_in)}</td><td class="num">${s.tot_in?`${s.tot_in[0]} รายการ · ${B(s.tot_in[1])}`:"—"}</td>
+        <td class="num">${s.n_out} รายการ · ${B(s.sum_out)}</td><td class="num">${s.tot_out?`${s.tot_out[0]} รายการ · ${B(s.tot_out[1])}`:"—"}</td>
+        <td class="l ${s.errors&&s.errors.length?"bad":"ok"}" style="white-space:normal;max-width:380px">${s.errors&&s.errors.length?"⚠ "+esc(s.errors.join(" · ")):"✓ ตรง"}</td></tr>`).join("")}
+  </tbody></table>`;
+}
+init();
+</script>
