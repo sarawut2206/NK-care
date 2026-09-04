@@ -360,7 +360,7 @@ th.svcol{background:#FFF4D6!important}
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.09.04-26</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.09.04-27</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
@@ -403,9 +403,35 @@ let DB = null;
 
 /* ============ ค่าคงที่จากสัญญา ============ */
 const RATE = 0.01;                                   // 1.00%/เดือน — ทั้งสองผลิตภัณฑ์
-const PERIODS = ["2569-01","2569-02","2569-03","2569-04","2569-05","2569-06","2569-07"];
-const PLBL = {"2569-01":"ม.ค.69","2569-02":"ก.พ.69","2569-03":"มี.ค.69","2569-04":"เม.ย.69",
-              "2569-05":"พ.ค.69","2569-06":"มิ.ย.69","2569-07":"ก.ค.69"};
+/* ---- งวด: ไล่ตั้งแต่ ม.ค.2568 ถึงเดือนปัจจุบัน — ดูย้อนหลังได้ทุกปี ----
+   P_ANCHOR = งวดอ้างอิงของ «ยกมา 1/2569» — สัญญาเดิมที่ชำระมาแล้ว t0 งวด
+   งวดนี้คือ «งวดที่ t0+1» เสมอ ไม่ว่าจะขยายช่วงย้อนไปไกลแค่ไหน                */
+const P_START  = "2568-01";
+const P_ANCHOR = "2569-01";
+const MTH_TH = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+const pNum  = p => { const a = String(p||"").split("-"); return (+a[0]||0)*12 + (+a[1]||1) - 1; };
+const pFrom = n => `${Math.floor(n/12)}-${String(n%12+1).padStart(2,"0")}`;
+const pDiff = (a,b) => pNum(a) - pNum(b);                 // ห่างกันกี่เดือน
+const pLabel = p => { const a = String(p||"").split("-"); return (MTH_TH[(+a[1]||1)-1]||"?") + String(a[0]||"").slice(2); };
+const nowPeriod = () => { const d = new Date(); return `${d.getFullYear()+543}-${String(d.getMonth()+1).padStart(2,"0")}`; };
+let PERIODS = [];
+const PLBL = {};
+function rebuildPeriods(){
+  const nowN = pNum(nowPeriod());
+  let end = nowN, start = pNum(P_START);
+  if(S){                                     // มีข้อมูลอยู่ไกลกว่านั้น ก็ขยายตาม (กันวันที่พิมพ์ผิดด้วย)
+    (S.tx||[]).concat(S.contracts||[]).forEach(z=>{ if(!z.d) return;
+      const n = pNum(periodOf(z.d)); if(n > end && n <= nowN + 12) end = n; });
+    // ถอยหลังตาม «เงินที่รับจริง» เท่านั้น — วันทำสัญญาเก่าอาจย้อนไปหลายปีโดยไม่มีรายการชำระ
+    (S.tx||[]).forEach(t=>{ if(!t.d) return;
+      const n = pNum(periodOf(t.d)); if(n < start && n > nowN - 240) start = n; });
+  }
+  if(start > end) start = end;
+  if(end - start > 240) start = end - 240;   // กันตารางบานเกินจำเป็น
+  PERIODS = [];
+  for(let n = start; n <= end; n++) PERIODS.push(pFrom(n));
+  for(let n = start; n <= end + 36; n++){ const p = pFrom(n); PLBL[p] = pLabel(p); }
+}
 const PROD = {
   "สามัญ":   {method:"reduce", maxAmt:0,     maxTerms:48, guar:2, quota:0,      slots:0,
               note:"ลดต้นลดดอก · ดอกเบี้ยคิดจากเงินต้นคงเหลือ (สัญญาข้อ 2.5)"},
@@ -502,9 +528,9 @@ async function doSave(){
 
 /* ============ งวด ============ */
 function periodOf(d){
-  if(!d || typeof d !== "string" || d.indexOf("-") < 0) return PERIODS[0];   // ★ ไม่มีวันที่ = งวดแรก
+  if(!d || typeof d !== "string" || d.indexOf("-") < 0) return P_ANCHOR;   // ★ ไม่มีวันที่ = งวดอ้างอิง
   let [y,m,dd] = d.split("-").map(Number);
-  if(!y || !m) return PERIODS[0];
+  if(!y || !m) return P_ANCHOR;
   if (dd >= S.cut){ m++; if(m>12){m=1;y++;} }
   return `${y+543}-${String(m).padStart(2,"0")}`;
 }
@@ -512,6 +538,9 @@ function periodOf(d){
 
 /* ============ สถานะการชำระรายงวด + ค่าทวงถาม + การผ่อนผัน ============ */
 const FEE_PCT = 0.05, FEE_MAX = 100, GRACE = 5;   // ข้อ 3.1
+// กำหนดชำระ = วันที่ 5 ของเดือนงวด + ผ่อนผัน 5 วัน — งวดที่ยังไม่ถึงกำหนด ห้ามนับว่าค้าง
+const dueDateOf = p => { const a = String(p).split("-"); return new Date((+a[0]||0)-543, (+a[1]||1)-1, 5+GRACE); };
+const isDue = p => dueDateOf(p) <= new Date();
 const perKey = (cid,p) => cid+"|"+p;
 function per(cid,p){ S.per = S.per||{}; return S.per[perKey(cid,p)] || {}; }
 function setPer(cid,p,f,v){ S.per = S.per||{}; const k=perKey(cid,p);
@@ -557,7 +586,7 @@ function drawT7(){
   let body = "";
   if(cur){
     const x = runContract(cur), m = DB.members.find(z=>z.no===cur.no)||{name:""};
-    const rows = x.rows.filter(w=>!w.pre);
+    const rows = x.rows.filter(w=>!w.pre && !w.future);
     body = `<div class="card">
       <div class="eyebrow">บัญชีรายงวด — ${esc(m.name)} · สัญญา${cur.prod} ${cur.code?`· ${esc(cur.code)}`:""}</div>
       <div class="tbl"><table><thead><tr><th class="l">งวด</th><th>ต้องชำระ</th><th>รับจริง</th><th>ขาด</th>
@@ -702,7 +731,7 @@ function warnHTML(c, kind, no, d, days){
   const m = DB.members.find(z=>z.no===c.no)||{name:""}, x = runContract(c), P = PROD[c.prod];
 
   const gs = [c.g1,c.g2].filter(Boolean).slice(0,P.guar).map(g=>DB.members.find(z=>z.no===g)||{no:g,name:""});
-  const arr = x.rows.filter(w=>!w.pre && w.short>0.005 && !w.relief);
+  const arr = x.rows.filter(w=>!w.pre && !w.future && w.short>0.005 && !w.relief);
   const totShort = +arr.reduce((s,w)=>s+w.short,0).toFixed(2);
   const totFee = +x.rows.reduce((s,w)=>s+(w.fee||0),0).toFixed(2);
   const nMiss = x.missed;
@@ -892,7 +921,12 @@ function runContract(c){
     const got = md.gotFix !== undefined ? +(+md.gotFix).toFixed(2) : +(recv[p]||0).toFixed(2);
     const txs = txp[p] || [];
     const nl  = (!c.legacy && p === start) ? +(+c.amt||0) : 0;
-    if (!c.legacy && p < start){ rows.push({p, pre:true}); return; }
+    // ★ งวดก่อนเริ่มบัญชีของสัญญานี้ — สัญญาเดิมเริ่มประเมินที่งวดอ้างอิง (ยกมา 1/2569)
+    //   เงินที่เข้ามาก่อนหน้านั้นยังแสดงให้เห็น แต่ไม่นำมาประเมิน เพราะอยู่ในยอดยกมาแล้ว
+    const anchor = c.legacy ? P_ANCHOR : start;
+    if (p < anchor){ rows.push({p, pre:true, got, txs}); return; }
+    // ★ งวดที่ยังไม่ถึงกำหนดชำระ — แสดงเงินที่จ่ายล่วงหน้า แต่ยังไม่ถือว่าค้าง
+    if (!isDue(p)){ rows.push({p, future:true, got, txs}); return; }
 
     // ยังไม่ได้แนบตาราง → ไม่รู้ยอดหนี้ ห้ามเดา ห้ามบอกว่าปิดแล้ว
     if (NT && !txs.some(z=>z.payoff)){          // ★ ถ้าระบุยอดปิดหนี้เอง ให้คิดต่อได้แม้ยังไม่แนบตาราง
@@ -917,8 +951,8 @@ function runContract(c){
     }
     if (nl) bal = +(bal + nl).toFixed(2);
 
-    const tn    = c.legacy ? (+c.t0||0) + PERIODS.indexOf(p) + 1
-                           : PERIODS.indexOf(p) - PERIODS.indexOf(start) + 1;
+    const tn    = c.legacy ? (+c.t0||0) + pDiff(p, P_ANCHOR) + 1
+                           : pDiff(p, start) + 1;
     const D = dueOn(c, p, tn);
     const baseDue = D.base, extraDue = D.extra, svDue = D.sv;
     const shDue = +(baseDue + extraDue + svDue).toFixed(2);
@@ -1019,8 +1053,11 @@ function runContract(c){
                : bal <= 0.005 && (c.legacy || rows.some(r=>r.opens)) ? "ปิดหนี้แล้ว"
                : !assessed ? "ยังประเมินไม่ได้"
                : missed >= 1 ? `ค้าง ${missed} งวด` : "ปกติ";
-  const T = f => +rows.reduce((s,r)=>s+(r[f]||0),0).toFixed(2);
+  // งวดที่ประเมินแล้ว (ไม่รวมงวดก่อนเริ่มสัญญาและงวดที่ยังไม่ถึงกำหนด) — ใช้กับยอดรวมในบัญชีรายงวด
+  const AR = rows.filter(r=>!r.pre && !r.future);
+  const T = f => +AR.reduce((s,r)=>s+(r[f]||0),0).toFixed(2);
   return {rows, bal, missed, last, closed, status, assessed,
+          totGotAll:+rows.reduce((s,r)=>s+(r.got||0),0).toFixed(2),   // ★ เงินเข้าทุกงวดทุกปี
           totGot:T("got"), totInt:T("int"), totSh:T("sh"), totShB:T("shB"), totShE:T("shE"),
           totPri:T("pri"), totFee:T("fee"), totShort:T("short"),
           nMiss:rows.filter(r=>r.known&&r.kind==="ไม่ชำระ"&&!r.relief).length,
@@ -1694,8 +1731,8 @@ function setPanel(cid){
   };
   if($("st_ok")) $("st_ok").onclick = () => {
     const p = $("st_p").value;
-    const tn = c.legacy ? (+c.t0||0) + PERIODS.indexOf(p) + 1
-                        : PERIODS.indexOf(p) - PERIODS.indexOf(periodOf(c.d)) + 1;
+    const tn = c.legacy ? (+c.t0||0) + pDiff(p, P_ANCHOR) + 1
+                        : pDiff(p, periodOf(c.d)) + 1;
     if(!confirm("อนุมัติว่า " + m.name + " ปิดชำระหนี้สัญญานี้แล้ว\n"
       + "ตั้งแต่งวด " + (PLBL[p]||p) + " (งวดที่ " + tn + ")\n\n"
       + (r.bal > 0.005 && !noTable(c) ? "⚠ ระบบยังคำนวณได้ว่าเหลือหนี้ " + B(r.bal) + " บาท\n\n" : "")
@@ -1823,10 +1860,11 @@ function svOf(c){ return shareOn(c, PERIODS[PERIODS.length-1]).sv; }
 function periodAtTerm(c,t){
   if(!c) return null;
   if(!c.legacy && !c.d) return null;            // ★ สัญญาชั่วคราว (เครื่องคำนวณ) ยังไม่มีวันที่
-  const i = c.legacy ? (+t) - (+c.t0||0) - 1
-                     : (+t) - 1 + PERIODS.indexOf(periodOf(c.d));
-  if(i < 0) return null;                                   // งวดก่อนเริ่มเก็บข้อมูล ม.ค.69
-  return PERIODS[Math.min(i, PERIODS.length-1)];           // เลยเดือนล่าสุด = ใช้ค่าล่าสุดต่อไป
+  const n = c.legacy ? pNum(P_ANCHOR) + ((+t) - (+c.t0||0) - 1)
+                     : pNum(periodOf(c.d)) + ((+t) - 1);
+  const first = pNum(PERIODS[0] || P_START), last = pNum(PERIODS[PERIODS.length-1] || P_ANCHOR);
+  if(n < first) return null;                               // งวดก่อนเริ่มเก็บข้อมูล
+  return pFrom(Math.min(n, last));                         // เลยเดือนล่าสุด = ใช้ค่าล่าสุดต่อไป
 }
 /* หุ้นเพิ่ม 2569 (สมัครใจ) ของงวดที่ t — 0 ถ้ายังไม่ถึงงวดที่เริ่มฝาก */
 function svAtTerm(c,t){
@@ -1837,8 +1875,8 @@ function svAtTerm(c,t){
 function svStart(c){
   const v = shLogOf(c).find(z=>(+z.sv||0)>0);
   if(!v || !v.from) return null;
-  const i = PERIODS.indexOf(v.from);
-  const t = c.legacy ? (+c.t0||0) + i + 1 : i - PERIODS.indexOf(periodOf(c.d)) + 1;
+  const t = c.legacy ? (+c.t0||0) + pDiff(v.from, P_ANCHOR) + 1
+                     : pDiff(v.from, periodOf(c.d)) + 1;
   return {t, p:v.from, sv:+v.sv||0, memo:v.memo||""};
 }
 
@@ -2670,7 +2708,7 @@ function drawT3(){
       ${r.cs.map(x=>`<span class="pill ${x.c.prod==="ดูแลกัน"?"yel":""}">${x.c.prod}</span>`).join("")}</td>
       <td class="l" style="white-space:normal;max-width:260px"><span class="pill ${ps.cls}">${ps.t}</span></td>
       <td class="amt">${B(r.shares)}</td><td class="amt" style="font-weight:600">${B(r.bal)}</td>
-      <td class="amt">${B(r.cs.reduce((s,x)=>s+x.r.totGot,0))}</td></tr>`;
+      <td class="amt">${B(r.cs.reduce((s,x)=>s+(x.r.totGotAll!=null?x.r.totGotAll:x.r.totGot),0))}</td></tr>`;
   }).join("");
 
   $("tab3").innerHTML = `<div id="slipHead">
@@ -2818,7 +2856,7 @@ function slipHTML(m){
         ${V?`<th class="svcol"><span class="ordmark">${E?4:3}</span>หุ้นเพิ่ม 2569<br><span style="font-weight:400;font-size:8.5px">สมัครใจ</span></th>`:""}
         <th><span class="ordmark">${(E?1:0)+(V?1:0)+3}</span>เงินต้น</th></tr>
     </thead><tbody>
-    ${x.rows.map(w => w.pre||w.done ? "" :
+    ${x.rows.map(w => w.pre||w.done||w.future ? "" :
       `<tr class="${w.opens?"newloan":(K&&w.short>0.005&&!w.relief?"miss":"")}">
          <td class="l">${PLBL[w.p]}${w.tn?` <span class="hint">(งวดที่ ${w.tn})</span>`:""}${w.opens?` <span class="pill yel">รับเงินกู้ ${B(w.nl)}</span>`:""}${w.note?` <span class="pill ${w.over>0.005?(w.overOK==="n"?"red":"yel"):"grn"}">${w.note}</span>`:""}${w.late?' <span class="pill yel">ชำระล่าช้า</span>':""}
 </td>
@@ -2839,6 +2877,12 @@ function slipHTML(m){
       ${V?`<td class="amt svcol">${B(x.rows.reduce((a,w)=>a+(w.shV||0),0))}</td>`:""}<td class="amt">${B(x.totPri)}</td>
       ${K?`<td class="amt">${B(x.totFee)}</td>`:""}<td class="amt">${B(x.bal)}</td>${K?"<td></td>":""}</tr>
     </tbody></table>
+    ${(()=>{ const ex = x.rows.filter(w=>(w.pre||w.future) && (w.got||0) > 0.005);
+      if(!ex.length) return "";
+      return `<p class="hint" style="margin-top:6px;background:#F4F8FF;border-left:3px solid var(--brand2);padding:6px 9px">
+        <b>เงินเข้านอกช่วงงวดของสัญญาฉบับนี้ รวม ${B(ex.reduce((a,w)=>a+w.got,0))} บาท</b> —
+        ${ex.map(w=>`${PLBL[w.p]||w.p} <b>${B(w.got)}</b>${w.pre?" (ก่อนงวดแรก — รวมอยู่ในยอดยกมาแล้ว)":" (จ่ายล่วงหน้า — ยังไม่ถึงกำหนดชำระ)"}`).join(" · ")}
+        <br>ดูรายละเอียดทุกรายการได้ที่แท็บ <b>«รายคน»</b></p>`; })()}
     ${svNote}
     ${!K?`<p class="hint" style="margin-top:6px;background:#FDF6E3;border-left:3px solid var(--gold);padding:6px 9px">
       <b>ยังไม่ได้กรอกตัวเลขสัญญา ของสัญญาฉบับนี้ในทะเบียน (แท็บ 1)</b> — ระบบจึงยังไม่ทราบว่าแต่ละงวดต้องชำระเท่าไหร่
@@ -2884,7 +2928,7 @@ function slipHTML(m){
         if(w){ base+=(w.shB||0); extra+=(w.shE||0); sv+=(w.shV||0); } });
       mtx.forEach(t=>{ if(autoAssign(t)==="share" && periodOf(t.d)===p) direct+=t.m; });
       const add=+(base+extra+sv+direct).toFixed(2); bal=+(bal+add).toFixed(2);
-      if(add>0 || r.cs.length) rs.push({p,base,extra,sv,direct,add,bal});
+      if(add>0 || (r.cs.length && p >= P_ANCHOR)) rs.push({p,base,extra,sv,direct,add,bal});
     });
     if(!rs.length) return '<p class="hint">ยังไม่มีรายการฝากในช่วงนี้</p>';
     // ผู้ฝากล้วน — ไม่มีสัญญา จึงไม่มีหุ้นประจำ/หุ้นเพิ่มจากการผ่อน
@@ -4598,7 +4642,7 @@ $("csv").onclick = () => {
   out += "\n== การจัดสรรรายงวด ==\n";
   out += ["เลขสมาชิก","ชื่อ","ผลิตภัณฑ์","งวด","รับชำระ","ดอกเบี้ย","ฝากหุ้น","เงินต้น","คงเหลือ","หมายเหตุ"].map(q).join(",")+"\n";
   S.contracts.forEach(c=>{ const m=DB.members.find(z=>z.no===c.no);
-    runContract(c).rows.forEach(w=>{ if(w.pre||w.done) return;
+    runContract(c).rows.forEach(w=>{ if(w.pre||w.done||w.future) return;
       out += [c.no,m?m.name:"",c.prod,PLBL[w.p],(w.got||0).toFixed(2),(w.int||0).toFixed(2),
         (w.sh||0).toFixed(2),(w.pri||0).toFixed(2),(w.bal||0).toFixed(2),
         w.miss?"ไม่มีเงินเข้า":(w.note||"")].map(q).join(",")+"\n"; }); });
@@ -4746,6 +4790,7 @@ async function boot(){
 }
 
 function draw(){
+  rebuildPeriods();                     // ★ ช่วงงวดเดินตามข้อมูลจริง — ย้อนดูได้ทุกปี
   // แท็บไหนพัง ให้พังแค่แท็บนั้น อย่าลากทั้งหน้าจอลงไปด้วย
   [["tab1",drawT1],["tab2",drawT2],["tab3",drawT3],["tab4",drawT4],["tab5",drawT5],
    ["tab6",drawT6],["tab7",drawT7],["tab8",drawT8],["tab9",drawT9]].forEach(([id,fn])=>{
