@@ -374,7 +374,7 @@ th.svcol{background:#FFF4D6!important}
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.09.04-33</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.09.04-34</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
@@ -4790,6 +4790,10 @@ const inGAS = typeof google !== "undefined" && google.script && google.script.ru
 
 /* ต่อระยะไกล — สำหรับกรณีเปิดจากที่อื่น (เช่น GitHub Pages) ไม่ใช่จาก Apps Script โดยตรง
    ต้องตั้งค่า URL + รหัส ก่อนถึงจะใช้ได้ · เก็บไว้ในเบราว์เซอร์เครื่องนี้เท่านั้น */
+/* ★ ที่อยู่ Apps Script ของกองทุน — ฝังไว้ในโปรแกรม จะได้ไม่ต้องพิมพ์ URL เองทุกเครื่อง
+      แก้ตรงนี้ที่เดียวเมื่อ Deploy ใหม่แล้วได้ลิงก์ใหม่
+      หมายเหตุ: ใส่แค่ «ที่อยู่» เท่านั้น รหัสเชื่อมต่อไม่ฝังไว้ เพราะไฟล์นี้เปิดสาธารณะบน GitHub */
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxfdQ1Z9Y2KDxfMgMhKE73UiucnGgNyFG5RflG5SgAXnyFj0gfL11NaWPOfAlLHh2yPwg/exec";
 const REMOTE_KEY = "kbk_remote_v1";
 function remoteConf(){ try{ const t = localStorage.getItem(REMOTE_KEY); return t ? JSON.parse(t) : null; }catch(e){ return null; } }
 let REMOTE = !inGAS ? remoteConf() : null;
@@ -4848,15 +4852,19 @@ function banner(){
       '<b style="color:var(--red)">คุณกำลังเปิดไฟล์จากเครื่อง — ไม่ได้ต่อกับ Google Sheets</b>'
       + '<p class="hint" style="margin:5px 0 7px">ข้อมูลอยู่แค่เบราว์เซอร์เครื่องนี้ กรรมการคนอื่นไม่เห็น · '
       + 'ทางที่ปลอดภัยสุดคือ<b>เปิดจากลิงก์ Apps Script</b> (ลงท้าย /exec) โดยตรง</p>'
-      + '<div class="bar"><button id="bnrConn">ตั้งค่าต่อกับ Sheets จากที่นี่</button>'
-      + '<span class="hint">ใช้ URL + รหัสที่กรรมการฝ่ายการเงินให้มา</span></div>');
+      + '<div class="bar">'
+      + (GAS_URL ? '<button class="cta" id="bnrOpen">เปิดจาก Google Sheets (แนะนำ)</button>' : "")
+      + '<button class="ghost" id="bnrConn">หรือต่อจากหน้านี้ ใช้รหัสเชื่อมต่อ</button>'
+      + '<span class="hint">ทางแรกล็อกอินด้วยบัญชี Google ไม่ต้องใช้รหัส · ทางที่สองใช้รหัสที่กรรมการฝ่ายการเงินให้มา ใส่ครั้งเดียวต่อเครื่อง</span></div>');
+    const o = $("bnrOpen"); if(o) o.onclick = () => window.open(GAS_URL, "_blank", "noopener");
     const b = $("bnrConn"); if(b) b.onclick = () => connectRemote();
   }
 }
 function connectRemote(){
-  const url = prompt("วาง URL Apps Script (ลงท้าย /exec):", (REMOTE&&REMOTE.url)||"");
+  const url = prompt("URL Apps Script (ลงท้าย /exec) — ใส่ให้แล้ว กด ตกลง ได้เลย:",
+                     (REMOTE&&REMOTE.url) || GAS_URL || "");
   if(!url) return;
-  const token = prompt("วางรหัสเชื่อมต่อ (REMOTE_TOKEN จาก Code.gs):", "");
+  const token = prompt("วางรหัสเชื่อมต่อ (REMOTE_TOKEN ที่ตั้งไว้ใน Apps Script):", "");
   if(!token) return;
   try{ localStorage.setItem(REMOTE_KEY, JSON.stringify({url:url.trim(), token:token.trim()})); }
   catch(e){ alert("บันทึกในเบราว์เซอร์ไม่ได้: " + e.message); return; }

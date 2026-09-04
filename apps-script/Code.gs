@@ -1,0 +1,407 @@
+/**
+ * กบข.นข. — ระบบทะเบียนสัญญาและรับชำระ
+ * Code.gs — ฝั่งเซิร์ฟเวอร์บน Google Apps Script
+ *
+ * ทำ 3 อย่าง
+ *   1. เสิร์ฟหน้าโปรแกรม (index.html) ให้เปิดจากลิงก์ /exec ได้เลย
+ *   2. เก็บและอ่านข้อมูลจาก Google Sheets — เก็บทั้งก้อนเป็น JSON จึงไม่มีฟิลด์ไหนหล่นหาย
+ *      แล้วแตกออกเป็นชีทอ่านง่ายให้กรรมการดูได้ (สั่งจากเมนู)
+ *   3. ให้ Claude อ่านสลิป/สเตทเมนท์ที่เป็นรูปภาพหรือ PDF แล้วแปลงเป็นรายการรับโอน
+ *
+ * ── ติดตั้งครั้งแรก ────────────────────────────────────────────────
+ *   1. เปิด Google Sheet ที่จะใช้เก็บข้อมูล → เมนู ส่วนขยาย → Apps Script
+ *   2. วางไฟล์นี้ทับ Code.gs   แล้วสร้างไฟล์ HTML ชื่อ index วางเนื้อ index.html ลงไป
+ *   3. ตั้งค่ารหัสและกุญแจ (ทำครั้งเดียว) — เมนู กบข.นข. → ตั้งค่ารหัสเชื่อมต่อ / ตั้งค่ากุญแจ AI
+ *      หรือใส่ที่ ตั้งค่าโปรเจกต์ → Script properties  ชื่อ REMOTE_TOKEN และ AI_KEY
+ *   4. Deploy → New deployment → Web app
+ *        Execute as        : Me
+ *        Who has access    : Anyone            ← ต้องเป็น Anyone หน้าเว็บภายนอกจึงจะเรียกได้
+ *   5. ทุกครั้งที่แก้ไฟล์นี้ ต้อง Deploy → Manage deployments → ✏️ → New version → Deploy
+ *
+ * ── ความปลอดภัย ──────────────────────────────────────────────────
+ *   ลิงก์ /exec เปิดให้ใครก็เรียกได้ตามการตั้งค่าข้อ 4  ตัวกันคือ REMOTE_TOKEN
+ *   ทุกคำขอที่เข้ามาทาง doPost ต้องแนบรหัสนี้ ไม่ตรง = ปฏิเสธ
+ *   จึงห้ามเอา REMOTE_TOKEN ไปใส่ในไฟล์ที่เปิดสาธารณะ เช่น GitHub
+ */
+
+/* ============ ตั้งค่า ============ */
+var SHEET_DATA   = "_ข้อมูล";           // ชีทเก็บ JSON ก้อนใหญ่ (ซ่อนไว้ ห้ามลบ ห้ามแก้มือ)
+var CHUNK        = 40000;               // ตัด JSON เป็นท่อน ๆ ละ 4 หมื่นตัวอักษร (ช่องละไม่เกิน 5 หมื่น)
+var AI_MODEL     = "claude-opus-5";
+var AI_DAILY_MAX = 40;                  // เรียก AI ได้วันละกี่ครั้ง กันเผลอกดรัว
+var TZ           = "Asia/Bangkok";
+
+function prop_(k){ return PropertiesService.getScriptProperties().getProperty(k) || ""; }
+function setProp_(k, v){ PropertiesService.getScriptProperties().setProperty(k, v); }
+function token_(){ return prop_("REMOTE_TOKEN"); }
+function aiKey_(){ return prop_("AI_KEY"); }
+
+/* ============ 1) เสิร์ฟหน้าโปรแกรม ============ */
+function doGet(e){
+  return HtmlService.createHtmlOutputFromFile("index")
+    .setTitle("กบข.นข. — ระบบทะเบียนสัญญาและรับชำระ")
+    .addMetaTag("viewport", "width=device-width, initial-scale=1");
+}
+
+/* ============ 2) ทางเข้าสำหรับหน้าเว็บภายนอก (GitHub Pages / เปิดไฟล์ตรง) ============ */
+function doPost(e){
+  var out;
+  try{
+    var req = JSON.parse((e && e.postData && e.postData.contents) || "{}");
+    var want = token_();
+    if(!want)                       throw new Error("ยังไม่ได้ตั้ง REMOTE_TOKEN ใน Apps Script — เมนู กบข.นข. → ตั้งค่ารหัสเชื่อมต่อ");
+    if(String(req.token) !== want)  throw new Error("รหัสเชื่อมต่อไม่ถูกต้อง");
+
+    switch(req.action){
+      case "getData":   out = readAll_();                       break;
+      case "saveState": out = {ok:true, saved: writeAll_(req.payload)}; break;
+      case "ai":        out = JSON.parse(ai(req.payload));       break;
+      case "ping":      out = {ok:true, ai: !!aiKey_(), time: now_()}; break;
+      default: throw new Error("ไม่รู้จักคำสั่ง: " + req.action);
+    }
+  }catch(err){
+    out = {error: String((err && err.message) || err)};
+  }
+  return ContentService.createTextOutput(JSON.stringify(out))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+/* ============ 3) ฟังก์ชันที่หน้าเว็บเรียกตรง (ตอนเปิดจากลิงก์ /exec) ============ */
+function getData(){ return JSON.stringify(readAll_()); }          // ต้องคืนเป็นข้อความ
+function saveState(payload){ return JSON.stringify({ok:true, saved: writeAll_(payload)}); }
+
+/* ============ เก็บ/อ่านข้อมูล ============ */
+function ss_(){ return SpreadsheetApp.getActiveSpreadsheet(); }
+
+function dataSheet_(create){
+  var sh = ss_().getSheetByName(SHEET_DATA);
+  if(!sh && create){
+    sh = ss_().insertSheet(SHEET_DATA);
+    sh.getRange("A1").setNote("ข้อมูลทั้งหมดของโปรแกรม เก็บเป็น JSON — อย่าแก้ด้วยมือ");
+    sh.hideSheet();
+  }
+  return sh;
+}
+
+/* อ่าน JSON ก้อนใหญ่ตามที่เก็บไว้ — รูปแบบเดียวกับไฟล์สำรองที่ปุ่ม «นำเข้า» ของโปรแกรมอ่านได้ */
+function readPacked_(){
+  var sh = dataSheet_(false);
+  if(!sh) return {};
+  var v = sh.getRange(1, 1, Math.max(1, sh.getLastRow()), 1).getValues();
+  var txt = v.map(function(r){ return r[0] || ""; }).join("");
+  if(!txt) return {};
+  try{ return JSON.parse(txt); }
+  catch(err){ throw new Error("ข้อมูลในชีท " + SHEET_DATA + " เสียหาย อ่านไม่ออก — กู้จากไฟล์สำรองใน Drive"); }
+}
+
+/* แยกเป็น db / state / board ตามที่หน้าเว็บต้องการ */
+function readAll_(){
+  var packed = readPacked_();
+  return {
+    db: {
+      members: packed.members || [],
+      anames:  packed.anames  || {},
+      wd:      packed.wd      || []
+    },
+    state: {
+      contracts: packed.contracts || [],
+      tx:        packed.tx        || [],
+      acct:      packed.acct      || {},
+      assign:    packed.assign    || {},
+      profile:   packed.profile   || {},
+      per:       packed.per       || {},
+      rule:      packed.rule      || {},
+      cut:       packed.cut       || 20,
+      pdfg:      packed.pdfg      || {}
+    },
+    board: packed.board || {},
+    user:  userLabel_(),
+    time:  now_()
+  };
+}
+
+/* เขียนทับทั้งก้อน — ล็อกกันสองคนบันทึกชนกัน */
+function writeAll_(payload){
+  var obj = (typeof payload === "string") ? JSON.parse(payload) : payload;
+  if(!obj || typeof obj !== "object") throw new Error("ข้อมูลที่ส่งมาไม่ถูกรูปแบบ");
+
+  var lock = LockService.getScriptLock();
+  if(!lock.tryLock(20000)) throw new Error("มีคนกำลังบันทึกอยู่ ลองใหม่อีกครั้ง");
+  try{
+    var txt = JSON.stringify(obj);
+    var sh  = dataSheet_(true);
+    sh.clearContents();
+    var rows = [], i;
+    for(i = 0; i < txt.length; i += CHUNK) rows.push([txt.substr(i, CHUNK)]);
+    if(!rows.length) rows = [[""]];
+    sh.getRange(1, 1, rows.length, 1).setValues(rows);
+    stamp_(obj, txt.length);
+    return txt.length;
+  } finally { lock.releaseLock(); }
+}
+
+/* บันทึกร่องรอยการบันทึกไว้ดูย้อนหลัง */
+function stamp_(obj, size){
+  var name = "บันทึกล่าสุด";
+  var sh = ss_().getSheetByName(name) || ss_().insertSheet(name);
+  sh.clear();
+  sh.getRange(1, 1, 6, 2).setValues([
+    ["บันทึกเมื่อ",   now_()],
+    ["โดย",           userLabel_()],
+    ["สมาชิก",        (obj.members   || []).length],
+    ["สัญญา",         (obj.contracts || []).length],
+    ["รายการรับชำระ", (obj.tx        || []).length],
+    ["ขนาดข้อมูล",    size + " ตัวอักษร"]
+  ]);
+  sh.getRange(1, 1, 6, 1).setFontWeight("bold");
+  sh.autoResizeColumns(1, 2);
+}
+
+function now_(){ return Utilities.formatDate(new Date(), TZ, "yyyy-MM-dd HH:mm:ss"); }
+function userLabel_(){
+  try{ return Session.getActiveUser().getEmail() || "ผ่านลิงก์"; }
+  catch(err){ return "ผ่านลิงก์"; }
+}
+
+/* ============ ชีทอ่านง่าย — สร้างจากข้อมูลล่าสุด (สั่งจากเมนู) ============ */
+function buildSheets(){
+  var d = readAll_(), db = d.db, st = d.state;
+  var mName = {};
+  (db.members || []).forEach(function(m){ mName[m.no] = m.name || ""; });
+
+  sheetOut_("สมาชิก",
+    ["เลขสมาชิก","ชื่อ-สกุล","ทุนเรือนหุ้นยกมา","เลขบัตรประชาชน","ตำแหน่ง","โทร","ที่อยู่"],
+    (db.members || []).map(function(m){
+      var p = (st.profile || {})[m.no] || {};
+      return [m.no, m.name || "", m.share || 0, p.cid || "", p.pos || "", p.tel || "", p.addr || ""];
+    }));
+
+  sheetOut_("บัญชีธนาคาร",
+    ["บัญชีท้าย 4 หลัก","ชื่อในสเตทเมนท์","เลขสมาชิก","ชื่อสมาชิก"],
+    Object.keys(db.anames || {}).sort().map(function(a){
+      var no = (st.acct || {})[a] || "";
+      return [a, db.anames[a], no, mName[no] || ""];
+    }));
+
+  sheetOut_("สัญญา",
+    ["รหัสสัญญา","เลขทะเบียน","ผลิตภัณฑ์","เลขสมาชิก","ชื่อสมาชิก","วันที่ทำสัญญา","ชำระงวดแรก",
+     "วงเงิน","จำนวนงวด","งวดละ","หุ้นประจำ","วิธีคิดหุ้น","ผู้ค้ำ 1","ผู้ค้ำ 2","สัญญาเก่า","ชำระแล้ว (งวด)"],
+    (st.contracts || []).map(function(c){
+      return [c.id, c.code || "", c.prod || "", c.no || "", mName[c.no] || "", c.d || "", c.p1 || "",
+              c.amt || 0, c.terms || 0, c.inst || 0, c.shareM || 0, c.mode || "",
+              c.g1 || "", c.g2 || "", c.legacy ? "ใช่" : "", c.t0 || 0];
+    }));
+
+  sheetOut_("รับชำระ",
+    ["วันที่","เวลา","บัญชีท้าย 4 หลัก","ชื่อในสเตทเมนท์","ยอดเงิน","เลขสมาชิก","ชื่อสมาชิก","ที่มา","หมายเหตุ"],
+    (st.tx || []).slice().sort(function(a, b){ return (a.d || "") < (b.d || "") ? -1 : 1; }).map(function(t){
+      var no = t.fixNo || t.no || (st.acct || {})[t.a] || "";
+      return [t.d || "", t.t || "", t.a || "", (db.anames || {})[t.a] || "", t.m || 0,
+              no, mName[no] || "", t.man ? "บันทึกมือ" : "สเตทเมนท์", t.note || t.part || ""];
+    }));
+
+  return "สร้างชีทอ่านง่ายเรียบร้อย";
+}
+
+function sheetOut_(name, head, rows){
+  var sh = ss_().getSheetByName(name) || ss_().insertSheet(name);
+  sh.clear();
+  sh.getRange(1, 1, 1, head.length).setValues([head])
+    .setFontWeight("bold").setBackground("#0B2C6B").setFontColor("#ffffff");
+  if(rows.length) sh.getRange(2, 1, rows.length, head.length).setValues(rows);
+  sh.setFrozenRows(1);
+  sh.autoResizeColumns(1, head.length);
+}
+
+/* ============ 4) ให้ Claude อ่านสลิป / สเตทเมนท์ ============ */
+var AI_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["rows"],
+  properties: {
+    rows: {
+      type: "array",
+      description: "รายการเงินเข้าทุกบรรทัดที่อ่านได้ เรียงตามที่ปรากฏในเอกสาร",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["d", "t", "m", "a", "nm", "no"],
+        properties: {
+          d:  {type: "string", description: "วันที่โอน รูปแบบ YYYY-MM-DD ปี ค.ศ."},
+          t:  {type: "string", description: "เวลา รูปแบบ HH:MM ไม่มีให้ใส่ 00:00"},
+          m:  {type: "number", description: "ยอดเงินที่เข้าบัญชี หน่วยบาท"},
+          a:  {type: "string", description: "เลขบัญชีผู้โอน 4 หลักท้าย เช่น X1366 ไม่มีให้ใส่ค่าว่าง"},
+          nm: {type: "string", description: "ชื่อผู้โอนตามที่พิมพ์ในเอกสาร"},
+          no: {type: "string", description: "เลขสมาชิกที่ตรงกับชื่อผู้โอน ถ้าไม่มั่นใจให้ใส่ค่าว่าง"}
+        }
+      }
+    }
+  }
+};
+
+function aiPrompt_(members, hint){
+  var list = (members || []).map(function(m){ return m.no + " " + m.name; }).join("\n");
+  return "นี่คือสลิปโอนเงินหรือสเตทเมนท์บัญชีธนาคารของกองทุน อ่านเฉพาะ«เงินที่เข้าบัญชี»ทุกบรรทัด "
+       + "แล้วส่งกลับตามโครงสร้างที่กำหนด\n\n"
+       + "กติกา\n"
+       + "• คัดตัวเลขให้ตรงตามเอกสารทุกหลัก ทศนิยม 2 ตำแหน่ง ห้ามปัด ห้ามเดา\n"
+       + "• วันที่ในเอกสารมักเป็น DD-MM-YY ปี พ.ศ. สองหลัก เช่น 05-07-69 ให้แปลงเป็น ค.ศ. 2026-07-05\n"
+       + "• ข้ามรายการถอนเงิน โอนออก ค่าธรรมเนียม และยอดยกมา เอาเฉพาะเงินเข้า\n"
+       + "• ถ้าชื่อผู้โอนตรงกับสมาชิกในรายชื่อข้างล่างให้ใส่เลขสมาชิกในช่อง no "
+       + "ชื่อในสลิปมักเป็นอังกฤษพิมพ์ใหญ่ ให้เทียบทั้งชื่อต้นและนามสกุล "
+       + "ถ้าไม่มั่นใจหรือมีคนชื่อซ้ำ ให้เว้นว่างไว้ ดีกว่าจับผิดคน\n"
+       + "• บรรทัดไหนอ่านตัวเลขไม่ชัด ให้ข้ามไป อย่าเดา\n\n"
+       + (list ? "รายชื่อสมาชิก (เลขสมาชิก ชื่อ-สกุล)\n" + list + "\n\n" : "")
+       + (hint ? "คำสั่งเพิ่มเติมจากผู้ใช้: " + hint + "\n" : "");
+}
+
+/**
+ * payload = JSON string {kind:"pdf"|"image", mime, data(base64), hint, members:[{no,name}]}
+ * คืน JSON string {rows:[...], used, limit} หรือ {error}
+ */
+function ai(payload){
+  try{
+    var key = aiKey_();
+    if(!key) throw new Error("ยังไม่ได้ตั้ง AI_KEY — เมนู กบข.นข. → ตั้งค่ากุญแจ AI");
+
+    var p = (typeof payload === "string") ? JSON.parse(payload) : payload;
+    if(!p || !p.data) throw new Error("ไม่มีไฟล์ส่งมา");
+
+    var used = bumpQuota_();
+    if(used > AI_DAILY_MAX) throw new Error("วันนี้ใช้ AI ครบ " + AI_DAILY_MAX + " ครั้งแล้ว พรุ่งนี้ค่อยใช้ใหม่");
+
+    var isPdf = (p.kind === "pdf") || /pdf/i.test(p.mime || "");
+    var media = isPdf
+      ? {type: "document", source: {type: "base64", media_type: "application/pdf", data: p.data}}
+      : {type: "image",    source: {type: "base64", media_type: p.mime || "image/png", data: p.data}};
+
+    var body = {
+      model: AI_MODEL,
+      max_tokens: 16000,
+      fallbacks: "default",
+      output_config: {
+        effort: "high",
+        format: {type: "json_schema", schema: AI_SCHEMA}
+      },
+      messages: [{
+        role: "user",
+        content: [media, {type: "text", text: aiPrompt_(p.members, p.hint)}]
+      }]
+    };
+
+    var res = UrlFetchApp.fetch("https://api.anthropic.com/v1/messages", {
+      method: "post",
+      contentType: "application/json",
+      headers: {
+        "x-api-key": key,
+        "anthropic-version": "2023-06-01",
+        "anthropic-beta": "server-side-fallback-2026-07-01"
+      },
+      payload: JSON.stringify(body),
+      muteHttpExceptions: true
+    });
+
+    var code = res.getResponseCode(), txt = res.getContentText();
+    if(code !== 200){
+      var detail = "";
+      try{ detail = JSON.parse(txt).error.message; }catch(err){ detail = txt.slice(0, 200); }
+      throw new Error("Claude ตอบกลับรหัส " + code + " — " + detail);
+    }
+
+    var msg = JSON.parse(txt);
+    if(msg.stop_reason === "refusal") throw new Error("AI ปฏิเสธการอ่านไฟล์นี้");
+
+    var out = "";
+    (msg.content || []).forEach(function(b){ if(b.type === "text") out += b.text; });
+    var parsed;
+    try{ parsed = JSON.parse(out); }
+    catch(err){ throw new Error("AI ตอบกลับไม่เป็นรูปแบบที่ตกลงไว้"); }
+
+    var rows = (parsed.rows || []).filter(function(r){ return r && r.d && +r.m > 0; })
+      .map(function(r){
+        return {d: String(r.d), t: String(r.t || "00:00").slice(0, 5),
+                m: +(+r.m).toFixed(2), a: String(r.a || ""),
+                nm: String(r.nm || ""), no: String(r.no || "")};
+      });
+
+    return JSON.stringify({rows: rows, used: used, limit: AI_DAILY_MAX});
+  }catch(err){
+    return JSON.stringify({error: String((err && err.message) || err)});
+  }
+}
+
+/* นับโควตารายวัน */
+function bumpQuota_(){
+  var k = "AI_USED_" + Utilities.formatDate(new Date(), TZ, "yyyyMMdd");
+  var n = (+prop_(k) || 0) + 1;
+  setProp_(k, String(n));
+  return n;
+}
+
+/* ============ เมนูในหน้า Sheet ============ */
+function onOpen(){
+  SpreadsheetApp.getUi().createMenu("กบข.นข.")
+    .addItem("1) สร้างชีททั้งหมด", "menuInit")
+    .addItem("2) อัปเดตชีทอ่านง่ายจากข้อมูลล่าสุด", "menuBuild")
+    .addItem("3) เช็คว่าระบบพร้อมใช้หรือยัง", "menuCheck")
+    .addSeparator()
+    .addItem("ตั้งค่ารหัสเชื่อมต่อ (REMOTE_TOKEN)", "menuToken")
+    .addItem("ตั้งค่ากุญแจ AI (AI_KEY)", "menuKey")
+    .addSeparator()
+    .addItem("สำรองข้อมูลเป็นไฟล์ JSON ใน Drive", "menuBackup")
+    .addToUi();
+}
+
+function menuInit(){
+  dataSheet_(true);
+  buildSheets();
+  SpreadsheetApp.getUi().alert("สร้างชีทเรียบร้อย\n\nขั้นต่อไป: ตั้งรหัสเชื่อมต่อและกุญแจ AI ในเมนูเดียวกัน "
+    + "แล้วกลับไปที่หน้าโปรแกรม กด «นำเข้า» ไฟล์ JSON สำรอง เพื่อยัดข้อมูลเข้า Sheets ครั้งแรก");
+}
+
+function menuBuild(){ SpreadsheetApp.getUi().alert(buildSheets()); }
+
+function menuCheck(){
+  var d, n = 0, err = "";
+  try{ d = readAll_(); n = d.db.members.length; }catch(e){ err = String(e.message || e); }
+  SpreadsheetApp.getUi().alert(
+    "สถานะระบบ\n\n"
+    + "• ชีทข้อมูล: " + (dataSheet_(false) ? "มีแล้ว" : "ยังไม่มี — กด «1) สร้างชีททั้งหมด»") + "\n"
+    + "• ข้อมูลในชีท: " + (err ? "อ่านไม่ได้ (" + err + ")" : n + " สมาชิก") + "\n"
+    + "• รหัสเชื่อมต่อ: " + (token_() ? "ตั้งแล้ว" : "ยังไม่ได้ตั้ง") + "\n"
+    + "• AI: " + (aiKey_() ? "พร้อมใช้" : "ยังไม่ได้ใส่กุญแจ") + "\n"
+    + "• ใช้ AI วันนี้: " + (+prop_("AI_USED_" + Utilities.formatDate(new Date(), TZ, "yyyyMMdd")) || 0)
+    + " / " + AI_DAILY_MAX + " ครั้ง\n\n"
+    + "อย่าลืม: ทุกครั้งที่แก้ Code.gs ต้อง Deploy → Manage deployments → ✏️ → New version → Deploy");
+}
+
+function menuToken(){
+  var ui = SpreadsheetApp.getUi();
+  var r = ui.prompt("รหัสเชื่อมต่อ (REMOTE_TOKEN)",
+    "ตั้งรหัสยาว ๆ เดาไม่ได้ แล้วบอกเฉพาะกรรมการที่ต้องใช้\nรหัสปัจจุบัน: " + (token_() ? "ตั้งไว้แล้ว" : "ยังไม่ได้ตั้ง"),
+    ui.ButtonSet.OK_CANCEL);
+  if(r.getSelectedButton() !== ui.Button.OK) return;
+  var v = r.getResponseText().trim();
+  if(v.length < 12){ ui.alert("สั้นเกินไป ควรยาวอย่างน้อย 12 ตัวอักษร"); return; }
+  setProp_("REMOTE_TOKEN", v);
+  ui.alert("ตั้งรหัสแล้ว — ห้ามนำรหัสนี้ไปใส่ในไฟล์ที่เปิดสาธารณะ เช่น GitHub");
+}
+
+function menuKey(){
+  var ui = SpreadsheetApp.getUi();
+  var r = ui.prompt("กุญแจ AI (AI_KEY)",
+    "วาง API key ของ Anthropic ขึ้นต้นด้วย sk-ant-\nสถานะ: " + (aiKey_() ? "ใส่ไว้แล้ว" : "ยังไม่ได้ใส่"),
+    ui.ButtonSet.OK_CANCEL);
+  if(r.getSelectedButton() !== ui.Button.OK) return;
+  var v = r.getResponseText().trim();
+  if(!v){ ui.alert("ไม่ได้ใส่อะไรมา"); return; }
+  setProp_("AI_KEY", v);
+  ui.alert("ใส่กุญแจแล้ว ลองกด «3) เช็คว่าระบบพร้อมใช้หรือยัง» อีกครั้ง");
+}
+
+function menuBackup(){
+  var txt = JSON.stringify(readPacked_());
+  var name = "kbk-backup-" + Utilities.formatDate(new Date(), TZ, "yyyyMMdd-HHmm") + ".json";
+  var f = DriveApp.createFile(name, txt, MimeType.PLAIN_TEXT);
+  SpreadsheetApp.getUi().alert("สำรองแล้ว\n\nไฟล์: " + name + "\nอยู่ใน Drive ของคุณ\n\n" + f.getUrl());
+}
