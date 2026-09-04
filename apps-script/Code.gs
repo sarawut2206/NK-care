@@ -37,10 +37,44 @@ function token_(){ return prop_("REMOTE_TOKEN"); }
 function aiKey_(){ return prop_("AI_KEY"); }
 
 /* ============ 1) เสิร์ฟหน้าโปรแกรม ============ */
+var PAGES_URL = "https://sarawut2206.github.io/NK-care/";   // ที่เปิดสำรอง ถ้ายังไม่ได้วางไฟล์ index
+
 function doGet(e){
-  return HtmlService.createHtmlOutputFromFile("index")
-    .setTitle("กบข.นข. — ระบบทะเบียนสัญญาและรับชำระ")
-    .addMetaTag("viewport", "width=device-width, initial-scale=1");
+  try{
+    return HtmlService.createHtmlOutputFromFile("index")
+      .setTitle("กบข.นข. — ระบบทะเบียนสัญญาและรับชำระ")
+      .addMetaTag("viewport", "width=device-width, initial-scale=1");
+  }catch(err){
+    // ยังไม่ได้สร้างไฟล์ HTML ชื่อ index — บอกวิธีทำ ดีกว่าโยน error เปล่า ๆ ใส่หน้าผู้ใช้
+    return HtmlService.createHtmlOutput(setupPage_(String(err && err.message || err)))
+      .setTitle("กบข.นข. — ยังตั้งค่าไม่ครบ")
+      .addMetaTag("viewport", "width=device-width, initial-scale=1");
+  }
+}
+
+function setupPage_(msg){
+  return '<!doctype html><meta charset="utf-8">'
+    + '<style>body{font-family:"IBM Plex Sans Thai",system-ui,sans-serif;background:#F4F7FC;color:#0B2C6B;'
+    + 'margin:0;padding:26px 18px;line-height:1.65}'
+    + '.w{max-width:640px;margin:0 auto;background:#fff;border:1px solid #D3DEEF;border-radius:12px;padding:22px 24px}'
+    + 'h1{font-size:19px;margin:0 0 4px}p{margin:8px 0}ol{margin:8px 0 8px 20px}li{margin-bottom:7px}'
+    + 'code{background:#EAF1FB;padding:1px 6px;border-radius:5px;font-family:ui-monospace,monospace;font-size:13px}'
+    + 'b{color:#0B2C6B}.e{background:#FDF3F3;border-left:4px solid #C0202E;padding:8px 11px;border-radius:0 6px 6px 0;'
+    + 'font-size:13px;color:#8A1B24;margin:12px 0}'
+    + 'a.btn{display:inline-block;background:#0B2C6B;color:#fff;text-decoration:none;padding:9px 16px;'
+    + 'border-radius:9px;font-weight:600;margin-top:6px}</style>'
+    + '<div class="w"><h1>ยังวางไฟล์หน้าโปรแกรมไม่ครบ</h1>'
+    + '<p>ตัวเซิร์ฟเวอร์ทำงานได้แล้ว แต่ยังหา<b>ไฟล์ HTML ชื่อ index</b> ในโปรเจกต์ Apps Script ไม่เจอ</p>'
+    + '<div class="e">' + msg + '</div>'
+    + '<p><b>วิธีทำ</b></p><ol>'
+    + '<li>ในหน้า Apps Script กด <b>+</b> ข้างคำว่า «ไฟล์» → เลือก <b>HTML</b></li>'
+    + '<li>ตั้งชื่อว่า <code>index</code> (พิมพ์แค่นี้ ระบบเติม .html ให้เอง)</li>'
+    + '<li>ลบข้อความตัวอย่างในไฟล์ให้หมด แล้ววางเนื้อ <code>index.html</code> ของโปรแกรมลงไปทั้งไฟล์</li>'
+    + '<li>กด <b>บันทึก</b> แล้ว <b>การทำให้ใช้งานได้ → จัดการ → ✏️ → เวอร์ชันใหม่ → ทำให้ใช้งานได้</b></li>'
+    + '<li>เปิดลิงก์นี้อีกครั้ง</li></ol>'
+    + '<p>ระหว่างนี้เปิดโปรแกรมจากที่นี่ไปก่อนได้ แล้วกด «ต่อจากหน้านี้ ใช้รหัสเชื่อมต่อ»</p>'
+    + '<a class="btn" href="' + PAGES_URL + '" target="_blank" rel="noopener">เปิดโปรแกรมจาก GitHub Pages</a>'
+    + '</div>';
 }
 
 /* ============ 2) ทางเข้าสำหรับหน้าเว็บภายนอก (GitHub Pages / เปิดไฟล์ตรง) ============ */
