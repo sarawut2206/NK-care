@@ -242,6 +242,7 @@ th.svcol{background:#FFF4D6!important}
   body.wprint section:not(#tab7){display:none!important}
   body.wprint #tab7>.card,body.wprint #tab7>.stats{display:none!important}
   body.wprint .kpage,body.aprint .kpage{page-break-after:always}
+  body.wprint .kpage:last-child,body.aprint .kpage:last-child{page-break-after:auto}
   body.aprint section:not(#tab6){display:none!important}
   body.aprint #tab6>.card,body.aprint #tab6>.stats,body.aprint #tab6 .tbl{display:none!important}
   body.aprint #a_doc>.eyebrow{display:none!important}
@@ -316,7 +317,7 @@ th.svcol{background:#FFF4D6!important}
 @media print{
   html,body{background:#fff!important;padding:0;margin:0;font-size:11px;
     -webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .mast,nav,.tools,.noprint,.card,.stats{display:none!important}
+  .topbar,#bnr,.mast,nav,.tools,.noprint,.card,.stats{display:none!important}
   .eyebrow{display:none}
   .receipt .eyebrow{display:flex!important;margin:14px 0 6px;color:var(--ink);font-weight:600}
   /* โหมดปกติ = ใบเสร็จ (แท็บ 3) */
@@ -360,7 +361,7 @@ th.svcol{background:#FFF4D6!important}
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.09.04-29</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.09.04-30</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
