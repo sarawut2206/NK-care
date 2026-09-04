@@ -361,7 +361,7 @@ th.svcol{background:#FFF4D6!important}
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.09.04-30</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.09.04-31</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
@@ -1271,7 +1271,7 @@ function drawT1(){
 
   <div id="atbox"></div>
   <div class="tbl"><table>
-    <thead><tr><th class="l">ผู้กู้ / สัญญา</th><th class="l">ผลิตภัณฑ์</th><th class="l">วันที่</th>
+    <thead><tr><th class="l">ผู้กู้ / สัญญา</th><th class="l">ผลิตภัณฑ์</th><th class="l">วันที่ทำสัญญา<br><span class="hint" style="font-weight:400">/ ชำระงวดแรก</span></th>
       <th class="l">ตารางเดิม / หุ้นฝาก</th>
       <th>วงเงิน</th><th>งวด</th><th>งวดละ</th><th>หุ้นประจำ</th><th class="l">วิธีคิดหุ้น</th>
       <th title="ชำระไปแล้วกี่งวด — กรอกเอง อัปเดตทุกเดือน">ชำระแล้ว<br><span class="hint" style="font-weight:400">งวด</span></th>
@@ -1286,7 +1286,9 @@ function drawT1(){
           ${c.legacy?'<span class="pill">ยกมา</span>':""}${c.code?`<span class="pill">${esc(c.code)}</span>`:""}</td>
         <td class="l"><span class="pill ${c.prod==="ดูแลกัน"?"yel":""}">${c.prod}</span>
           <span class="hint">${PROD[c.prod].method==="flat"?"Flat":"ลดต้นลดดอก"}</span></td>
-        <td class="l"><input type="date" data-e="${c.id}:d" value="${c.d}" style="font-size:11.5px;padding:3px 5px"></td>
+        <td class="l"><input type="date" data-e="${c.id}:d" value="${c.d}" style="font-size:11.5px;padding:3px 5px">
+          <input type="date" data-e="${c.id}:p1" value="${p1Of(c)}" style="font-size:11.5px;padding:3px 5px;margin-top:3px"
+            title="วันที่ชำระงวดแรก — งวดถัดไปกำหนดชำระไม่เกินวันที่ 5 ของเดือนถัดไป ระบบคิดให้เอง"></td>
         <td class="l" style="white-space:nowrap">${c.ref
           ? `<button class="ghost sm" data-at="${c.id}" style="padding:2px 6px;font-size:10.5px;border-color:var(--green);color:var(--green)"
                title="${esc(c.ref.file)} · แนบเมื่อ ${c.ref.d}">✓ PDF</button>`
@@ -1408,7 +1410,7 @@ function drawT1(){
   document.querySelectorAll("[data-e]").forEach(i => i.onchange = e => {
     const [id,f] = e.target.dataset.e.split(":");
     const c = S.contracts.find(x=>x.id===id);
-    c[f] = (f==="d"||f==="mode") ? e.target.value : +e.target.value||0;
+    c[f] = (f==="d"||f==="mode"||f==="p1") ? e.target.value : +e.target.value||0;
     all();
   });
   document.querySelectorAll("[data-at]").forEach(b => b.onclick = () => attachPanel(b.dataset.at));
@@ -3244,6 +3246,27 @@ function shareAt(c,t){
 function lockedRows(c){ return (c && c.rows && c.rows.length) ? c.rows : null; }
 function rowAt(c,t){ const L = lockedRows(c); return L ? (L.find(r=>+r.t===+t) || null) : null; }
 
+/* ---- กำหนดชำระรายงวด ----
+   งวดที่ 1 = วันที่ที่ระบุไว้ · งวดถัดไป = ไม่เกินวันที่ 5 ของเดือนถัดไป เรียงไปเรื่อย ๆ */
+function dueOfTerm(p1, t){
+  const a = String(p1||"").split("-").map(Number);
+  if(!a[0] || !a[1]) return "";
+  if(+t <= 1) return p1;
+  const n = a[0]*12 + (a[1]-1) + (+t-1);
+  return `${Math.floor(n/12)}-${String(n%12+1).padStart(2,"0")}-05`;
+}
+/* วันที่แบบไทยย่อ — 5 ต.ค. 2569 */
+const thDay = iso => { const a = String(iso||"").split("-").map(Number);
+  return (a[0] && a[1]) ? `${a[2]||5} ${MTH_TH[a[1]-1]} ${a[0]+543}` : "—"; };
+/* งวดแรกที่แนะนำ = วันที่ 5 ของเดือนถัดจากวันที่ทำสัญญา (ไม่ระบุ = ถัดจากวันนี้) */
+function firstDue(d){
+  const b = /^\d{4}-\d{2}-\d{2}$/.test(d||"") ? new Date(d+"T00:00:00") : new Date();
+  const n = b.getFullYear()*12 + b.getMonth() + 1;
+  return `${Math.floor(n/12)}-${String(n%12+1).padStart(2,"0")}-05`;
+}
+/* กำหนดชำระงวดแรกของสัญญา — ระบุเองได้ ไม่ระบุก็คิดจากวันที่ทำสัญญา */
+const p1Of = c => (c && c.p1) ? c.p1 : firstDue(c && c.d);
+
 /* ตารางผ่อน — ตารางล็อก > สูตรใหม่ (calc) > คงที่ (fixed/flat) */
 function schedule(c){
   const L = lockedRows(c);
@@ -3824,15 +3847,19 @@ function docSched(c){
   const half=Math.ceil(s.rows.length/2);
   const st = svStart(c);                      // สะสมเพิ่มกี่บาท · ตั้งแต่งวดไหน
   const hasSv = s.rows.some(r=>r.sv>0);
-  const col = rs => `<table class="kt ktsch"><thead><tr><th>งวด</th><th>ยอดส่ง</th><th>เงินต้น</th>
+  const P1 = p1Of(c);
+  const col = rs => `<table class="kt ktsch"><thead><tr><th>งวด</th><th>กำหนดชำระ</th><th>ยอดส่ง</th><th>เงินต้น</th>
     <th>ดอกเบี้ย</th><th>หุ้นประจำ</th><th>หุ้นเพิ่ม</th>${hasSv?'<th class="svcol">สะสมเพิ่ม</th>':""}<th>คงเหลือ</th></tr></thead><tbody>
     ${rs.map(r=>`<tr${st&&r.t===st.t?' style="border-top:1.5px solid #C8A24B"':""}><td class="c">${r.t}</td>
+      <td class="c">${thDay(dueOfTerm(P1, r.t))}</td>
       <td class="n"><b>${B(r.total)}</b></td><td class="n">${B(r.pri)}</td>
       <td class="n">${B(r.int)}</td><td class="n">${B(r.base)}</td><td class="n">${B(r.extra)}</td>
       ${hasSv?`<td class="n svcol">${r.sv>0?B(r.sv):"—"}</td>`:""}<td class="n">${B(r.bal)}</td></tr>`).join("")}</tbody></table>`;
   return pg(1,1,`${logo()}<div class="kt1">เอกสารแนบท้าย · ตารางการชำระหนี้รายเดือน</div>
     <div class="kmeta2"><span>สัญญาเลขที่ <b>${esc(c.code)||"…………"}</b></span><span>ผู้กู้ <b>${esc(m.name)}</b></span>
       <span>วงเงิน <b>${B(c.amt)}</b> บาท · <b>${c.terms}</b> งวด · งวดละ <b>${B(c.inst)}</b> บาท</span></div>
+    <p class="kh"><b>งวดที่ 1 กำหนดชำระ ${thDay(P1)}</b> · งวดถัดไปกำหนดชำระไม่เกินวันที่ 5 ของเดือนถัดไป ·
+      งวดสุดท้าย (งวดที่ ${c.terms}) กำหนดชำระ <b>${thDay(dueOfTerm(P1, c.terms))}</b></p>
     <p class="kh">คำนวณตามระบบเพดานวงเงินของกลุ่มบุคคลฯ · ดอกเบี้ย 1.00%/เดือน
       ${PROD[c.prod].method==="flat"?"(แบบคงที่/Flat)":"(ลดต้นลดดอก)"} ·
       ${c.mode==="old"
@@ -4214,6 +4241,9 @@ function drawT6(){
       <div><label>หุ้นประจำ/งวด (B)</label><input type="number" id="c_B" step="0.01" value="${CV?CV.B:500}"></div>
       <div><label>ผลิตภัณฑ์</label><select id="c_prod">${Object.keys(PROD).map(k=>`<option ${CV&&CV.prod===k?"selected":""}>${k}</option>`).join("")}</select></div>
       <div><label>จำนวนงวด</label><input type="number" id="c_N" value="${CV?CV.N:36}"></div>
+      <div><label>วันที่ชำระงวดแรก</label>
+        <input type="date" id="c_p1" value="${CV&&CV.p1?CV.p1:firstDue()}"
+               title="งวดถัดไปกำหนดชำระไม่เกินวันที่ 5 ของเดือนถัดไป ระบบคิดให้เอง"></div>
       <div><label>ดอกเบี้ย/เดือน (%)</label><input type="number" id="c_i" step="0.01" value="${CV?CV.i*100:1}"></div>
       <div><label>&nbsp;</label><button id="c_go">คำนวณ</button></div>
     </div>
@@ -4252,12 +4282,12 @@ function calcRun(){
   // กรอกยอดที่ขอ → ใช้ยอดนั้นเป็นวงเงิน แล้วคิดยอดผ่อนจากยอดนั้น · ไม่กรอก → ใช้เพดาน
   const P0   = want>0 ? want : cap;
   const Mpay = want>0 ? reqPayment(want,B,N,i) : M;
-  CV = {M, B, N, i, want, prod, cap, P0, Mpay};
+  CV = {M, B, N, i, want, prod, cap, P0, Mpay, p1: $("c_p1").value || firstDue()};
   renderCalc();
 }
 
 function renderCalc(){
-  const {M, B:bs, N, i, want, cap, P0, Mpay} = CV;
+  const {M, B:bs, N, i, want, cap, P0, Mpay} = CV, p1 = CV.p1 || firstDue();
   const tmp = {prod:CV.prod, mode:"calc", amt:P0, terms:N, inst:Mpay, shareM:bs};
   const s = schedule(tmp);
   const over  = want > 0 && Mpay > M + 0.005;      // ขอเกินความสามารถชำระ
@@ -4312,12 +4342,17 @@ function renderCalc(){
   </div>
   <div id="a_doc"></div>
   <div class="eyebrow">ตารางการชำระหนี้ที่คำนวณได้</div>
-  <div class="tbl"><table><thead><tr><th>งวด</th><th>ยอดส่ง</th><th>เงินต้น</th><th>ดอกเบี้ย</th>
+  <p class="hint" style="margin:-6px 0 9px">งวดที่ 1 กำหนดชำระ <b>${thDay(p1)}</b> ตามที่ระบุไว้ด้านบน ·
+    งวดถัดไปกำหนดชำระ<b>ไม่เกินวันที่ 5 ของเดือนถัดไป</b> · งวดสุดท้าย (งวดที่ ${N}) กำหนดชำระ
+    <b>${thDay(dueOfTerm(p1, N))}</b> · แก้วันที่งวดแรกแล้วกด «คำนวณ» ใหม่ วันที่ทุกงวดจะเลื่อนตาม</p>
+  <div class="tbl"><table><thead><tr><th>งวด</th><th class="l">กำหนดชำระ</th><th>ยอดส่ง</th><th>เงินต้น</th><th>ดอกเบี้ย</th>
     <th>หุ้นประจำ</th><th>หุ้นเพิ่ม</th><th>คงเหลือ</th></tr></thead><tbody>
-    ${s.rows.map(r=>`<tr><td class="amt">${r.t}</td><td class="amt">${B(r.pay)}</td><td class="amt">${B(r.pri)}</td>
+    ${s.rows.map(r=>`<tr><td class="amt">${r.t}</td>
+      <td class="l">${thDay(dueOfTerm(p1, r.t))}</td>
+      <td class="amt">${B(r.pay)}</td><td class="amt">${B(r.pri)}</td>
       <td class="amt">${B(r.int)}</td><td class="amt">${B(r.base)}</td><td class="amt">${B(r.extra)}</td>
       <td class="amt">${B(r.bal)}</td></tr>`).join("")}
-    <tr class="tot"><td class="amt"><b>รวม</b></td><td class="amt"><b>${B(s.totPay)}</b></td><td class="amt"><b>${B(s.totPri)}</b></td>
+    <tr class="tot"><td class="amt"><b>รวม</b></td><td></td><td class="amt"><b>${B(s.totPay)}</b></td><td class="amt"><b>${B(s.totPri)}</b></td>
       <td class="amt"><b>${B(s.totInt)}</b></td><td class="amt"><b>${B(s.totBase)}</b></td>
       <td class="amt"><b>${B(s.totExtra)}</b></td><td class="amt">0.00</td></tr>
   </tbody></table></div>`;
@@ -4333,7 +4368,7 @@ function renderCalc(){
     if(!$("n_d").value){ alert("กรุณาเลือกวันที่ทำสัญญา"); return; }
     const id = "C"+Math.random().toString(36).slice(2,8);
     S.contracts.push({id, prod:$("n_prod").value, no:$("n_no").value, d:$("n_d").value,
-      amt:P0, terms:N, inst:Mpay, shareM:bs, mode:"calc", code:$("n_code").value.trim(),
+      amt:P0, terms:N, inst:Mpay, shareM:bs, mode:"calc", code:$("n_code").value.trim(), p1,
       g1:$("n_g1").value, g2:$("n_g2").value, open:0, legacy:false, ben:{}, want});
     S.pick = id; all();
     document.querySelector('nav b[data-t="5"]').click();
