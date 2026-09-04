@@ -360,7 +360,7 @@ th.svcol{background:#FFF4D6!important}
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.09.04-27</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.09.04-28</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
@@ -464,7 +464,7 @@ const esc = s => String(s??"").replace(/[<>&"]/g, c => ({"<":"&lt;",">":"&gt;","
 /* ============ สถานะ ============ */
 let S = null;
 function freshS(){ return { contracts: DB.contracts.map(c=>({...c})), tx: DB.tx.slice(),
-          acct: {...DB.acct}, assign: {}, cut: 20, profile: {}, pick: null, per: {}, watch: null, rule: {}, fprod: "", fper: "" }; }
+          acct: {...DB.acct}, assign: {}, cut: 20, profile: {}, pick: null, per: {}, watch: null, rule: {}, fprod: "", fno: "", fd1: "", fd2: "" }; }
 let sel = null, tab = 1;
 const txKey = t => `${t.a}|${t.d}|${t.t}|${t.m}`;
 const memOf = t => t.fixNo || t.no || S.acct[t.a] || "";   // ★ fixNo = ระบุเจ้าของเอง (ฝากชำระแทน)
@@ -2201,6 +2201,21 @@ function drawT2(){
     const k = a==="share"?"ฝากหุ้น" : (c?c.prod:"ยังไม่ระบุ");
     TT[k].n++; TT[k].m+=t.m; });
 
+  /* ---- ตัวกรองรายการรับชำระ — ประเภท · สมาชิก · ช่วงวันที่ ---- */
+  const kindOfTx = t => { const a = autoAssign(t), c = S.contracts.find(x=>x.id===a);
+    return a==="share" ? "ฝากหุ้น" : (c ? c.prod : "ยังไม่ระบุ"); };
+  const FL = S.tx.slice().sort((a,b)=>b.d<a.d?-1:1).filter(t =>
+       (!S.fprod || kindOfTx(t)===S.fprod)
+    && (!S.fno   || memOf(t)===S.fno)
+    && (!S.fd1   || (t.d||"") >= S.fd1)
+    && (!S.fd2   || (t.d||"") <= S.fd2));
+  const FSUM = +FL.reduce((a,t)=>a+(+t.m||0),0).toFixed(2);
+  const FON  = !!(S.fprod || S.fno || S.fd1 || S.fd2);
+  const FCAP = FON ? 500 : 60;            // กรองแล้วให้เห็นครบ ไม่ต้องตัดที่ 60
+  const thDay = d => { if(!d) return ""; const a = String(d).split("-").map(Number);
+    return `${a[2]} ${MTH_TH[(a[1]||1)-1]}${String((a[0]||0)+543).slice(2)}`; };
+  S._flist = FL.length; S._fcap = FCAP;
+
   $("tab2").innerHTML = pre + `
   ${Object.keys(S.rule||{}).length ? `<div class="card" style="border-left:3px solid var(--green)">
     <div class="eyebrow">กฎจับคู่ที่ใช้อยู่ (${Object.keys(S.rule).length} กฎ)</div>
@@ -2229,19 +2244,37 @@ function drawT2(){
     <span id="txbox" style="display:none"></span>
     <select id="fprod" style="width:auto"><option value="">— ทุกประเภท —</option>
       ${["สามัญ","ดูแลกัน","ฝากหุ้น","ยังไม่ระบุ"].map(k=>`<option ${S.fprod===k?"selected":""}>${k}</option>`).join("")}</select>
-    <select id="fper" style="width:auto"><option value="">— ทุกงวด —</option>
-      ${PERIODS.map(k=>`<option ${S.fper===k?"selected":""} value="${k}">${PLBL[k]}</option>`).join("")}</select>
+    <select id="fno" style="width:auto" title="เลือกสมาชิกที่ต้องการตรวจสอบการชำระ">
+      <option value="">— สมาชิกทุกคน —</option>
+      ${DB.members.slice().sort((a,b)=>String(a.no).localeCompare(String(b.no)))
+        .map(m=>`<option value="${m.no}" ${S.fno===m.no?"selected":""}>${m.no} · ${esc(m.name)}</option>`).join("")}</select>
+    <label style="margin:0;font-weight:400;font-size:12.5px;display:flex;gap:5px;align-items:center">ตั้งแต่วันที่
+      <input type="date" id="fd1" value="${esc(S.fd1||"")}" style="width:auto" title="วันที่ชำระ ตั้งแต่"></label>
+    <label style="margin:0;font-weight:400;font-size:12.5px;display:flex;gap:5px;align-items:center">ถึงวันที่
+      <input type="date" id="fd2" value="${esc(S.fd2||"")}" style="width:auto" title="วันที่ชำระ ถึง"></label>
+    ${FON?'<button class="ghost sm" id="fclr">ล้างตัวกรอง</button>':""}
     <span class="hint" id="fcnt" style="margin-left:auto"></span>
   </div>
+
+  ${FON ? (()=>{ const mm = S.fno ? DB.members.find(z=>z.no===S.fno) : null;
+    const by = {}; FL.forEach(t=>{ const k = kindOfTx(t);
+      by[k] = by[k] || {n:0, m:0}; by[k].n++; by[k].m += (+t.m||0); });
+    return `<div class="keybox" style="margin:0 0 11px;border-left:3px solid var(--brand2)">
+      <b style="font-size:14px">${mm ? `${mm.no} · ${esc(mm.name)}` : "สมาชิกทุกคน"}</b>
+      <span class="hint">${S.fprod?` · เฉพาะ${esc(S.fprod)}`:""}` +
+        `${S.fd1||S.fd2 ? ` · ${S.fd1?"ตั้งแต่ "+thDay(S.fd1):"ตั้งแต่ต้น"} ${S.fd2?"ถึง "+thDay(S.fd2):"ถึงปัจจุบัน"}` : " · ทุกวันที่"}</span>
+      <p class="hint" style="margin:6px 0 0">ชำระเข้ามา <b style="font-size:15px;color:var(--brand)">${FL.length}</b> รายการ ·
+        รวม <b style="font-size:15px;color:var(--brand)">${B(FSUM)}</b> บาท
+        ${FL.length ? ` · ครั้งแรก <b>${thDay(FL[FL.length-1].d)}</b> · ล่าสุด <b>${thDay(FL[0].d)}</b>` : ""}</p>
+      ${Object.keys(by).length ? `<p class="hint" style="margin:4px 0 0">แยกตามประเภท —
+        ${Object.entries(by).sort((a,b)=>b[1].m-a[1].m).map(([k,v])=>`<b>${esc(k)}</b> ${B(v.m)} (${v.n} รายการ)`).join(" · ")}</p>` : ""}
+      ${mm ? `<p class="hint" style="margin:4px 0 0">อยากดูแยกรายงวดของคนนี้ ไปที่แท็บ <b>«รายคน»</b></p>` : ""}
+    </div>`; })() : ""}
   <div class="tbl"><table><thead><tr><th class="l">วันที่ชำระ</th><th class="l">เวลา</th><th>ยอด</th>
     <th class="l">บัญชีผู้โอน</th><th class="l">สมาชิก</th><th class="l">งวด</th>
     <th class="l">ประเภท</th><th class="l">เลขทะเบียนสัญญาที่เข้า</th><th class="l">ที่มา</th></tr></thead><tbody>
-    ${(()=>{ const list = S.tx.slice().sort((a,b)=>b.d<a.d?-1:1).filter(t=>{
-        const a=autoAssign(t), c=S.contracts.find(x=>x.id===a);
-        const k = a==="share"?"ฝากหุ้น" : (c?c.prod:"ยังไม่ระบุ");
-        return (!S.fprod || k===S.fprod) && (!S.fper || periodOf(t.d)===S.fper); });
-      S._flist = list.length;
-      return list.slice(0,60).map(t=>{
+    ${(()=>{
+      return FL.slice(0,FCAP).map(t=>{
         const no=memOf(t), m=DB.members.find(z=>z.no===no), a=autoAssign(t);
         const c = S.contracts.find(x=>x.id===a);
         return `<tr${a===null?' style="background:#FFF6F5"':""}><td class="l">${t.d}</td><td class="l hint">${t.t}</td>
@@ -2263,15 +2296,19 @@ function drawT2(){
     })()}</tbody></table></div>
   <p class="hint" style="margin-top:8px" id="ftail"></p>`;
 
-  $("fcnt").textContent = `แสดง ${Math.min(60,S._flist)} จาก ${S._flist} รายการ`;
-  $("ftail").innerHTML = S._flist>60 ? `แสดง 60 รายการแรก · ใช้ตัวกรองด้านบนเพื่อดูรายการอื่น` : "";
+  $("fcnt").textContent = `แสดง ${Math.min(FCAP,S._flist)} จาก ${S._flist} รายการ`;
+  $("ftail").innerHTML = S._flist>FCAP
+    ? `แสดง ${FCAP} รายการแรก · เลือกสมาชิกหรือระบุช่วงวันที่ด้านบนเพื่อจำกัดให้แคบลง` : "";
   document.querySelectorAll("[data-delrule]").forEach(b=>b.onclick=()=>{
     delete S.rule[b.dataset.delrule]; all(); });
 
   // ★ เปิดแผงแก้ไขรายการ — ระบุเจ้าของ · แยกยอด · ยอดปิดหนี้
   document.querySelectorAll("[data-txopen]").forEach(b=>b.onclick=()=>txOpen(b.dataset.txopen));
   $("fprod").onchange = e => { S.fprod = e.target.value; drawT2(); };
-  $("fper").onchange  = e => { S.fper  = e.target.value; drawT2(); };
+  $("fno").onchange   = e => { S.fno   = e.target.value; drawT2(); };
+  $("fd1").onchange   = e => { S.fd1   = e.target.value; drawT2(); };
+  $("fd2").onchange   = e => { S.fd2   = e.target.value; drawT2(); };
+  if($("fclr")) $("fclr").onclick = () => { S.fprod=""; S.fno=""; S.fd1=""; S.fd2=""; drawT2(); };
   $("cut").onchange = e => { S.cut = +e.target.value; all(); };
   document.querySelectorAll("[data-map]").forEach(s => s.onchange = e => {
     S.acct[e.target.dataset.map] = e.target.value; all(); });

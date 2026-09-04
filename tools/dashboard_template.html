@@ -132,6 +132,11 @@ svg .b.hi{fill:var(--accent)}
       <input id="lq" placeholder="ค้นชื่อ / บัญชี / ยอดเงิน / วันที่" style="min-width:250px">
       <div class="seg" id="ldir"><button class="on" data-d="">ทั้งหมด</button><button data-d="in">เงินเข้า</button><button data-d="out">เงินออก</button></div>
       <select id="lper"><option value="">— ทุกงวด —</option></select>
+      <label style="display:flex;gap:5px;align-items:center;font-size:12.5px;color:var(--soft)">ตั้งแต่วันที่
+        <input type="date" id="ld1"></label>
+      <label style="display:flex;gap:5px;align-items:center;font-size:12.5px;color:var(--soft)">ถึงวันที่
+        <input type="date" id="ld2"></label>
+      <button id="lclr">ล้างตัวกรอง</button>
       <span class="hint" id="lcnt" style="margin-left:auto"></span>
     </div>
   </div>
@@ -174,6 +179,9 @@ function init(){
   $("lper").innerHTML = '<option value="">— ทุกงวด —</option>'
     + M.periods.map(p=>`<option value="${p}">${M.period_labels[p]}</option>`).join("");
   $("lq").oninput = ledger; $("lper").onchange = ledger;
+  $("ld1").onchange = ledger; $("ld2").onchange = ledger;
+  $("lclr").onclick = () => { $("lq").value=""; $("lper").value=""; $("ld1").value=""; $("ld2").value="";
+    LDIR=""; document.querySelectorAll("#ldir button").forEach((x,i)=>x.classList.toggle("on", i===0)); ledger(); };
   document.querySelectorAll("#ldir button").forEach(b=>b.onclick=()=>{ LDIR=b.dataset.d;
     document.querySelectorAll("#ldir button").forEach(x=>x.classList.toggle("on",x===b)); ledger(); });
   draw(); ledger(); checks();
@@ -255,13 +263,16 @@ let LDIR = "";
 function ledger(){
   const M = DATA.meta;
   const q = $("lq").value.trim().toLowerCase(), per = $("lper").value;
+  const d1 = $("ld1").value, d2 = $("ld2").value;
   const rows = DATA.tx.filter(t =>
     (!LDIR || (LDIR === "in" ? t.in : !t.in)) &&
     (!per || t.period === per) &&
+    (!d1 || t.date >= d1) && (!d2 || t.date <= d2) &&
     (!q || [t.date, thDate(t.date), t.name, t.account, t.member_no, t.member_name, t.kind, t.channel, t.amount.toFixed(2)]
             .join(" ").toLowerCase().includes(q)));
   const sIn = rows.filter(t=>t.in).reduce((a,t)=>a+t.amount,0), sOut = rows.filter(t=>!t.in).reduce((a,t)=>a+t.amount,0);
-  $("lcnt").innerHTML = `${rows.length} รายการ · เข้า <b>${B(sIn)}</b> · ออก <b>${B(sOut)}</b>`;
+  $("lcnt").innerHTML = `${(d1||d2)?`${d1?thDate(d1):"ต้นช่วง"} – ${d2?thDate(d2):"ปัจจุบัน"} · `:""}`
+    + `${rows.length} รายการ · เข้า <b>${B(sIn)}</b> · ออก <b>${B(sOut)}</b>`;
   $("ledger").innerHTML = `<table><thead><tr>
     <th class="l">วันที่</th><th>เวลา</th><th class="l">รายการ</th><th>เงินเข้า</th><th>เงินออก</th>
     <th>ยอดคงเหลือ</th><th class="l">ช่องทาง</th><th class="l">ผู้โอน / รายละเอียด</th><th class="l">สมาชิก</th>
