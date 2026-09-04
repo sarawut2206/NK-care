@@ -231,6 +231,8 @@ th.svcol{background:#FFF4D6!important}
 .kcut{border-top:1px dashed var(--rule);margin:14px 0}
 .ksch{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .ktsch td,.ktsch th{padding:1.5px 4px;font-size:9px}
+.ktfull{width:100%}
+.ktfull td,.ktfull th{padding:1.8px 6px;font-size:9.5px}
 .ktot{border-top:1.5px solid var(--ink);margin-top:6px;padding-top:5px;text-align:right;font-size:11px}
 @media print{
   body.kprint .kpage{page-break-after:always;border:0;border-radius:0;padding:0;margin:0}
@@ -361,7 +363,7 @@ th.svcol{background:#FFF4D6!important}
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.09.04-31</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.09.04-32</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
@@ -3258,6 +3260,9 @@ function dueOfTerm(p1, t){
 /* วันที่แบบไทยย่อ — 5 ต.ค. 2569 */
 const thDay = iso => { const a = String(iso||"").split("-").map(Number);
   return (a[0] && a[1]) ? `${a[2]||5} ${MTH_TH[a[1]-1]} ${a[0]+543}` : "—"; };
+/* วันที่แบบสั้น สำหรับตารางในเอกสาร — 5 ต.ค.69 */
+const thDayS = iso => { const a = String(iso||"").split("-").map(Number);
+  return (a[0] && a[1]) ? `${a[2]||5} ${MTH_TH[a[1]-1]}${String(a[0]+543).slice(2)}` : "—"; };
 /* งวดแรกที่แนะนำ = วันที่ 5 ของเดือนถัดจากวันที่ทำสัญญา (ไม่ระบุ = ถัดจากวันนี้) */
 function firstDue(d){
   const b = /^\d{4}-\d{2}-\d{2}$/.test(d||"") ? new Date(d+"T00:00:00") : new Date();
@@ -3844,21 +3849,32 @@ function docConsent(c, idx){
 /* ---------- 4) ตารางการชำระหนี้รายเดือน ---------- */
 function docSched(c){
   const m=DB.members.find(z=>z.no===c.no)||{name:""}, s=schedule(c);
-  const half=Math.ceil(s.rows.length/2);
   const st = svStart(c);                      // สะสมเพิ่มกี่บาท · ตั้งแต่งวดไหน
   const hasSv = s.rows.some(r=>r.sv>0);
   const P1 = p1Of(c);
-  const col = rs => `<table class="kt ktsch"><thead><tr><th>งวด</th><th>กำหนดชำระ</th><th>ยอดส่ง</th><th>เงินต้น</th>
+  const col = rs => `<table class="kt ktsch ktfull"><thead><tr><th>งวด</th><th>กำหนดชำระ</th><th>ยอดส่ง</th><th>เงินต้น</th>
     <th>ดอกเบี้ย</th><th>หุ้นประจำ</th><th>หุ้นเพิ่ม</th>${hasSv?'<th class="svcol">สะสมเพิ่ม</th>':""}<th>คงเหลือ</th></tr></thead><tbody>
     ${rs.map(r=>`<tr${st&&r.t===st.t?' style="border-top:1.5px solid #C8A24B"':""}><td class="c">${r.t}</td>
-      <td class="c">${thDay(dueOfTerm(P1, r.t))}</td>
+      <td class="c">${thDayS(dueOfTerm(P1, r.t))}</td>
       <td class="n"><b>${B(r.total)}</b></td><td class="n">${B(r.pri)}</td>
       <td class="n">${B(r.int)}</td><td class="n">${B(r.base)}</td><td class="n">${B(r.extra)}</td>
       ${hasSv?`<td class="n svcol">${r.sv>0?B(r.sv):"—"}</td>`:""}<td class="n">${B(r.bal)}</td></tr>`).join("")}</tbody></table>`;
-  return pg(1,1,`${logo()}<div class="kt1">เอกสารแนบท้าย · ตารางการชำระหนี้รายเดือน</div>
+
+  /* ---- แบ่งหน้ากระดาษ A4 ----
+     ตารางกินความสูงราว 5 มม./แถว · หน้าที่มีคำอธิบายหรือยอดรวมกับช่องเซ็นจะเหลือที่น้อยกว่า
+     จึงจำกัดแถวต่อหน้าไว้แล้วกระจายให้ทุกหน้าเท่า ๆ กัน ไม่ให้มีหน้าสุดท้ายเหลือแค่ 2–3 แถว */
+  const PER = hasSv ? 20 : 30;      // มีคอลัมน์ «สะสมเพิ่ม» ท้ายเอกสารจะยาวขึ้น จึงเผื่อที่ไว้
+  const np  = Math.max(1, Math.ceil(s.rows.length / PER));
+  const per = Math.ceil(s.rows.length / np) || 1;
+  const chunks = [];
+  for(let i=0; i<s.rows.length; i+=per) chunks.push(s.rows.slice(i, i+per));
+  if(!chunks.length) chunks.push([]);
+
+  const head = `${logo()}<div class="kt1">เอกสารแนบท้าย · ตารางการชำระหนี้รายเดือน</div>
     <div class="kmeta2"><span>สัญญาเลขที่ <b>${esc(c.code)||"…………"}</b></span><span>ผู้กู้ <b>${esc(m.name)}</b></span>
-      <span>วงเงิน <b>${B(c.amt)}</b> บาท · <b>${c.terms}</b> งวด · งวดละ <b>${B(c.inst)}</b> บาท</span></div>
-    <p class="kh"><b>งวดที่ 1 กำหนดชำระ ${thDay(P1)}</b> · งวดถัดไปกำหนดชำระไม่เกินวันที่ 5 ของเดือนถัดไป ·
+      <span>วงเงิน <b>${B(c.amt)}</b> บาท · <b>${c.terms}</b> งวด · งวดละ <b>${B(c.inst)}</b> บาท</span></div>`;
+
+  const notes = `<p class="kh"><b>งวดที่ 1 กำหนดชำระ ${thDay(P1)}</b> · งวดถัดไปกำหนดชำระไม่เกินวันที่ 5 ของเดือนถัดไป ·
       งวดสุดท้าย (งวดที่ ${c.terms}) กำหนดชำระ <b>${thDay(dueOfTerm(P1, c.terms))}</b></p>
     <p class="kh">คำนวณตามระบบเพดานวงเงินของกลุ่มบุคคลฯ · ดอกเบี้ย 1.00%/เดือน
       ${PROD[c.prod].method==="flat"?"(แบบคงที่/Flat)":"(ลดต้นลดดอก)"} ·
@@ -3871,9 +3887,9 @@ function docSched(c){
       <b>ผู้กู้ขอฝาก «สะสมเพิ่ม» จำนวน ${B(st.sv)} บาท/งวด ตั้งแต่งวดที่ ${st.t} (${PLBL[st.p]||st.p}) เป็นต้นไป</b>
       ${st.memo?`ตาม${esc(st.memo)}`:""} — เป็นความประสงค์เพิ่มเติมของผู้กู้เอง <b>ไม่ใช่เงื่อนไขของสัญญาเงินกู้</b> ·
       งวดที่ 1–${st.t-1} ยอดส่ง ${B(s.rows[0].total)} บาท · ตั้งแต่งวดที่ ${st.t} ยอดส่ง
-      ${B((s.rows.find(r=>r.t===st.t)||s.rows[s.rows.length-1]).total)} บาท</p>`:""}
-    <div class="ksch">${col(s.rows.slice(0,half))}${s.rows.length>half?col(s.rows.slice(half)):""}</div>
-    <div class="ktot">รวมดอกเบี้ย ${B(s.totInt)} · รวมหุ้นประจำ ${B(s.totBase)} · รวมหุ้นเพิ่ม ${B(s.totExtra)}
+      ${B((s.rows.find(r=>r.t===st.t)||s.rows[s.rows.length-1]).total)} บาท</p>`:""}`;
+
+  const tail = `<div class="ktot">รวมดอกเบี้ย ${B(s.totInt)} · รวมหุ้นประจำ ${B(s.totBase)} · รวมหุ้นเพิ่ม ${B(s.totExtra)}
       ${hasSv?`· <b class="svcol">รวมสะสมเพิ่ม ${B(s.totSv)}</b>`:""} ·
       รวมเงินต้น ${B(s.totPri)} · <b>รวมทั้งสิ้น ${B(s.totAll)} บาท</b></div>
     ${hasSv?`<div class="keybox" style="margin-top:7px;border-left:3px solid var(--gold)">
@@ -3895,7 +3911,17 @@ function docSched(c){
         <div>( ${esc(m.name)} )</div><div class="rl">ผู้กู้ — รับทราบตารางการชำระหนี้</div></div>
       <div class="ksig"><div class="sp" style="height:30px"></div><div class="ln">ลงชื่อ ..............................................</div>
         <div>( ${esc(CHAIR())} )</div><div class="rl">ประธานกลุ่มบุคคล</div></div>
-    </div>`,"ผู้กู้");
+    </div>`;
+
+  return chunks.map((rows, i) => {
+    const cont = rows.length
+      ? `<p class="kh">งวดที่ <b>${rows[0].t}–${rows[rows.length-1].t}</b> (ต่อจากหน้าก่อน) ·
+           กำหนดชำระ ${thDay(dueOfTerm(P1, rows[0].t))} ถึง ${thDay(dueOfTerm(P1, rows[rows.length-1].t))}</p>`
+      : "";
+    return pg(i+1, chunks.length,
+      head + (i===0 ? notes : cont) + col(rows)
+      + (i===chunks.length-1 ? tail : ""), "ผู้กู้");
+  }).join("");
 }
 
 
@@ -4335,6 +4361,7 @@ function renderCalc(){
       <div><label>ผู้ค้ำ 1</label><select id="n_g1"><option value="">—</option>${opts}</select></div>
       <div><label>ผู้ค้ำ 2</label><select id="n_g2"><option value="">—</option>${opts}</select></div>
       <div><label>&nbsp;</label><button class="ghost" id="n_apply">พิมพ์แบบคำขอกู้</button></div>
+      <div><label>&nbsp;</label><button class="ghost" id="n_sched" title="จัดตารางลงกระดาษ A4 แบ่งหน้าให้อัตโนมัติ">พิมพ์ตารางชำระหนี้ A4</button></div>
       <div><label>&nbsp;</label><button id="n_add">สร้างสัญญา &amp; ไปพิมพ์เอกสาร</button></div>
     </div>
     <p class="hint" style="margin-top:8px">จะบันทึก <b>วงเงิน ${B(P0)} · ${N} งวด · งวดละ ${B(Mpay)} · หุ้นประจำ ${B(bs)}</b> เข้าทะเบียนสัญญา
@@ -4362,6 +4389,13 @@ function renderCalc(){
       <button class="ghost sm" onclick="document.body.classList.add('aprint');setTimeout(()=>{window.print();document.body.classList.remove('aprint')},250)">พิมพ์แบบคำขอ</button></div>`
       + docApply({no:$("n_no").value, prod:$("n_prod").value, M:Mpay, Mmax:M, B:bs, N, i, P0, want, cap,
                   g1:$("n_g1").value, g2:$("n_g2").value});
+    try{ $("a_doc").scrollIntoView({behavior:"smooth",block:"start"}); }catch(e){}
+  };
+  $("n_sched").onclick = () => {
+    $("a_doc").innerHTML = `<div class="eyebrow" style="margin-top:14px">ตารางการชำระหนี้ — กระดาษ A4
+      <button class="ghost sm" onclick="document.body.classList.add('aprint');setTimeout(()=>{window.print();document.body.classList.remove('aprint')},250)">พิมพ์</button></div>`
+      + docSched({prod:CV.prod, mode:"calc", amt:P0, terms:N, inst:Mpay, shareM:bs,
+                  no:$("n_no").value, code:$("n_code").value.trim(), d:$("n_d").value, p1});
     try{ $("a_doc").scrollIntoView({behavior:"smooth",block:"start"}); }catch(e){}
   };
   $("n_add").onclick = () => {
