@@ -320,6 +320,17 @@ th.svcol{background:#FFF4D6!important}
   html,body{background:#fff!important;padding:0;margin:0;font-size:11px;
     -webkit-print-color-adjust:exact;print-color-adjust:exact}
   .topbar,#bnr,.mast,nav,.tools,.noprint,.card,.stats{display:none!important}
+  /* ---- พิมพ์เป็นขาวดำ: ตัวอักษรสีดำล้วน เส้นและพื้นเป็นโทนเทา ---- */
+  body,body *{color:#000!important}
+  th{background:#ECECEC!important;border-bottom:1px solid #888!important}
+  .kt th,.ksec{background:#ECECEC!important}
+  .kt .kk,.kt.sum tr.hl td,.kt.sg tr.hl td,.kt3 tr.hl td{background:#F5F5F5!important}
+  .pt,.dtl,.calcbox,.keybox,.ack,.capbox,.warnbox,.warnbox2,.benbox{background:#fff!important;border-color:#666!important}
+  .capbox,.warnbox,.warnbox2{border-left-color:#000!important}
+  .pill{background:#fff!important;border-color:#666!important}
+  .dt,.ksig .ln,.f,.fill{border-color:#000!important}
+  .klogo .mark i,.khead .mark i,.lethead .mark i{background:#000!important}
+  .klogo .mark i:nth-child(2),.khead .mark i:nth-child(2),.lethead .mark i:nth-child(2){background:#777!important}
   .eyebrow{display:none}
   .receipt .eyebrow{display:flex!important;margin:14px 0 6px;color:var(--ink);font-weight:600}
   /* โหมดปกติ = ใบเสร็จ (แท็บ 3) */
@@ -363,7 +374,7 @@ th.svcol{background:#FFF4D6!important}
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.09.04-32</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.09.04-33</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
@@ -4146,13 +4157,15 @@ function docApply(o){
         พ.ศ. <span class="dt" style="min-width:60px"></span> <span class="kh">· กำหนดชำระภายในวันที่ 5 ของทุกเดือน</span></td></tr>
     </tbody></table>
 
-    <div class="ksec">ส่วนที่ 3 · ภาระปัจจุบันของผู้ขอกู้ <span class="kh">(ระบบตรวจสอบให้จากทะเบียน — ผู้ขอกู้ไม่ต้องกรอก)</span></div>
+    <div class="ksec">ส่วนที่ 3 · ภาระปัจจุบันของผู้ขอกู้
+      <span class="kh">(กรรมการฝ่ายการเงินตรวจสอบจากทะเบียนคุมและสมุดบัญชีจริง แล้วกรอกด้วยลายมือ — ผู้ขอกู้ไม่ต้องกรอก)</span></div>
     <table class="kt sum"><tbody>
-      <tr><td>ทุนเรือนหุ้นสะสมปัจจุบัน</td><td class="n">${B(R.shares)} บาท</td></tr>
-      <tr><td>หนี้คงเหลือกับ กบข.นข. ก่อนกู้ครั้งนี้</td><td class="n">${B(R.bal)} บาท</td></tr>
-      <tr><td>จำนวนสัญญาที่ยังไม่ปิด</td><td class="n">${R.cs.filter(x=>x.r.bal>0.005).length} ฉบับ</td></tr>
-      <tr><td>ภาระค้ำประกันที่รับไว้ให้ผู้อื่น</td><td class="n">${G.length} ราย · หนี้คงเหลือรวม ${B(G.reduce((a,g)=>a+g.r.bal,0))} บาท</td></tr>
-      <tr class="hl"><td><b>สถานะการชำระย้อนหลัง</b></td><td class="n"><b>${R.cs.some(x=>x.r.missed>0)?"⚠ มีงวดค้างชำระ":"ไม่พบงวดค้างชำระ"}</b></td></tr>
+      <tr><td>ทุนเรือนหุ้นสะสมปัจจุบัน</td><td class="n"><span class="dt" style="min-width:150px"></span> บาท</td></tr>
+      <tr><td>หนี้คงเหลือกับ กบข.นข. ก่อนกู้ครั้งนี้</td><td class="n"><span class="dt" style="min-width:150px"></span> บาท</td></tr>
+      <tr><td>จำนวนสัญญาที่ยังไม่ปิด</td><td class="n"><span class="dt" style="min-width:150px"></span> ฉบับ</td></tr>
+      <tr><td>ภาระค้ำประกันที่รับไว้ให้ผู้อื่น</td><td class="n"><span class="dt" style="min-width:55px"></span> ราย ·
+        หนี้คงเหลือรวม <span class="dt" style="min-width:105px"></span> บาท</td></tr>
+      <tr class="hl"><td><b>สถานะการชำระย้อนหลัง</b></td><td class="n"><span class="dt" style="min-width:150px"></span></td></tr>
     </tbody></table>
     <p class="kh">เกณฑ์พิจารณา: สัญญาข้อ 6.4 — คณะกรรมการอาจระงับสิทธิ์การกู้ของสมาชิกที่มีประวัติผิดนัดเกิน 3 ครั้งภายใน 24 เดือน</p>
 
