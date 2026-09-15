@@ -374,7 +374,7 @@ th.svcol{background:#FFF4D6!important}
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.09.04-34</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.09.15-35</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
@@ -3190,8 +3190,16 @@ function extraRate(t){
   if(t<=12) return 0.08; if(t<=24) return 0.10; if(t<=36) return 0.12;
   if(t<=48) return 0.14; if(t<=60) return 0.16; return 0.18;
 }
-// วงเงินกู้สูงสุด = Σ (M − B − E_t) / (1+i)^t
-function maxPrincipal(M,B,N,i){
+/* ผลรวมสัดส่วนที่เหลือหลังหักหุ้นเพิ่ม Σ(1 − E_t) ใช้ทั้งสองสูตรข้างล่าง */
+function sumNet_(N){ let C=0; for(let t=1;t<=N;t++) C += 1 - extraRate(t); return C; }
+
+// วงเงินกู้สูงสุดที่ยอดส่ง M รองรับได้
+//   ลดต้นลดดอก : P0 = Σ (M − B − M·E_t) / (1+i)^t
+//   Flat       : ดอกเบี้ยทุกงวดเท่ากัน = P0·i จึงต้องแก้สมการ  Σ(M − B − M·E_t − P0·i) = P0
+//                → P0 = (M·Σ(1−E_t) − N·B) / (1 + N·i)
+//   ถ้าใช้สูตรลดต้นลดดอกกับสัญญา Flat ยอดส่งจะเบาไปทุกงวด แล้วเงินต้นที่เหลือไปกองที่งวดสุดท้าย
+function maxPrincipal(M,B,N,i,flat){
+  if(flat) return +((M*sumNet_(N) - N*B) / (1 + N*i)).toFixed(2);
   let P=0; for(let t=1;t<=N;t++) P += (M - B - M*extraRate(t)) / Math.pow(1+i,t);
   return +P.toFixed(2);
 }
@@ -3241,7 +3249,8 @@ function dueOn(c, p, tn){
 
 // ย้อนสูตร: กรอกวงเงินที่ต้องการ → ได้ยอดที่ต้องส่ง/เดือน
 // P0 = M·Σ(1−E_t)/(1+i)^t − B·Σ1/(1+i)^t  →  M = (P0 + B·A) / C
-function reqPayment(P0,B,N,i){
+function reqPayment(P0,B,N,i,flat){
+  if(flat){ const C = sumNet_(N); return C>0 ? +((P0*(1 + N*i) + N*B) / C).toFixed(2) : 0; }
   let A=0, C=0;
   for(let t=1;t<=N;t++){ const df=Math.pow(1+i,-t); A+=df; C+=(1-extraRate(t))*df; }
   return C>0 ? +((P0 + B*A)/C).toFixed(2) : 0;
@@ -4317,10 +4326,11 @@ function calcRun(){
     $("c_err").textContent=`ยอดหักได้ไม่พอ — งวดที่ ${t} จะเหลือเงินต้น+ดอกเบี้ย ≤ 0 · เพิ่มยอดหักได้ / ลดหุ้นประจำ / ลดจำนวนงวด`; return; }
   $("c_err").textContent="";
 
-  const cap = maxPrincipal(M,B,N,i);          // เพดานที่ยอดหักได้รองรับ
+  const flat = PROD[prod].method === "flat";  // ดูแลกัน = ดอกเบี้ยคงที่จากวงเงิน
+  const cap = maxPrincipal(M,B,N,i,flat);     // เพดานที่ยอดหักได้รองรับ
   // กรอกยอดที่ขอ → ใช้ยอดนั้นเป็นวงเงิน แล้วคิดยอดผ่อนจากยอดนั้น · ไม่กรอก → ใช้เพดาน
   const P0   = want>0 ? want : cap;
-  const Mpay = want>0 ? reqPayment(want,B,N,i) : M;
+  const Mpay = want>0 ? reqPayment(want,B,N,i,flat) : M;
   CV = {M, B, N, i, want, prod, cap, P0, Mpay, p1: $("c_p1").value || firstDue()};
   renderCalc();
 }
@@ -4345,7 +4355,7 @@ function renderCalc(){
     </div>
     <p class="hint" style="margin-top:7px">
       ${over ? `ด้วยยอดหักได้ ${B(M)}/เดือน กู้ได้สูงสุด <b>${B(cap)}</b> บาท — ขอเกินไป <b>${B(want-cap)}</b> บาท<br>
-        ทางออก: ยืดเป็น <b>${(()=>{for(let n=N+1;n<=72;n++) if(maxPrincipal(M,bs,n,i)>=want) return n+" งวด"; return "มากกว่า 72 งวด (เกินเกณฑ์)";})()}</b>
+        ทางออก: ยืดเป็น <b>${(()=>{for(let n=N+1;n<=72;n++) if(maxPrincipal(M,bs,n,i,PROD[CV.prod].method==="flat")>=want) return n+" งวด"; return "มากกว่า 72 งวด (เกินเกณฑ์)";})()}</b>
         · หรือเพิ่มยอดหักได้เป็น <b>${B(Mpay)}</b> บาท · หรือลดวงเงินที่ขอลงเหลือ <b>${B(cap)}</b> บาท`
              : `เพดานที่ยอดหักได้รองรับคือ ${B(cap)} บาท — <b>แต่สัญญาจะใช้วงเงินที่ขอจริง ${B(want)} บาท</b>
         และคิดยอดผ่อนจากยอดนั้น ไม่ใช่จากเพดาน`}</p>`
