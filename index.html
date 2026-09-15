@@ -374,7 +374,7 @@ th.svcol{background:#FFF4D6!important}
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.09.15-35</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.09.15-36</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
@@ -449,8 +449,8 @@ function rebuildPeriods(){
 const PROD = {
   "สามัญ":   {method:"reduce", maxAmt:0,     maxTerms:72, guar:2, quota:0,      slots:0,
               note:"ลดต้นลดดอก · ดอกเบี้ยคิดจากเงินต้นคงเหลือ (สัญญาข้อ 2.5)"},
-  "ดูแลกัน": {method:"flat",   maxAmt:35000, maxTerms:36, guar:1, quota:150000, slots:10,
-              note:"Flat · ดอกเบี้ยคงที่ทุกงวด = วงเงิน × 1% (สัญญาข้อ 2.3)"},
+  "ดูแลกัน": {method:"reduce", maxAmt:35000, maxTerms:36, guar:1, quota:150000, slots:10,
+              note:"ลดต้นลดดอก · ดอกเบี้ยคิดจากเงินต้นคงเหลือ 1%/เดือน เช่นเดียวกับสามัญ"},
   "ฝากหุ้น": {method:"none",   maxAmt:0,     maxTerms:0,  guar:0, quota:0,      slots:0,
               note:"ฝากหุ้นอย่างเดียว — ไม่มีหนี้ ไม่มีดอกเบี้ย ไม่ต้องมีผู้ค้ำ ถอนคืนได้ตามข้อ 7"},
 };
@@ -4326,7 +4326,7 @@ function calcRun(){
     $("c_err").textContent=`ยอดหักได้ไม่พอ — งวดที่ ${t} จะเหลือเงินต้น+ดอกเบี้ย ≤ 0 · เพิ่มยอดหักได้ / ลดหุ้นประจำ / ลดจำนวนงวด`; return; }
   $("c_err").textContent="";
 
-  const flat = PROD[prod].method === "flat";  // ดูแลกัน = ดอกเบี้ยคงที่จากวงเงิน
+  const flat = PROD[prod].method === "flat";  // ปัจจุบันทุกผลิตภัณฑ์เป็นลดต้นลดดอก — เผื่อไว้ถ้ามีผลิตภัณฑ์ Flat ในอนาคต
   const cap = maxPrincipal(M,B,N,i,flat);     // เพดานที่ยอดหักได้รองรับ
   // กรอกยอดที่ขอ → ใช้ยอดนั้นเป็นวงเงิน แล้วคิดยอดผ่อนจากยอดนั้น · ไม่กรอก → ใช้เพดาน
   const P0   = want>0 ? want : cap;
