@@ -504,7 +504,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-47</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-48</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
@@ -2843,26 +2843,58 @@ const NI_COLS = [["m","ยอดส่ง"],["pri","เงินต้น"],["in
 const niNum = v => { if(v==null || v==="") return null; const n = +String(v).replace(/[,\s฿บาท]/g,""); return isFinite(n) && n >= 0 ? +n.toFixed(2) : null; };
 
 /* ข้อความที่คัดลอกจาก Excel / เว็บ / PDF — บรรทัดละงวด: งวดที่ ยอดส่ง เงินต้น ดอกเบี้ย ฝากหุ้น [ฝากเพิ่ม] คงเหลือ */
+/* ตัวอ่านตารางที่วาง — รองรับ 2 รูปแบบ
+   ก) หน้าพิมพ์เครื่องคำนวณ:  งวดที่ · ยอดส่ง · เงินต้น · ดอกเบี้ย · ฝากหุ้น · ฝากเพิ่ม · ยอดคงเหลือ
+   ข) ตารางทะเบียนในโปรแกรมนี้:  งวด 1 · พ.ค.68 · ชำระรวม · ดอกเบี้ย · เงินต้น · หุ้นประจำ · หุ้นเพิ่ม · หนี้คงเหลือ · หุ้นสะสม
+   ลำดับคอลัมน์ดูจากแถวหัว · ช่องว่างที่หายตอนคัดลอกจัดให้จากความสัมพันธ์ของตัวเลข (ส่ง = ต้น + ดอก + หุ้น, คงเหลือ = ก่อนหน้า − ต้น) */
+const NI_MTHS = MTH_TH.map(m => m.split(".").join("\\.")).join("|");
+const NI_RE_ROW  = new RegExp("^\\s*(?:งวด(?:ที่)?\\s*)?(\\d{1,3})(?=[\\s·•]|$)\\s*[·•]?\\s*(?:(" + NI_MTHS + ")\\s?(\\d{2}))?");
+const NI_RE_DATE = new RegExp("\\d{1,2}\\s*(?:" + NI_MTHS + ")\\s*\\d{4}", "g");
+const NI_RE_HEAD = /งวดที่|งวด|ยอดส่งต่อเดือน|ยอดส่ง|ชำระรวม|ยอดรับรวม|ดอกเบี้ย|เงินต้น|ฝากหุ้นประจำ|หุ้นประจำ|ฝากหุ้นเพิ่ม|หุ้นเพิ่ม|ฝากเพิ่ม|ฝากหุ้น|หุ้นสะสม|หนี้คงเหลือ|ยอดคงเหลือ|คงเหลือ|วันที่รับ|วันที่|ตรวจ|หมายเหตุ/g;
+const niKey = c => /สะสม/.test(c) ? "tot" : /วันที่/.test(c) ? "dt" : /ตรวจ|หมายเหตุ/.test(c) ? "x" : /^งวด/.test(c) ? "n"
+  : /เพิ่ม/.test(c) ? "shx" : /คงเหลือ/.test(c) ? "bal" : /ดอก/.test(c) ? "int" : /ต้น/.test(c) ? "pri"
+  : /หุ้น|ฝาก/.test(c) ? "sh" : /ส่ง|ชำระ|รวม/.test(c) ? "m" : "x";
+function niScore(r, prev){
+  const near = (a, b) => Math.abs(a - b) <= 0.02; let sc = 0;
+  if(r.m != null && r.int != null && r.pri != null) sc += near(r.m, r.int + r.pri + (r.sh||0) + (r.shx||0)) ? 3 : 0;
+  if(prev != null && r.bal != null && r.pri != null) sc += near(prev - r.pri, r.bal) ? 3 : 0;
+  if(prev != null && r.int != null) sc += near(prev * RATE, r.int) ? 2 : 0;
+  return sc;
+}
+/* จับตัวเลขเข้าคอลัมน์ — ถ้าจำนวนตัวเลขน้อยกว่าคอลัมน์ (ช่องว่างหาย) ลองทุกวิธีแล้วเลือกที่ตัวเลขสัมพันธ์กันถูกที่สุด */
+function niFit(order, vals, prev){
+  const L = order.length, V = vals.length;
+  const fill = idx => { const r = {}; idx.forEach((oi, vi) => { if(vals[vi] != null && order[oi]) r[order[oi]] = vals[vi]; }); return r; };
+  if(V >= L) return fill(order.map((_, k) => k));
+  let best = null;
+  const rec = (start, pick) => {
+    if(pick.length === V){ const r = fill(pick), sc = niScore(r, prev); if(!best || sc > best.sc) best = {r, sc}; return; }
+    for(let k = start; k <= L - (V - pick.length); k++) rec(k + 1, pick.concat(k));
+  };
+  rec(0, []);
+  return best ? best.r : {};
+}
 function niParseText(txt){
   const lines = String(txt||"").split(/\r?\n/);
   let order = null;
-  const head = lines.find(l => /งวด/.test(l) && /ดอก/.test(l) && /(คงเหลือ|ต้น)/.test(l));
-  if(head){
-    const cells = head.split(/\t|\s{2,}|\|/).map(c=>c.trim()).filter(Boolean);
-    const key = c => /งวด/.test(c) ? "n" : /เพิ่ม/.test(c) ? "shx" : /คงเหลือ|คงค้าง/.test(c) ? "bal" : /ดอก/.test(c) ? "int"
-      : /ต้น/.test(c) ? "pri" : /หุ้น|ฝาก/.test(c) ? "sh" : /ส่ง|ชำระ|รวม/.test(c) ? "m" : null;
-    const o = cells.map(key).filter(Boolean);
-    if(o[0]==="n" && o.includes("bal")) order = o.slice(1);
-  }
-  const rows = [];
-  lines.forEach(l=>{
-    const t = (l.match(/-?\d[\d,]*(?:\.\d+)?/g) || []).map(s=>s.replace(/,/g,""));
-    if(t.length < 4 || !/^\d{1,3}$/.test(t[0])) return;
-    const n = +t[0], v = t.slice(1).map(niNum);
-    const o = order && order.length === v.length ? order
-      : v.length >= 6 ? ["m","pri","int","sh","shx","bal"] : v.length === 5 ? ["m","pri","int","sh","bal"] : ["m","pri","int","bal"];
-    const r = {n}; o.forEach((k,i)=>{ if(v[i] != null) r[k] = v[i]; });
-    rows.push(r);
+  const hl = lines.find(l => /งวด/.test(l) && /ดอก/.test(l) && /(คงเหลือ|ต้น)/.test(l));
+  if(hl){ const ks = (hl.match(NI_RE_HEAD) || []).map(niKey); if(ks[0] === "n" && ks.includes("bal")) order = ks.slice(1); }
+  const rows = []; let prevRow = null;
+  lines.forEach(l => {
+    const m = l.match(NI_RE_ROW); if(!m || !(+m[1] >= 1)) return;
+    const n = +m[1], rest = l.slice(m[0].length).replace(NI_RE_DATE, " — "), vals = [];
+    for(const w of rest.trim().split(/\s+/)){
+      if(/^-?\d[\d,]*(\.\d+)?$/.test(w)) vals.push(+w.replace(/,/g, ""));
+      else if(/^[—–-]$/.test(w)) vals.push(null);
+      else if(vals.filter(v => v != null).length >= 3) break;          // เจอคำอธิบายท้ายแถวแล้ว
+    }
+    const cnt = vals.filter(v => v != null).length; if(cnt < 3) return;
+    const o = order && order.length ? order
+      : cnt >= 6 ? ["m","pri","int","sh","shx","bal"] : cnt === 5 ? ["m","pri","int","sh","bal"] : ["m","pri","int","bal"];
+    const prev = prevRow && prevRow.n === n - 1 && prevRow.bal != null ? prevRow.bal : null;
+    const r = Object.assign({n}, niFit(o, vals, prev));
+    if(m[2]) r.p = `${2500 + (+m[3])}-${String(MTH_TH.indexOf(m[2]) + 1).padStart(2, "0")}`;     // ชื่อเดือนในแถว → งวดโอน
+    rows.push(r); prevRow = r;
   });
   return niClean(rows);
 }
@@ -2891,6 +2923,7 @@ function niClean(rows){
   const by = {};
   (rows||[]).forEach(r=>{ const n = +r.n; if(!(n >= 1 && n <= 600)) return;
     const o = by[n] || (by[n] = {n});
+    if(r.p && !o.p) o.p = r.p;
     NI_COLS.forEach(([k])=>{ const v = niNum(r[k]); if(v != null && o[k] == null) o[k] = v; }); });
   return Object.values(by).sort((a,b)=>a.n - b.n);
 }
@@ -2923,7 +2956,8 @@ function niCheck(rows, rate, loan0){
     if(prev != null && r.int != null && Math.abs(prev * R - r.int) > 0.05) msg.push(`ดอกเบี้ยควรเป็น ${B(prev*R)}`);
     if(r.m != null && r.pri != null && r.int != null){
       const d = r.m - r.pri - r.int - (r.sh||0) - (r.shx||0); if(Math.abs(d) > 0.05) msg.push(`ยอดส่งต่าง ${B(d)}`); }
-    const miss = NI_COLS.filter(([k])=>r[k] == null).map(([,l])=>l);
+    // เตือนช่องว่างเฉพาะคอลัมน์ที่แถวอื่นมีตัวเลข (ไม่มีหุ้นเพิ่มทั้งตาราง = ไม่ใช่ช่องที่หายไป)
+    const miss = NI_COLS.filter(([k])=>r[k] == null && rows.some(q=>q[k] != null)).map(([,l])=>l);
     if(miss.length) msg.push("ว่าง: " + miss.join(", "));
     out[r.n] = msg;
   });
@@ -2944,7 +2978,7 @@ function niHTML(x){
       <span class="hint">เลือกได้หลายรูปพร้อมกัน — ตารางยาวหลายหน้า หรือหลายคนในครั้งเดียว (ระบบดูเลขสมาชิกในรูป)</span><span class="hint" id="ni_msg"></span></div>
     <details><summary class="hint" style="cursor:pointer">หรือวางตารางที่คัดลอกมา (Excel / เว็บ)</summary>
       <textarea id="ni_txt" rows="5" style="width:100%;margin-top:6px;font-family:var(--mono,monospace);font-size:12px"
-        placeholder="งวดที่  ยอดส่งต่อเดือน  เงินต้น  ดอกเบี้ย  ฝากหุ้น  ฝากเพิ่ม  ยอดคงเหลือ&#10;1  3,000.00  1,838.00  982.00  150.00  30.00  96,362.00"></textarea>
+        placeholder="งวดที่  ยอดส่งต่อเดือน  เงินต้น  ดอกเบี้ย  ฝากหุ้น  ฝากเพิ่ม  ยอดคงเหลือ&#10;1  3,000.00  1,838.00  982.00  150.00  30.00  96,362.00&#10;(วางตารางทะเบียนในโปรแกรมนี้ที่มี «งวด 1 · พ.ค.68» ก็ได้)"></textarea>
       <button class="ghost sm" id="ni_parse">อ่านจากข้อความ</button></details>`;
   if(!I) return body;
   const plan = niPlan(x, I), chk = niCheck(I.rows, (I.meta && I.meta.rate) ? I.meta.rate/100 : RATE, I.meta && has(I.meta.loan) ? I.meta.loan : null);
@@ -2962,7 +2996,8 @@ function niHTML(x){
     ${I.detNo || I.detName ? (() => { const a = niNameKey(I.detName), b = niNameKey(x.name), same = !a || !b || a.includes(b) || b.includes(a);
       return `<p class="hint" style="margin:0 0 6px">${same ? "✓" : "⚠"} ในรูปคือสมาชิก ${esc(I.detNo||"")} ${esc(I.detName||"")}`
         + (same ? "" : ` — ชื่อไม่ตรงกับในทะเบียน (<b>${esc(x.name)}</b>) ตรวจให้แน่ใจว่าเป็นคนเดียวกันก่อนบันทึก`) + "</p>"; })() : ""}
-    <p class="hint" style="margin:0 0 6px">${I.auto ? `✓ จับคู่อัตโนมัติจากยอดคงเหลือ — ตรงกับยอดที่มีอยู่ ${I.auto} งวด` : '⚠ จับคู่จากยอดคงเหลือไม่ได้ — เลือกเองว่างวดที่ 1 ของตารางคือเดือนไหน'}
+    <p class="hint" style="margin:0 0 6px">${I.byLabel ? `✓ ใช้ชื่อเดือนที่ระบุในตาราง${I.auto ? ` — ตรงกับยอดคงเหลือที่มีอยู่ ${I.auto} งวด` : ""}`
+      : I.auto ? `✓ จับคู่อัตโนมัติจากยอดคงเหลือ — ตรงกับยอดที่มีอยู่ ${I.auto} งวด` : '⚠ จับคู่จากยอดคงเหลือไม่ได้ — เลือกเองว่างวดที่ 1 ของตารางคือเดือนไหน'}
       · จะเติมงวด ${nwRound(P_ANCHOR)} (${thPer(P_ANCHOR)}) ถึงงวด ${nwRound(nwCurP())} (${thPer(nwCurP())}) · แก้ตัวเลขได้ทุกช่อง</p>
     <div class="tbl" style="max-height:380px"><table><thead><tr><th>ตาราง</th><th class="l">งวดโอน</th>
       ${NI_COLS.map(([,l])=>`<th>${l}</th>`).join("")}<th class="l">ตรวจ</th></tr></thead><tbody>
@@ -2990,7 +3025,10 @@ function niLoad(x, rows, meta, src){
   const mode = k => { const c = {}; rows.forEach(r=>{ if(r[k] != null) c[r[k]] = (c[r[k]]||0) + 1; });
     const top = Object.entries(c).sort((p,q)=>q[1]-p[1])[0]; return top && top[1] >= 2 ? +top[0] : null; };
   [["sh","sh"],["shx","shx"],["inst","m"]].forEach(([k, col])=>{ if(meta[k] == null){ const v = mode(col); if(v != null) meta[k] = v; } });
-  S.nimp = {no:x.no, rows, meta, src, first: a ? a.first : P_ANCHOR, auto: a ? a.hit : 0, over:false, def:true};
+  let byLabel = null; const cnt = {};
+  rows.forEach(r => { if(r.p){ const f = pNum(r.p) - (r.n - 1); cnt[f] = (cnt[f] || 0) + 1; } });
+  const top = Object.entries(cnt).sort((u, v) => v[1] - u[1])[0]; if(top) byLabel = pFrom(+top[0]);
+  S.nimp = {no:x.no, rows, meta, src, first: byLabel || (a ? a.first : P_ANCHOR), auto: a ? a.hit : 0, byLabel: !!byLabel, over:false, def:true};
   return true;
 }
 const niMsg = h => ["ni_msg", "nw_nimsg"].forEach(id => { const e = $(id); if(e) e.innerHTML = h; });
@@ -3059,7 +3097,7 @@ function bindNi(x, kind){
   if($("ni_parse")) $("ni_parse").onclick = () => { const t = $("ni_txt").value, M = niParseHead(t), no = M.no || "", name = M.name || "";
     delete M.no; delete M.name; niRoute([{no, name, rows:niParseText(t), meta:M, src:"text"}], x); };
   const I = S.nimp && S.nimp.no===x.no ? S.nimp : null; if(!I) return;
-  $("ni_first").onchange = e => { I.first = e.target.value; I.auto = 0; redraw(); };
+  $("ni_first").onchange = e => { I.first = e.target.value; I.auto = 0; I.byLabel = false; redraw(); };
   $("ni_over").onchange = e => { I.over = e.target.checked; redraw(); };
   if($("ni_def")) $("ni_def").onchange = e => { I.def = e.target.checked; };
   document.querySelectorAll("[data-ni]").forEach(inp=>inp.onchange = () => {
