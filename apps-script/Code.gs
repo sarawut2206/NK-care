@@ -28,6 +28,7 @@
 var SHEET_DATA   = "_ข้อมูล";           // ชีทเก็บ JSON ก้อนใหญ่ (ซ่อนไว้ ห้ามลบ ห้ามแก้มือ)
 var CHUNK        = 40000;               // ตัด JSON เป็นท่อน ๆ ละ 4 หมื่นตัวอักษร (ช่องละไม่เกิน 5 หมื่น)
 var AI_MODEL     = "claude-opus-5";
+var AI_MODEL_STD = "claude-opus-5-5";   // รุ่นมาตรฐาน — ใช้เมื่อรุ่น/ฟีเจอร์ทดลองข้างบนเรียกไม่ได้
 var AI_DAILY_MAX = 40;                  // เรียก AI ได้วันละกี่ครั้ง กันเผลอกดรัว
 var TZ           = "Asia/Bangkok";
 
@@ -35,6 +36,21 @@ function prop_(k){ return PropertiesService.getScriptProperties().getProperty(k)
 function setProp_(k, v){ PropertiesService.getScriptProperties().setProperty(k, v); }
 function token_(){ return prop_("REMOTE_TOKEN"); }
 function aiKey_(){ return prop_("AI_KEY"); }
+
+function claude_(key, body){
+  var call = function(b, beta){
+    var h = {"x-api-key": key, "anthropic-version": "2023-06-01"};
+    if(beta) h["anthropic-beta"] = beta;
+    return UrlFetchApp.fetch("https://api.anthropic.com/v1/messages", {
+      method: "post", contentType: "application/json", headers: h, payload: JSON.stringify(b), muteHttpExceptions: true});
+  };
+  var res = call(body, "server-side-fallback-2026-07-01"), code = res.getResponseCode();
+  if(code === 400 || code === 404){
+    var b2 = JSON.parse(JSON.stringify(body)); delete b2.fallbacks; b2.model = AI_MODEL_STD;
+    return call(b2, null);
+  }
+  return res;
+}
 
 /* ============ 1) เสิร์ฟหน้าโปรแกรม ============ */
 var PAGES_URL = "https://sarawut2206.github.io/NK-care/";   // ที่เปิดสำรอง ถ้ายังไม่ได้วางไฟล์ index
@@ -437,17 +453,7 @@ function ai(payload){
       }]
     };
 
-    var res = UrlFetchApp.fetch("https://api.anthropic.com/v1/messages", {
-      method: "post",
-      contentType: "application/json",
-      headers: {
-        "x-api-key": key,
-        "anthropic-version": "2023-06-01",
-        "anthropic-beta": "server-side-fallback-2026-07-01"
-      },
-      payload: JSON.stringify(body),
-      muteHttpExceptions: true
-    });
+    var res = claude_(key, body);
 
     var code = res.getResponseCode(), txt = res.getContentText();
     if(code !== 200){
@@ -552,16 +558,10 @@ function aiSchedule(payload){
       + "• ยอดคงเหลือ 0 ให้ใส่ 0 (ไม่ใช่ -1)\n"
       + "• meta อ่านจากส่วนหัวเหนือตาราง (จำนวนงวด อัตราดอกเบี้ย ฝากหุ้นประจำ ฝากหุ้นเพิ่ม รวมยอดชำระต่อเดือน) ไม่มีให้ใส่ -1\n";
 
-    var res = UrlFetchApp.fetch("https://api.anthropic.com/v1/messages", {
-      method: "post",
-      contentType: "application/json",
-      headers: {"x-api-key": key, "anthropic-version": "2023-06-01", "anthropic-beta": "server-side-fallback-2026-07-01"},
-      payload: JSON.stringify({
-        model: AI_MODEL, max_tokens: 16000, fallbacks: "default",
-        output_config: {effort: "high", format: {type: "json_schema", schema: AI_SCHED_SCHEMA}},
-        messages: [{role: "user", content: [media, {type: "text", text: prompt}]}]
-      }),
-      muteHttpExceptions: true
+    var res = claude_(key, {
+      model: AI_MODEL, max_tokens: 16000, fallbacks: "default",
+      output_config: {effort: "high", format: {type: "json_schema", schema: AI_SCHED_SCHEMA}},
+      messages: [{role: "user", content: [media, {type: "text", text: prompt}]}]
     });
     var code = res.getResponseCode(), txt = res.getContentText();
     if(code !== 200){
