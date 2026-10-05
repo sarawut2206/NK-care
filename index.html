@@ -513,7 +513,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-52</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-53</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" title="บันทึกขึ้น Google Sheets เดี๋ยวนี้ (ปกติบันทึกให้เองทุกครั้งที่กรอก)">☁ บันทึกขึ้น Google Sheets</button>
@@ -7113,7 +7113,7 @@ const inGAS = typeof google !== "undefined" && google.script && google.script.ru
 /* ★ ที่อยู่ Apps Script ของกองทุน — ฝังไว้ในโปรแกรม จะได้ไม่ต้องพิมพ์ URL เองทุกเครื่อง
       แก้ตรงนี้ที่เดียวเมื่อ Deploy ใหม่แล้วได้ลิงก์ใหม่
       หมายเหตุ: ใส่แค่ «ที่อยู่» เท่านั้น รหัสเชื่อมต่อไม่ฝังไว้ เพราะไฟล์นี้เปิดสาธารณะบน GitHub */
-const GAS_URL = "https:\/\/script.google.com/macros/s/AKfycbxfdQ1Z9Y2KDxfMgMhKE73UiucnGgNyFG5RflG5SgAXnyFj0gfL11NaWPOfAlLHh2yPwg/exec";
+const GAS_URL = "https:\/\/script.google.com/macros/s/AKfycbznwpyTNOCbL1srUObf_8_HMHNYxSpKpF0ZvUQ6ShmhvGda-GeD-ithjJHFshcdX9hB2A/exec";
 const REMOTE_KEY = "kbk_remote_v1";
 function remoteConf(){ try{ const t = localStorage.getItem(REMOTE_KEY); return t ? JSON.parse(t) : null; }catch(e){ return null; } }
 let REMOTE = !inGAS ? remoteConf() : null;
