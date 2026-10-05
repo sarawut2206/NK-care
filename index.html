@@ -387,6 +387,30 @@ details.opn[open] summary{margin-bottom:9px}
 .toast.on{opacity:1}
 
 /* ---------- เว็บใหม่ ---------- */
+.nwr{color:#111827;font-size:13px}
+.nwr .r-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;border-bottom:1px solid #e5e7eb;padding-bottom:10px;margin-bottom:10px}
+.nwr .org{font-weight:800;font-size:14px}
+.nwr .title{font-weight:800;font-size:18px;margin-top:4px}
+.nwr .meta{font-size:12px;color:#374151;text-align:right}
+.nwr .meta div{margin:2px 0}
+.nwr .badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.nwr .badge{display:inline-block;padding:3px 10px;border-radius:999px;border:1px solid #d1d5db;font-size:12px;font-weight:800;background:#f8fafc;color:#111827}
+.nwr .b-borrow{background:#fff7ed;border-color:#fed7aa}
+.nwr .b-save{background:#ecfeff;border-color:#a5f3fc}
+.nwr .info{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 12px}
+.nwr .tb{border:1px solid #e5e7eb;border-radius:12px;overflow:hidden}
+.nwr .trow{display:grid;grid-template-columns:140px 1fr 1fr 1fr 1fr;gap:10px;padding:7px 12px;border-top:1px solid #e5e7eb;align-items:center}
+.nwr .trow:first-child{border-top:none;background:#f8fafc;font-weight:800}
+.nwr .amount{text-align:right;font-variant-numeric:tabular-nums}
+.nwr .sumBox{border:1px solid #e5e7eb;border-radius:12px;padding:10px 12px;margin-top:10px}
+.nwr .sumRow{display:flex;justify-content:space-between;gap:10px;padding:4px 0}
+.nwr .sumRow b{font-variant-numeric:tabular-nums;white-space:nowrap}
+.nwr .sumRow.big{font-size:14px}
+.nwr .hr{border:none;border-top:1px solid #e5e7eb;margin:8px 0}
+.nwr .note{margin-top:10px;font-size:12px;color:#374151}
+.nwr .sign{display:flex;justify-content:flex-end;margin-top:18px}
+.nwr .signbox{min-width:280px;text-align:center;font-size:12px;color:#374151}
+.nwr .signline{border-bottom:1px solid #9ca3af;margin:34px 0 6px}
 .pill.amb{background:#FFF4DC;color:#8A5A00;border-color:#F2D48A}
 nav .oldbtn{margin-left:auto}
 nav .oldnav{flex-basis:100%;display:flex;flex-wrap:wrap;gap:5px;align-items:center;
@@ -462,7 +486,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-41</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-42</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
@@ -479,6 +503,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <span class="ngrp">เว็บใหม่</span>
   <b data-t="20" class="on"><span class="grp-ic">📗</span>ทะเบียนผู้กู้</b>
   <b data-t="21"><span class="grp-ic">📘</span>ทะเบียนผู้ฝาก</b>
+  <b data-t="22"><span class="grp-ic">🧾</span>ใบสรุป + ปันผล</b>
   <b id="oldbtn" class="oldbtn" title="เมนูทั้งหมดของระบบเดิม"><span class="grp-ic">🗂️</span>ระบบเก่า <span id="oldar">▾</span></b>
   <div class="oldnav" id="oldnav" hidden>
     <span class="ngrp">ระบบเก่า</span>
@@ -500,6 +525,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
 <div id="bnr" style="display:none;padding:10px 13px;border-radius:0 6px 6px 0;margin:0 0 14px"></div>
 <section id="tab20" class="on"></section>
 <section id="tab21"></section>
+<section id="tab22"></section>
 <section id="tab10"></section>
 <section id="tab11"></section>
 <section id="tab12"></section>
@@ -586,7 +612,7 @@ function freshS(){ return { contracts: DB.contracts.map(c=>({...c})), tx: DB.tx.
           acct: {...DB.acct}, assign: {}, cut: 20, profile: {}, pick: null, per: {}, watch: null, rule: {}, fprod: "", fno: "", fd1: "", fd2: "",
           ledger: [], ep: "", ef: "all", eq: "", oy: "", pp: "", py: "", ps: null, psq: "", pso: "no", rf: "", rt: "",
           em: "person", pk: "loan", pq: "", sp: null, pf: null, open: null, opPlan: null,
-          nw: null, nsel: {}, nq: "", nf: null }; }
+          nw: null, nsel: {}, nq: "", nf: null, dvf: "all", dvq: "", dvsel: null }; }
 let sel = null, tab = 20;
 const txKey = t => `${t.a}|${t.d}|${t.t}|${t.m}`;
 const memOf = t => t.fixNo || t.no || S.acct[t.a] || "";   // ★ fixNo = ระบุเจ้าของเอง (ฝากชำระแทน)
@@ -2385,7 +2411,8 @@ function nwPanel(x, kind){
       <span class="pill ${kind==="loan"?"":"grn"}">${kind==="loan"?"ผู้กู้":"ผู้ฝาก"}</span>
       ${st.missed && kind==="loan" ? `<span class="pill red">ค้าง ${st.missed} เดือน</span>` : ""}
       ${tel?`<span class="hint">โทร ${esc(tel)}</span>`:""}
-      <button class="ghost sm" id="nw_p1" style="margin-left:auto">พิมพ์ทะเบียนคนนี้</button></div>
+      <button class="ghost sm" id="nw_p1" style="margin-left:auto">พิมพ์ทะเบียนคนนี้</button>
+      <button class="ghost sm" id="nw_p2" title="ตามรูปแบบใบสรุปเดิม ช่วงและอัตราตั้งที่แท็บ ใบสรุป + ปันผล">ใบสรุป + ปันผล</button></div>
     <div class="stats" style="margin-bottom:12px">
       ${kind==="loan" ? `<div class="stat"><div class="k">หนี้คงเหลือ</div><div class="v">${B(st.debt)}</div><div class="hint">ยกมา ${B(+x.debt0||0)}</div></div>
         <div class="stat"><div class="k">งวดละ</div><div class="v">${x.inst?B(x.inst):"—"}</div></div>` : ""}
@@ -2460,7 +2487,7 @@ function drawNW(kind){
   const T = kind==="loan" ? "ทะเบียนผู้กู้" : "ทะเบียนผู้ฝาก";
   // วาดเฉพาะแท็บที่เปิดอยู่ — ฟอร์ม (S.nf) และ id ในหน้าใช้ร่วมกันระหว่างผู้กู้/ผู้ฝาก
   if(tab !== (kind==="loan" ? 20 : 21)){ el.innerHTML = ""; return; }
-  $(kind==="loan" ? "tab21" : "tab20").innerHTML = "";
+  [kind==="loan" ? "tab21" : "tab20", "tab22"].forEach(id=>{ const e = $(id); if(e) e.innerHTML = ""; });
   if(!NW.on()){ el.innerHTML = nwStartHTML(T); bindNwImport(); return; }
   if(!S.nsel) S.nsel = {};
   const q = (S.nq||"").trim().toLowerCase();
@@ -2542,6 +2569,7 @@ function drawNW(kind){
   const x = cur.x;
   const loanForm = () => kind==="loan" || num(S.nf.vals.loan) > 0;
   $("nw_p1").onclick = () => nwPrint(nwDocHTML(x, kind));
+  $("nw_p2").onclick = () => nwPrint(nwSumDoc(x, nwDivCfg()));
   const bindMv = () => { const b = $("nf_mv"); if(b) b.onclick = () => { S.nf.p = b.dataset.p; S.nf.edit = false; drawNW(kind); }; };
   const refresh = () => { $("nf_chk").innerHTML = nfCheck(x, loanForm() ? "loan" : "save"); bindMv(); };
   bindMv();
@@ -2595,6 +2623,159 @@ function drawNW(kind){
 }
 function drawNWLoan(){ drawNW("loan"); }
 function drawNWSave(){ drawNW("save"); }
+
+/* ============ เว็บใหม่: ใบสรุปชำระรายเดือน + สรุปปันผล ============
+   อ้างอิงรูปแบบและสูตรจากไฟล์ใบสรุป พ.ค.–ธ.ค.68
+   ปันผลเงินฝาก/หุ้น      = หุ้นสะสมล่าสุดในช่วง × อัตราปันผล × จำนวนเดือน/12
+   ปันผลดอกเบี้ยเงินกู้   = ดอกเบี้ยที่ชำระแล้วรวมในช่วง × อัตราเฉลี่ยคืน × จำนวนเดือน/12
+   สถานะ: หนี้คงค้างล่าสุดในช่วง > 0 = ผู้กู้ · = 0 = ผู้ฝาก                                    */
+const r2 = v => Math.round((+v||0) * 100 + (v>=0 ? 1e-9 : -1e-9)) / 100;
+function nwDivCfg(){
+  if(!S.nw) S.nw = {people:[], rows:[]};
+  const cur = nwCurP(), d = S.nw.div || {};
+  return {from: d.from || P_ANCHOR, to: d.to || (pNum(cur) > pNum("2569-12") ? "2569-12" : cur),
+          rs: has(d.rs) ? +d.rs : 4.5, ri: has(d.ri) ? +d.ri : 6.5};
+}
+/* ทุกเดือนของคนนี้ — ใบสรุป (งวด 1–8) ต่อด้วยที่บันทึกในเว็บใหม่ */
+function nwSeries(x){
+  const H = x.hist || [], hs = H.map(()=>0);
+  let back = +x.share0||0;
+  for(let i=H.length-1; i>=0; i--){ hs[i] = r2(back); back -= +H[i].sh||0; }
+  const out = H.map((h,i)=>({p:ymToP(h.ym), int:+h.int||0, sh:+h.sh||0, pay:+h.pay||0, debt:+h.debt||0, shares:hs[i], hist:true}));
+  let debt = +x.debt0||0, shares = +x.share0||0;
+  NW.rows(x.no).forEach(r=>{ debt = nwStep(debt, r); shares = r2(shares + nwSh(r));
+    out.push({p:r.p, int:num(r.int), sh:nwSh(r), pay:num(r.m), debt, shares, d:r.d}); });
+  return out.sort((a,b)=>pNum(a.p) - pNum(b.p));
+}
+function nwSum(x, D){
+  const all = nwSeries(x), a = pNum(D.from), b = pNum(D.to);
+  const rows = all.filter(s=>pNum(s.p) >= a && pNum(s.p) <= b);
+  const last = all.filter(s=>pNum(s.p) <= b).pop();
+  const months = Math.max(0, b - a + 1);
+  const shares = last ? last.shares : +x.share0||0, debt = last ? last.debt : +x.debt0||0;
+  const int = r2(rows.reduce((t,s)=>t+s.int,0)), sh = r2(rows.reduce((t,s)=>t+s.sh,0)), pay = r2(rows.reduce((t,s)=>t+s.pay,0));
+  const rawS = shares * D.rs/100 * months/12, rawI = int * D.ri/100 * months/12;   // รวมก่อนปัด ตามใบสรุปเดิม
+  return {rows, months, shares, debt, int, sh, pay, divS:r2(rawS), divI:r2(rawI), tot:r2(rawS + rawI), loan: debt > 0.005};
+}
+const nwRangeLbl = D => { const a = D.from.split("-"), b = D.to.split("-");
+  return a[0]===b[0] ? `${MTH_TH[+a[1]-1].replace(/\.$/,"")}–${MTH_TH[+b[1]-1]} ${a[0]}` : `${MTH_TH[+a[1]-1]} ${a[0]} – ${MTH_TH[+b[1]-1]} ${b[0]}`; };
+const nwRangeShort = D => { const a = D.from.split("-"), b = D.to.split("-");
+  return a[0]===b[0] ? `${MTH_TH[+a[1]-1].replace(/\.$/,"")}–${MTH_TH[+b[1]-1]}` : `${thPer(D.from)}–${thPer(D.to)}`; };
+const nwAdYm = p => { const n = pNum(p) - 543*12; return `${Math.floor(n/12)}${String(n%12+1).padStart(2,"0")}`; };
+const pct = v => (+v).toFixed(2) + "%";
+
+function nwSumDoc(x, D){
+  const s = nwSum(x, D), today = nwToday(), R = nwRangeShort(D);
+  return `<div class="receipt nwr">
+    <div class="r-head"><div>
+        <div class="org">${ORGF} (กบข.นข.)</div>
+        <div class="title">ใบสรุปชำระรายเดือน + สรุปปันผล (${nwRangeLbl(D)})</div>
+        <div class="badges"><span class="badge ${s.loan?"b-borrow":"b-save"}">${s.loan?"ผู้กู้":"ผู้ฝาก"}</span></div></div>
+      <div class="meta"><div><b>เลขที่เอกสาร:</b> KB-${esc(x.no)}-${nwAdYm(D.from)}-${nwAdYm(D.to)}</div>
+        <div><b>วันที่ออก:</b> ${thDay(today)}</div>
+        <div><b>ช่วงเดือน:</b> ${thPer(D.from)} – ${thPer(D.to)} (${s.months} เดือน)</div></div></div>
+    <div class="info">
+      <div><b>รหัสสมาชิก:</b> ${esc(x.no)}</div><div><b>ชื่อ:</b> ${esc(x.name)}</div>
+      <div><b>หุ้นสะสม (ล่าสุดในช่วง):</b> ${B(s.shares)} บาท</div><div><b>หนี้คงค้าง (ล่าสุดในช่วง):</b> ${B(s.debt)} บาท</div></div>
+    <div class="tb"><div class="trow"><div>เดือน</div><div class="amount">ดอกเบี้ยที่ชำระ</div><div class="amount">ฝากหุ้นเดือนนี้</div>
+        <div class="amount">ชำระรวม</div><div class="amount">หนี้คงค้าง</div></div>
+      ${s.rows.map(r=>`<div class="trow"><div>งวด ${nwRound(r.p)} · ${thPer(r.p)}</div><div class="amount">${B(r.int)}</div>
+        <div class="amount">${B(r.sh)}</div><div class="amount">${B(r.pay)}</div><div class="amount">${B(r.debt)}</div></div>`).join("")
+        || '<div class="trow"><div style="grid-column:1/-1;color:#6b7280">ยังไม่มีรายการในช่วงนี้</div></div>'}</div>
+    <div class="sumBox">
+      <div class="sumRow"><span>รวมดอกเบี้ยที่ชำระแล้ว (${R})</span><b>${B(s.int)} บาท</b></div>
+      <div class="sumRow"><span>รวมฝากหุ้น (${R})</span><b>${B(s.sh)} บาท</b></div>
+      <div class="sumRow"><span>รวมยอดชำระทั้งหมด</span><b>${B(s.pay)} บาท</b></div>
+      <hr class="hr">
+      <div class="sumRow"><span>ปันผลเงินฝาก/หุ้น = หุ้นสะสมล่าสุด × ${pct(D.rs)} × ${s.months}/12</span><b>${B(s.divS)} บาท</b></div>
+      <div class="sumRow"><span>ปันผลดอกเบี้ยเงินกู้ = (ดอกเบี้ยที่ชำระแล้วรวม) × ${pct(D.ri)} × ${s.months}/12</span><b>${B(s.divI)} บาท</b></div>
+      <div class="sumRow big"><span><b>รายรับที่ต้องรับ (รวมปันผล)</b></span><b>${B(s.tot)} บาท</b></div></div>
+    <div class="note">เกณฑ์สถานะ: “หนี้คงค้างล่าสุดในช่วง &gt; 0” = ผู้กู้, ถ้า = 0 = ผู้ฝาก</div>
+    <div class="sign"><div class="signbox"><div class="signline"></div><div>(เจ้าหน้าที่การเงิน)</div><div>ฝ่ายการเงิน</div></div></div>
+  </div>`;
+}
+
+function drawNWDiv(){
+  const el = $("tab22"); if(!el) return;
+  if(tab !== 22){ el.innerHTML = ""; return; }
+  ["tab20","tab21"].forEach(id=>{ const e = $(id); if(e) e.innerHTML = ""; });
+  if(!NW.on()){ el.innerHTML = nwStartHTML("ใบสรุป + ปันผล"); bindNwImport(); return; }
+  const D = nwDivCfg(), f = S.dvf || "all", q = (S.dvq||"").trim().toLowerCase();
+  const all = NW.people().map(x=>({x, s:nwSum(x, D)}));
+  const list = all.filter(a=>(f==="all" || (f==="loan") === a.s.loan) && (!q || `${a.x.no} ${a.x.name}`.toLowerCase().includes(q)));
+  const T = k => r2(list.reduce((t,a)=>t + a.s[k], 0));
+  if(!S.dvsel || !NW.person(S.dvsel)) S.dvsel = list[0] && list[0].x.no;
+  const opt = sel => { const o = []; for(let n = pNum(NW_R1); n <= Math.max(pNum(nwCurP()) + 2, pNum("2569-12")); n++){ const p = pFrom(n);
+    o.push(`<option value="${p}" ${p===sel?"selected":""}>งวด ${nwRound(p)} · ${thPer(p)}</option>`); } return o.join(""); };
+  const cur = NW.person(S.dvsel);
+  el.innerHTML = `<div class="nwscreen">
+  <div class="card">
+    <div class="eyebrow">ใบสรุปชำระรายเดือน + สรุปปันผล</div>
+    <div class="pf">
+      <div><label>ตั้งแต่งวด</label><select id="dv_from">${opt(D.from)}</select></div>
+      <div><label>ถึงงวด</label><select id="dv_to">${opt(D.to)}</select></div>
+      <div><label>ปันผลหุ้น (% ต่อปี)</label><input type="number" step="0.01" min="0" id="dv_rs" value="${D.rs}"></div>
+      <div><label>เฉลี่ยคืนดอกเบี้ย (% ต่อปี)</label><input type="number" step="0.01" min="0" id="dv_ri" value="${D.ri}"></div>
+      <div><label>จำนวนเดือน</label><input disabled value="${Math.max(0, pNum(D.to)-pNum(D.from)+1)} เดือน"></div>
+    </div>
+    <div class="bar" style="margin-top:10px">
+      <button class="ghost sm" data-dvp="2568-05|2568-12">พ.ค.–ธ.ค.68 (ตามใบสรุปเดิม)</button>
+      <button class="ghost sm" data-dvp="2569-01|2569-12">ปี 2569 (ม.ค.–ธ.ค.)</button>
+      <button class="ghost sm" data-dvp="2569-01|${nwCurP()}">ม.ค.69 – งวดปัจจุบัน</button>
+      <span class="hint">สูตรตามใบสรุปเดิม · สถานะผู้กู้/ผู้ฝาก ดูจากหนี้คงค้างล่าสุดในช่วง</span>
+    </div>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="k">สมาชิก</div><div class="v">${list.length} <small>คน</small></div></div>
+    <div class="stat"><div class="k">หุ้นสะสมรวม</div><div class="v">${B0(T("shares"))}</div></div>
+    <div class="stat"><div class="k">ดอกเบี้ยรับในช่วง</div><div class="v">${B0(T("int"))}</div></div>
+    <div class="stat"><div class="k">ปันผลหุ้นรวม</div><div class="v">${B(T("divS"))}</div></div>
+    <div class="stat"><div class="k">เฉลี่ยคืนดอกเบี้ยรวม</div><div class="v">${B(T("divI"))}</div></div>
+    <div class="stat" style="border-top-color:var(--green)"><div class="k">รวมจ่ายปันผล</div><div class="v" style="color:var(--green)">${B(T("tot"))}</div></div>
+  </div>
+  <div class="card">
+    <div class="bar" style="margin:0 0 8px">
+      <select id="dv_f" style="width:auto"><option value="all">ทุกคน</option><option value="loan" ${f==="loan"?"selected":""}>ผู้กู้</option>
+        <option value="save" ${f==="save"?"selected":""}>ผู้ฝาก</option></select>
+      <input id="dv_q" placeholder="ค้นชื่อ / เลขสมาชิก" value="${esc(S.dvq||"")}" style="max-width:260px">
+      <button class="ghost sm" id="dv_all" style="margin-left:auto">พิมพ์ใบสรุปทั้งหมด (คนละหน้า)</button>
+      <button class="ghost sm" id="dv_csv">ส่งออก CSV</button>
+    </div>
+    <div class="tbl" style="max-height:480px"><table><thead><tr><th class="l">เลขที่</th><th class="l">ชื่อ</th><th class="l">สถานะ</th>
+      <th>หุ้นสะสม</th><th>หนี้คงค้าง</th><th>ดอกเบี้ยที่ชำระ</th><th>ฝากหุ้น</th><th>ชำระรวม</th>
+      <th>ปันผลหุ้น</th><th>เฉลี่ยคืนดอกเบี้ย</th><th>รวมรับ</th></tr></thead><tbody>
+      ${list.map(({x,s})=>`<tr data-dv="${esc(x.no)}" style="cursor:pointer${x.no===S.dvsel?";background:var(--faint)":""}">
+        <td class="l">${esc(x.no)}</td><td class="l"><b>${esc(x.name)}</b></td>
+        <td class="l"><span class="pill ${s.loan?"":"grn"}">${s.loan?"ผู้กู้":"ผู้ฝาก"}</span></td>
+        <td class="amt">${B(s.shares)}</td><td class="amt">${B(s.debt)}</td><td class="amt">${B(s.int)}</td><td class="amt">${B(s.sh)}</td>
+        <td class="amt">${B(s.pay)}</td><td class="amt">${B(s.divS)}</td><td class="amt">${B(s.divI)}</td><td class="amt"><b>${B(s.tot)}</b></td></tr>`).join("")
+        || '<tr><td colspan="11" class="hint" style="text-align:left">ไม่พบ</td></tr>'}
+      </tbody><tfoot><tr><td class="l" colspan="3"><b>รวม ${list.length} คน</b></td><td class="amt">${B(T("shares"))}</td><td class="amt">${B(T("debt"))}</td>
+        <td class="amt">${B(T("int"))}</td><td class="amt">${B(T("sh"))}</td><td class="amt">${B(T("pay"))}</td>
+        <td class="amt">${B(T("divS"))}</td><td class="amt">${B(T("divI"))}</td><td class="amt"><b>${B(T("tot"))}</b></td></tr></tfoot></table></div>
+  </div>
+  ${cur ? `<div class="card"><div class="bar" style="margin:0 0 8px"><span class="eyebrow" style="margin:0">ตัวอย่างใบสรุป · ${esc(cur.no)} ${esc(cur.name)}</span>
+      <button class="ghost sm" id="dv_p1" style="margin-left:auto">พิมพ์ใบนี้</button></div>${nwSumDoc(cur, D)}</div>` : ""}
+  </div>
+  <div class="nwdoc" id="nwdoc"></div>`;
+
+  const setD = patch => { S.nw.div = Object.assign(nwDivCfg(), patch); save(); drawNWDiv(); };
+  $("dv_from").onchange = e => { const v = e.target.value; setD(pNum(v) > pNum(D.to) ? {from:v, to:v} : {from:v}); };
+  $("dv_to").onchange   = e => { const v = e.target.value; setD(pNum(v) < pNum(D.from) ? {from:v, to:v} : {to:v}); };
+  $("dv_rs").onchange   = e => setD({rs: Math.max(0, +e.target.value||0)});
+  $("dv_ri").onchange   = e => setD({ri: Math.max(0, +e.target.value||0)});
+  el.querySelectorAll("[data-dvp]").forEach(b=>b.onclick = () => { const [a, z] = b.dataset.dvp.split("|"); setD({from:a, to:z}); });
+  $("dv_f").onchange = e => { S.dvf = e.target.value; drawNWDiv(); };
+  $("dv_q").oninput = e => { S.dvq = e.target.value; drawNWDiv(); const i = $("dv_q"); i.focus(); i.setSelectionRange(i.value.length, i.value.length); };
+  el.querySelectorAll("[data-dv]").forEach(tr=>tr.onclick = () => { S.dvsel = tr.dataset.dv; drawNWDiv();
+    const c = $("dv_p1"); if(c) c.scrollIntoView({behavior:"smooth", block:"start"}); });
+  if($("dv_p1")) $("dv_p1").onclick = () => nwPrint(nwSumDoc(cur, D));
+  $("dv_all").onclick = () => { if(!list.length || !confirm(`พิมพ์ใบสรุป ${list.length} คน คนละหน้า?`)) return;
+    nwPrint(list.map(a=>nwSumDoc(a.x, D)).join("")); };
+  $("dv_csv").onclick = () => csvOut(`kbk-ใบสรุปปันผล-${nwAdYm(D.from)}-${nwAdYm(D.to)}.csv`, [[`ใบสรุป + ปันผล ${nwRangeLbl(D)} (${Math.max(0, pNum(D.to)-pNum(D.from)+1)} เดือน · หุ้น ${pct(D.rs)} · ดอกเบี้ย ${pct(D.ri)})`,
+    ["เลขสมาชิก","ชื่อ","สถานะ","หุ้นสะสมล่าสุด","หนี้คงค้างล่าสุด","ดอกเบี้ยที่ชำระ","ฝากหุ้น","ชำระรวม","ปันผลหุ้น","เฉลี่ยคืนดอกเบี้ย","รวมรับ"],
+    list.map(({x,s})=>[x.no, x.name, s.loan?"ผู้กู้":"ผู้ฝาก", f2(s.shares), f2(s.debt), f2(s.int), f2(s.sh), f2(s.pay), f2(s.divS), f2(s.divI), f2(s.tot)])]]);
+}
 
 /* ============ ตรวจสอบ — ระบบกันปัญหาเดิมกลับมา ============ */
 function checks(){
@@ -6372,7 +6553,7 @@ async function boot(){
 function draw(){
   rebuildPeriods();                     // ★ ช่วงงวดเดินตามข้อมูลจริง — ย้อนดูได้ทุกปี
   // แท็บไหนพัง ให้พังแค่แท็บนั้น อย่าลากทั้งหน้าจอลงไปด้วย
-  [["tab20",drawNWLoan],["tab21",drawNWSave],["tab10",drawEntry],["tab11",drawOverview],["tab12",drawPeriods],["tab1",drawT1],["tab3",drawT3],
+  [["tab20",drawNWLoan],["tab21",drawNWSave],["tab22",drawNWDiv],["tab10",drawEntry],["tab11",drawOverview],["tab12",drawPeriods],["tab1",drawT1],["tab3",drawT3],
    ["tab4",drawT4],["tab5",drawT5],["tab6",drawT6],["tab7",drawT7],["tab8",drawT8],["tab9",drawT9]].forEach(([id,fn])=>{
     try{ fn(); }
     catch(err){ const el=$(id); if(el) el.innerHTML =
@@ -6404,7 +6585,7 @@ if($("saveNow")) $("saveNow").onclick = async () => {
 
 /* ============ เดินระบบ ============ */
 function all(){ draw(); save(); banner(); }
-const TABFN = {20:"drawNWLoan",21:"drawNWSave",1:"drawT1",3:"drawT3",4:"drawT4",5:"drawT5",6:"drawT6",7:"drawT7",8:"drawT8",9:"drawT9",
+const TABFN = {20:"drawNWLoan",21:"drawNWSave",22:"drawNWDiv",1:"drawT1",3:"drawT3",4:"drawT4",5:"drawT5",6:"drawT6",7:"drawT7",8:"drawT8",9:"drawT9",
                10:"drawEntry",11:"drawOverview",12:"drawPeriods"};
 const OLD_TABS = [10,11,9,12,7,1,8,3,5,6,4];
 $("oldbtn").onclick = () => {
