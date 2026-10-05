@@ -148,7 +148,8 @@ function readAll_(){
       cut:       packed.cut       || 20,
       pdfg:      packed.pdfg      || {},
       ledger:    packed.ledger    || [],         // สมุดรับชำระที่กรรมการกรอกเอง
-      open:      packed.open      || null        // ข้อมูลการนำเข้ายอดยกมา
+      open:      packed.open      || null,       // ข้อมูลการนำเข้ายอดยกมา
+      nw:        packed.nw        || null        // เว็บใหม่: ทะเบียนผู้กู้ / ผู้ฝาก
     },
     board: packed.board || {},
     user:  userLabel_(),
@@ -283,6 +284,38 @@ function buildSheets(){
     ["งวด","จำนวนรายการ","รับรวม","ดอกเบี้ย","เงินต้น","หุ้นประจำ","หุ้นเพิ่ม","ค่าทวงถาม"],
     Object.keys(pp).sort().map(function(k){ var a = pp[k];
       return [perLabel_(k), a.n, r2_(a.m), r2_(a.int), r2_(a.pri), r2_(a.shB), r2_(a.shE), r2_(a.fee)]; }));
+
+  // ---- เว็บใหม่: ทะเบียนผู้กู้ / ทะเบียนผู้ฝาก ----
+  var nw = st.nw;
+  if(nw && nw.people && nw.people.length){
+    var byNo = {};
+    (nw.rows || []).forEach(function(r){ (byNo[r.no] = byNo[r.no] || []).push(r); });
+    var reg = nw.people.map(function(x){
+      var rs = (byNo[x.no] || []).sort(function(a, b){ return a.p < b.p ? -1 : 1; });
+      var debt = n_(x.debt0), sh = n_(x.share0), paid = 0, it = 0, dep = 0;
+      rs.forEach(function(r){
+        debt = has_(r.bal) ? +r.bal : r2_(debt - n_(r.pri) + n_(r.loan));
+        sh = r2_(sh + n_(r.sh)); paid += n_(r.m); it += n_(r.int); dep += n_(r.sh); });
+      return {x:x, rs:rs, debt:r2_(debt), sh:sh, paid:r2_(paid), it:r2_(it), dep:r2_(dep),
+              last: rs.length ? perLabel_(rs[rs.length - 1].p) : ""};
+    });
+    sheetOut_("ทะเบียนผู้กู้",
+      ["เลขสมาชิก","ชื่อ","หนี้ยกมา ธ.ค.68","งวดละ","ชำระรวมตั้งแต่ ม.ค.69","ดอกเบี้ย","หนี้คงเหลือ","หุ้นยกมา","หุ้นสะสม","บันทึกล่าสุด"],
+      reg.filter(function(a){ return a.debt > 0.005; }).map(function(a){
+        return [a.x.no, a.x.name, n_(a.x.debt0), n_(a.x.inst), a.paid, a.it, a.debt, n_(a.x.share0), a.sh, a.last]; }));
+    sheetOut_("ทะเบียนผู้ฝาก",
+      ["เลขสมาชิก","ชื่อ","หุ้นยกมา ธ.ค.68","ฝากปกติเดือนละ","ฝากตั้งแต่ ม.ค.69","หุ้นสะสม","บันทึกล่าสุด"],
+      reg.filter(function(a){ return a.debt <= 0.005; }).map(function(a){
+        return [a.x.no, a.x.name, n_(a.x.share0), n_(a.x.shM), a.dep, a.sh, a.last]; }));
+    var allRows = [];
+    reg.forEach(function(a){ a.rs.forEach(function(r){
+      allRows.push([r.p, a.x.no, a.x.name, r.d || "", n_(r.m), n_(r.int), n_(r.pri), n_(r.sh),
+                    n_(r.loan), has_(r.bal) ? +r.bal : "", r.note || ""]); }); });
+    allRows.sort(function(a, b){ return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : (a[1] < b[1] ? -1 : 1); });
+    allRows.forEach(function(r){ r[0] = perLabel_(r[0]); });
+    sheetOut_("บันทึกรายเดือน (เว็บใหม่)",
+      ["เดือน","เลขสมาชิก","ชื่อ","วันที่รับ","ชำระรวม","ดอกเบี้ย","เงินต้น","ฝากหุ้น","กู้เพิ่ม","หนี้คงเหลือ","หมายเหตุ"], allRows);
+  }
 
   return "สร้างชีทอ่านง่ายเรียบร้อย";
 }
