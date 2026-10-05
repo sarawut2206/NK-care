@@ -411,6 +411,35 @@ details.opn[open] summary{margin-bottom:9px}
 .ce:hover{border-color:var(--rule);background:#fff}
 .ce:focus{outline:none;border-color:var(--brand2);background:#fff;box-shadow:0 0 0 2px rgba(11,44,107,.12)}
 tr.prow .ce,tr.grow .ce{opacity:.85}
+/* ---------- แดชบอร์ด ---------- */
+.ds-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px}
+.ds-ctl{display:flex;gap:10px;flex-wrap:wrap}.ds-ctl label{font-size:12.5px;color:var(--soft)}.ds-ctl select{width:auto}
+.ds-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-bottom:14px}
+.ds-kpi{background:#fff;border:1px solid var(--rule);border-top:4px solid;border-radius:12px;padding:14px 16px}
+.ds-kpi .k{font-size:12.5px;color:var(--soft);font-weight:600}
+.ds-kpi .v{font-size:28px;font-weight:700;color:var(--ink);margin:4px 0 2px;line-height:1.15}
+.ds-kpi .v small{font-size:13px;font-weight:500;color:var(--soft)}
+.ds-kpi .s{font-size:12.5px;color:var(--soft)}
+.ds-chg{font-weight:700}.ds-chg.up{color:#0F6B4A}.ds-chg.dn{color:#B4452B}
+.ds .card{margin-bottom:14px}
+.ds-ttl{font-weight:700;color:var(--ink);margin-bottom:8px;display:flex;gap:10px;flex-wrap:wrap;align-items:baseline}
+.ds-ttl .hint{font-weight:400}
+.ds-lg{margin-left:auto;font-size:12.5px;font-weight:500}.ds-lg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin:0 4px 0 12px}
+.ds-g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:860px){.ds-g2{grid-template-columns:1fr}}
+.ds-donut{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.ds-leg{flex:1;min-width:190px}
+.ds-leg div{display:grid;grid-template-columns:12px 1fr auto 52px;gap:8px;align-items:center;padding:4px 0;font-size:13px}
+.ds-leg i{width:12px;height:12px;border-radius:3px;display:block}.ds-leg b{text-align:right}.ds-leg em{font-style:normal;color:var(--soft);text-align:right}
+.ds-row{display:grid;grid-template-columns:22px minmax(80px,170px) 1fr 84px;gap:8px;align-items:center;padding:3px 0;font-size:13px}
+.ds-no{color:var(--soft);text-align:right}.ds-nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ds-bar,.ds-bar2{background:#EEF2F9;border-radius:6px;height:12px;overflow:hidden}.ds-bar i,.ds-bar2 i{display:block;height:100%;border-radius:6px}
+.ds-row b,.ds-dr b{text-align:right}
+.ds-pct{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end;margin:6px 0 12px}.ds-pct label{font-size:13px;color:var(--ink)}
+.ds-pct input[type=number]{width:84px;display:inline-block;margin:0 4px}
+.ds-dr{display:grid;grid-template-columns:minmax(220px,1.3fr) 1.4fr 96px;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--rule);font-size:13px}
+.ds-dr.tot{font-weight:700;border-bottom:2px solid var(--ink)}.ds-dr.est{color:var(--soft)}
+@media(max-width:700px){.ds-dr{grid-template-columns:1fr 96px}.ds-dr .ds-bar2{grid-column:1/3;order:3}}
 .vtabs{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0 10px;border-bottom:1px solid var(--rule);padding-bottom:10px}
 .vtabs .vt{background:#fff;border:1px solid var(--rule);color:var(--ink);border-radius:8px;padding:7px 12px;font:inherit;font-weight:600;cursor:pointer}
 .vtabs .vt:hover{background:var(--faint)}
@@ -520,7 +549,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-59</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-60</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" title="บันทึกขึ้น Google Sheets เดี๋ยวนี้ (ปกติบันทึกให้เองทุกครั้งที่กรอก)">☁ บันทึกขึ้น Google Sheets</button>
@@ -535,7 +564,8 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
 
 <nav><div class="wrap">
   <span class="ngrp">เว็บใหม่</span>
-  <b data-t="20" class="on"><span class="grp-ic">📗</span>ทะเบียนผู้กู้</b>
+  <b data-t="23" class="on"><span class="grp-ic">📊</span>แดชบอร์ด</b>
+  <b data-t="20"><span class="grp-ic">📗</span>ทะเบียนผู้กู้</b>
   <b data-t="21"><span class="grp-ic">📘</span>ทะเบียนผู้ฝาก</b>
   <b data-t="22"><span class="grp-ic">🧾</span>ใบสรุป + ปันผล</b>
   <b id="oldbtn" class="oldbtn" title="เมนูทั้งหมดของระบบเดิม"><span class="grp-ic">🗂️</span>ระบบเก่า <span id="oldar">▾</span></b>
@@ -557,7 +587,8 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
 
 <div class="wrap">
 <div id="bnr" style="display:none;padding:10px 13px;border-radius:0 6px 6px 0;margin:0 0 14px"></div>
-<section id="tab20" class="on"></section>
+<section id="tab23" class="on"></section>
+<section id="tab20"></section>
 <section id="tab21"></section>
 <section id="tab22"></section>
 <section id="tab10"></section>
@@ -647,7 +678,7 @@ function freshS(){ return { contracts: DB.contracts.map(c=>({...c})), tx: DB.tx.
           ledger: [], ep: "", ef: "all", eq: "", oy: "", pp: "", py: "", ps: null, psq: "", pso: "no", rf: "", rt: "",
           em: "person", pk: "loan", pq: "", sp: null, pf: null, open: null, opPlan: null,
           nw: null, nsel: {}, nq: "", nf: null, npv: {}, dvf: "all", dvq: "", dvsel: null }; }
-let sel = null, tab = 20;
+let sel = null, tab = 23;
 const txKey = t => `${t.a}|${t.d}|${t.t}|${t.m}`;
 const memOf = t => t.fixNo || t.no || S.acct[t.a] || "";   // ★ fixNo = ระบุเจ้าของเอง (ฝากชำระแทน)
 
@@ -2879,7 +2910,7 @@ function drawNW(kind){
   const T = kind==="loan" ? "ทะเบียนผู้กู้" : "ทะเบียนผู้ฝาก";
   // วาดเฉพาะแท็บที่เปิดอยู่ — ฟอร์ม (S.nf) และ id ในหน้าใช้ร่วมกันระหว่างผู้กู้/ผู้ฝาก
   if(tab !== (kind==="loan" ? 20 : 21)){ el.innerHTML = ""; return; }
-  [kind==="loan" ? "tab21" : "tab20", "tab22"].forEach(id=>{ const e = $(id); if(e) e.innerHTML = ""; });
+  [kind==="loan" ? "tab21" : "tab20", "tab22", "tab23"].forEach(id=>{ const e = $(id); if(e) e.innerHTML = ""; });
   if(!NW.on()){ el.innerHTML = nwStartHTML(T); bindNwImport(); return; }
   if(!S.nsel) S.nsel = {};
   if(!S.npv) S.npv = {};
@@ -3092,6 +3123,142 @@ function drawNW(kind){
 function drawNWLoan(){ drawNW("loan"); }
 function drawNWSave(){ drawNW("save"); }
 
+/* ============ เว็บใหม่: แดชบอร์ดสรุป กบข.นข. (กราฟดูง่ายแบบพอร์ตการลงทุน) ============
+   ตัวเลขทั้งหมด = ที่กรอกไว้ในทะเบียนตอนนี้ (หุ้น/เงินกู้/ดอกเบี้ย รวมทุกคนที่ยังไม่ลาออก)
+   ประมาณการปันผล/เฉลี่ยคืน = ใช้สูตรเดียวกับ «ใบสรุป + ปันผล» (ผลรวมตรงกัน) แต่เติม % เองได้  */
+const DSH = {sh:"#2a78d6", dbt:"#eb6834", int:"#1baf7a", sam:"#2a78d6", dk:"#eb6834", free:"#1baf7a", mute:"#9AA6BC"};
+const dshK = v => { v = +v || 0; const a = Math.abs(v);
+  return a >= 1e6 ? (v / 1e6).toFixed(a >= 1e7 ? 1 : 2).replace(/\.0+$/, "") + " ล้าน" : a >= 1e3 ? Math.round(v / 1e3) + " พัน" : String(Math.round(v)); };
+const dshNice = v => { if(v <= 0) return 1; const e = Math.pow(10, Math.floor(Math.log10(v))), f = v / e; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * e; };
+
+function nwDashCfg(){
+  if(!S.nw) S.nw = {people:[], rows:[], v:2};
+  const d = S.nw.dash || {}, dv = S.nw.div || {};
+  return {from:d.from || "", to:d.to || "", rs:has(d.rs) ? +d.rs : (has(dv.rs) ? +dv.rs : 4.5), ri:has(d.ri) ? +d.ri : (has(dv.ri) ? +dv.ri : 6.5), adj:d.adj !== false};
+}
+/* ข้อมูลทั้งหมดของแดชบอร์ด */
+function nwDashData(){
+  const C = nwDashCfg(), people = NW.people(), all = NW.all();
+  const lastRec = all.reduce((m, r) => (!m || pNum(r.p) > pNum(m)) ? r.p : m, null);
+  const end = lastRec && pNum(lastRec) >= pNum("2568-12") ? lastRec : "2568-12";                 // เดือนล่าสุดที่กรอก
+  const ser = people.map(x => ({x, st:nwState(x), sr:nwSeries(x)}));
+  const at = (sr, p, k) => { let v = 0; for(const e of sr){ if(pNum(e.p) <= pNum(p)) v = e[k]; else break; } return v; };     // ค่า ณ สิ้นเดือน p (เดือนที่ไม่มีบันทึก = ค่าเดิม)
+  const months = []; for(let n = pNum("2568-05"); n <= pNum(end); n++) months.push(pFrom(n));
+  const tot = months.map(p => ({p, sh:r2(ser.reduce((s, o) => s + at(o.sr, p, "shares"), 0)), dbt:r2(ser.reduce((s, o) => s + at(o.sr, p, "debt"), 0)),
+    int:r2(ser.reduce((s, o) => s + o.sr.filter(e => e.p === p).reduce((t, e) => t + e.int, 0), 0))}));
+  const yr = end.split("-")[0], defFrom = pNum(`${yr}-01`) < pNum("2568-05") ? "2568-05" : `${yr}-01`;
+  const from = C.from && pNum(C.from) <= pNum(end) ? C.from : defFrom, to = C.to && pNum(C.to) >= pNum(from) ? C.to : end;
+  const rng = tot.filter(t => pNum(t.p) >= pNum(from) && pNum(t.p) <= pNum(to)), m = pNum(to) - pNum(from) + 1;
+  const shNow = r2(ser.reduce((s, o) => s + o.st.shares, 0)), dbNow = r2(ser.reduce((s, o) => s + o.st.debt, 0));
+  const typ = k => r2(ser.reduce((s, o) => s + o.st.by[k].shares, 0)), typD = k => r2(ser.reduce((s, o) => s + o.st.by[k].debt, 0));
+  const intY = r2(rng.reduce((s, t) => s + t.int, 0)), f = C.adj ? m / 12 : 1;
+  const divS = r2(shNow * C.rs / 100 * f), divI = r2(intY * C.ri / 100 * f);
+  const intYr = m > 0 ? intY / m * 12 : 0, divSY = r2(shNow * C.rs / 100), divIY = r2(intYr * C.ri / 100 * (C.adj ? 1 : 1));
+  const open = tot.find(t => t.p === "2568-12") || tot[tot.length - 1] || {sh:0, dbt:0};
+  return {C, end, months, tot, from, to, m, rng, shNow, dbNow, intY, divS, divI, divSY, divIY, open, n:people.length,
+    shBy:{sam:typ("sam"), dk:typ("dk"), free:typ("free")}, dbBy:{sam:typD("sam"), dk:typD("dk")}, ser};
+}
+
+/* ---- กราฟ (SVG วาดเอง) ---- */
+function dashLine(tot){
+  const W = 760, H = 270, L = 58, R = 74, T = 18, Bm = 34, n = tot.length; if(n < 2) return '<p class="hint">ยังมีข้อมูลไม่พอวาดกราฟ</p>';
+  const mx = dshNice(Math.max(...tot.map(t => Math.max(t.sh, t.dbt))) * 1.04), X = i => L + i * (W - L - R) / (n - 1), Y = v => T + (1 - v / mx) * (H - T - Bm);
+  const path = k => tot.map((t, i) => `${i ? "L" : "M"}${X(i).toFixed(1)},${Y(t[k]).toFixed(1)}`).join(" ");
+  const area = k => `${path(k)} L${X(n - 1).toFixed(1)},${Y(0)} L${X(0).toFixed(1)},${Y(0)} Z`;
+  const grid = [0, 1, 2, 3, 4].map(g => { const v = mx * g / 4, y = Y(v); return `<line x1="${L}" x2="${W - R}" y1="${y}" y2="${y}" stroke="#E4EAF4" stroke-width="1"/><text x="${L - 8}" y="${y + 4}" text-anchor="end" font-size="11" fill="#6B7A99">${dshK(v)}</text>`; }).join("");
+  const step = Math.ceil(n / 8), xl = tot.map((t, i) => (i % step === 0 || i === n - 1) ? `<text x="${X(i)}" y="${H - 12}" text-anchor="middle" font-size="11" fill="#6B7A99">${thPer(t.p)}</text>` : "").join("");
+  const hov = tot.map((t, i) => `<rect x="${X(i) - (W - L - R) / (n - 1) / 2}" y="${T}" width="${(W - L - R) / (n - 1)}" height="${H - T - Bm}" fill="transparent"><title>${thPer(t.p)}\nหุ้นสะสม ${B0(t.sh)} บาท\nเงินกู้คงเหลือ ${B0(t.dbt)} บาท</title></rect>`).join("");
+  const last = tot[n - 1], dot = (k, c) => `<circle cx="${X(n - 1)}" cy="${Y(last[k])}" r="4.5" fill="#fff" stroke="${c}" stroke-width="2.5"/>`;
+  const lab = (k, c, dy) => `<text x="${X(n - 1) + 9}" y="${Y(last[k]) + dy}" font-size="12" font-weight="700" fill="${c}">${dshK(last[k])}</text>`;
+  const dy = Math.abs(Y(last.sh) - Y(last.dbt)) < 14 ? [-6, 12] : [4, 4];
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="กราฟหุ้นสะสมและเงินกู้คงเหลือรายเดือน" style="display:block;max-width:100%;height:auto">
+    ${grid}
+    <path d="${area("sh")}" fill="${DSH.sh}" opacity=".10"/><path d="${area("dbt")}" fill="${DSH.dbt}" opacity=".10"/>
+    <path d="${path("sh")}" fill="none" stroke="${DSH.sh}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="${path("dbt")}" fill="none" stroke="${DSH.dbt}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
+    ${dot("sh", DSH.sh)}${dot("dbt", DSH.dbt)}${lab("sh", DSH.sh, dy[0])}${lab("dbt", DSH.dbt, dy[1])}${xl}${hov}</svg>`;
+}
+function dashDonut(parts, centerLbl){
+  const R = 54, CIR = 2 * Math.PI * R, tot = parts.reduce((s, p) => s + p.v, 0); let off = 0;
+  const seg = tot > 0 ? parts.filter(p => p.v > 0).map(p => { const len = p.v / tot * CIR, s = `<circle r="${R}" cx="80" cy="80" fill="none" stroke="${p.c}" stroke-width="22" stroke-dasharray="${len.toFixed(2)} ${(CIR - len).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}" transform="rotate(-90 80 80)"><title>${p.l}: ${B0(p.v)} บาท (${(p.v / tot * 100).toFixed(1)}%)</title></circle>`; off += len; return s; }).join("")
+    : `<circle r="${R}" cx="80" cy="80" fill="none" stroke="#E4EAF4" stroke-width="22"/>`;
+  return `<div class="ds-donut"><svg viewBox="0 0 160 160" width="170" height="170" role="img" aria-label="${esc(centerLbl)}">${seg}
+      <text x="80" y="76" text-anchor="middle" font-size="11" fill="#6B7A99">${esc(centerLbl)}</text><text x="80" y="96" text-anchor="middle" font-size="16" font-weight="700" fill="#0B2C6B">${dshK(tot)}</text></svg>
+    <div class="ds-leg">${parts.map(p => `<div><i style="background:${p.c}"></i><span>${p.l}</span><b>${B0(p.v)}</b><em>${tot > 0 ? (p.v / tot * 100).toFixed(1) : "0.0"}%</em></div>`).join("")}</div></div>`;
+}
+function dashBars(rng){
+  const W = 760, H = 220, L = 58, R = 16, T = 24, Bm = 30, n = rng.length; if(!n) return '<p class="hint">ยังไม่มีข้อมูลดอกเบี้ยในช่วงนี้</p>';
+  const mx = dshNice(Math.max(1, ...rng.map(t => t.int)) * 1.12), bw = Math.min(46, (W - L - R) / n * 0.62), X = i => L + (i + .5) * (W - L - R) / n, Y = v => T + (1 - v / mx) * (H - T - Bm);
+  const grid = [0, 1, 2, 3].map(g => { const v = mx * g / 3, y = Y(v); return `<line x1="${L}" x2="${W - R}" y1="${y}" y2="${y}" stroke="#E4EAF4"/><text x="${L - 8}" y="${y + 4}" text-anchor="end" font-size="11" fill="#6B7A99">${dshK(v)}</text>`; }).join("");
+  const bars = rng.map((t, i) => `<rect x="${X(i) - bw / 2}" y="${Y(t.int)}" width="${bw}" height="${Math.max(0, Y(0) - Y(t.int))}" rx="4" fill="${DSH.int}"><title>${thPer(t.p)}: ดอกเบี้ย ${B0(t.int)} บาท</title></rect>
+    ${n <= 14 && t.int ? `<text x="${X(i)}" y="${Y(t.int) - 5}" text-anchor="middle" font-size="10.5" font-weight="600" fill="#0F6B4A">${B0(t.int)}</text>` : ""}<text x="${X(i)}" y="${H - 10}" text-anchor="middle" font-size="11" fill="#6B7A99">${thPer(t.p)}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="ดอกเบี้ยรับรายเดือน" style="display:block;max-width:100%;height:auto">${grid}${bars}</svg>`;
+}
+function dashTop(list, k, color){
+  const top = list.slice().sort((a, b) => b.st[k] - a.st[k]).filter(o => o.st[k] > 0.005).slice(0, 10), mx = Math.max(1, ...top.map(o => o.st[k]));
+  return top.length ? top.map((o, i) => `<div class="ds-row"><span class="ds-no">${i + 1}</span><span class="ds-nm" title="${esc(o.x.no)} ${esc(o.x.name)}">${esc(o.x.name)}</span>
+      <span class="ds-bar"><i style="width:${(o.st[k] / mx * 100).toFixed(1)}%;background:${color}"></i></span><b>${B0(o.st[k])}</b></div>`).join("") : '<p class="hint">ยังไม่มีข้อมูล</p>';
+}
+
+function drawNWDash(){
+  const el = $("tab23"); if(!el) return;
+  if(tab !== 23){ el.innerHTML = ""; return; }
+  ["tab20", "tab21", "tab22"].forEach(id => { const e = $(id); if(e) e.innerHTML = ""; });
+  if(!NW.on()){ el.innerHTML = nwStartHTML("แดชบอร์ด"); bindNwImport(); return; }
+  const D = nwDashData(), C = D.C, chg = (a, b) => { const d = r2(a - b); return `<span class="ds-chg ${d > 0 ? "up" : d < 0 ? "dn" : ""}">${d > 0 ? "▲ +" : d < 0 ? "▼ −" : "• "}${B0(Math.abs(d))}</span>`; };
+  const opts = sel => D.months.map(p => `<option value="${p}" ${p === sel ? "selected" : ""}>${thPer(p)}</option>`).join("");
+  const divTot = r2(D.divS + D.divI), divY = r2(D.divSY + D.divIY), mx = Math.max(1, divTot, divY);
+  el.innerHTML = `<div class="ds">
+  <div class="ds-head"><div><div class="eyebrow" style="margin:0">แดชบอร์ดสรุป กบข.นข.</div>
+    <div class="hint">ตัวเลขที่กรอกไว้ในทะเบียนถึง <b>${thPer(D.end)}</b> · สมาชิก ${D.n} คน (ไม่รวมคนที่ลาออก) · เหมือนดูพอร์ตของกองทุน</div></div>
+    <div class="ds-ctl"><label>ช่วงดอกเบี้ย/ปันผล จาก <select id="ds_from">${opts(D.from)}</select></label><label>ถึง <select id="ds_to">${opts(D.to)}</select></label></div></div>
+
+  <div class="ds-kpis">
+    <div class="ds-kpi" style="border-top-color:${DSH.sh}"><div class="k">① ทุนเรือนหุ้นสะสมรวม</div><div class="v">${B0(D.shNow)} <small>บาท</small></div>
+      <div class="s">${chg(D.shNow, D.open.sh)} จาก 31 ธ.ค.68</div></div>
+    <div class="ds-kpi" style="border-top-color:${DSH.dbt}"><div class="k">② เงินกู้คงเหลือรวม</div><div class="v">${B0(D.dbNow)} <small>บาท</small></div>
+      <div class="s">${chg(D.dbNow, D.open.dbt)} จาก 31 ธ.ค.68</div></div>
+    <div class="ds-kpi" style="border-top-color:${DSH.int}"><div class="k">③ ดอกเบี้ยรับสะสม (${thPer(D.from)} – ${thPer(D.to)})</div><div class="v">${B0(D.intY)} <small>บาท</small></div>
+      <div class="s">เฉลี่ยเดือนละ ${D.m > 0 ? B0(D.intY / D.m) : "0"} บาท · ${D.m} เดือน</div></div>
+    <div class="ds-kpi" style="border-top-color:#0B2C6B"><div class="k">④ คาดการณ์เงินคืนสมาชิก</div><div class="v" style="color:#0B2C6B">${B0(divTot)} <small>บาท</small></div>
+      <div class="s">ปันผลหุ้น ${B0(D.divS)} + เฉลี่ยคืน ${B0(D.divI)}</div></div>
+  </div>
+
+  <div class="card"><div class="ds-ttl">พอร์ตกองทุนรายเดือน <span class="hint">หุ้นสะสม เทียบ เงินกู้คงเหลือ (รวมทุกคน)</span>
+      <span class="ds-lg"><i style="background:${DSH.sh}"></i>ทุนเรือนหุ้นสะสม <i style="background:${DSH.dbt}"></i>เงินกู้คงเหลือ</span></div>${dashLine(D.tot)}</div>
+
+  <div class="ds-g2">
+    <div class="card"><div class="ds-ttl">① หุ้นสะสมแยกตามประเภท</div>${dashDonut([{l:NW_ACCS.sam, v:D.shBy.sam, c:DSH.sam}, {l:NW_ACCS.dk, v:D.shBy.dk, c:DSH.dk}, {l:NW_ACCS.free, v:D.shBy.free, c:DSH.free}], "หุ้นรวม")}</div>
+    <div class="card"><div class="ds-ttl">② เงินกู้คงเหลือแยกตามประเภท</div>${dashDonut([{l:NW_ACCS.sam, v:D.dbBy.sam, c:DSH.sam}, {l:NW_ACCS.dk, v:D.dbBy.dk, c:DSH.dk}], "เงินกู้รวม")}</div>
+  </div>
+
+  <div class="card"><div class="ds-ttl">③ ดอกเบี้ยรับรายเดือน <span class="hint">รวมทั้งกองทุน · ${thPer(D.from)} – ${thPer(D.to)} · รวม ${B0(D.intY)} บาท</span></div>${dashBars(D.rng)}</div>
+
+  <div class="card"><div class="ds-ttl">④ ประมาณการปันผลหุ้น และเฉลี่ยคืนดอกเบี้ย <span class="hint">เติม % เองได้ — คิดจากตัวเลข ① และ ③ ด้านบน</span></div>
+    <div class="ds-pct">
+      <label>ปันผลหุ้น ร้อยละ <input type="number" id="ds_rs" step="0.01" min="0" value="${C.rs}"> % ต่อปี</label>
+      <label>เฉลี่ยคืนดอกเบี้ย ร้อยละ <input type="number" id="ds_ri" step="0.01" min="0" value="${C.ri}"> %</label>
+      <label class="rlf" title="ใบสรุปเดิมคูณ เดือน/12 ทั้งปันผลหุ้นและเฉลี่ยคืน — ติ๊กไว้ตัวเลขจะตรงกับแท็บ «ใบสรุป + ปันผล»"><input type="checkbox" id="ds_adj" ${C.adj ? "checked" : ""}> ปรับตามจำนวนเดือน (× ${D.m}/12 เหมือนใบสรุป)</label></div>
+    <div class="ds-div">
+      <div class="ds-dr"><span>ปันผลหุ้น = หุ้นสะสม ${B0(D.shNow)} × ${C.rs}%${C.adj ? ` × ${D.m}/12` : ""}</span><div class="ds-bar2"><i style="width:${(D.divS / mx * 100).toFixed(1)}%;background:${DSH.sh}"></i></div><b>${B0(D.divS)}</b></div>
+      <div class="ds-dr"><span>เฉลี่ยคืนดอกเบี้ย = ดอกเบี้ยรับ ${B0(D.intY)} × ${C.ri}%${C.adj ? ` × ${D.m}/12` : ""}</span><div class="ds-bar2"><i style="width:${(D.divI / mx * 100).toFixed(1)}%;background:${DSH.int}"></i></div><b>${B0(D.divI)}</b></div>
+      <div class="ds-dr tot"><span>รวมคาดการณ์เงินคืนสมาชิก (ถึง ${thPer(D.to)})</span><div class="ds-bar2"><i style="width:${(divTot / mx * 100).toFixed(1)}%;background:#0B2C6B"></i></div><b>${B0(divTot)}</b></div>
+      <div class="ds-dr est"><span>ประมาณทั้งปี (ถ้ายอดหุ้นคงที่ และดอกเบี้ยรายเดือนเท่าเดิม) : หุ้น ${B0(D.divSY)} + เฉลี่ยคืน ${B0(D.divIY)}</span><div class="ds-bar2"><i style="width:${(divY / mx * 100).toFixed(1)}%;background:#9AA6BC"></i></div><b>${B0(divY)}</b></div></div>
+    <p class="hint" style="margin:6px 0 0">เป็นตัวเลขประมาณการจากที่กรอกไว้ ณ ตอนนี้ — ตัวเลขจริงขึ้นกับมติที่ประชุมและยอดสิ้นปี · ตรงกับผลรวมของแท็บ «ใบสรุป + ปันผล» เมื่อเลือกช่วงและอัตราเดียวกัน</p></div>
+
+  <div class="ds-g2">
+    <div class="card"><div class="ds-ttl">10 อันดับ ทุนเรือนหุ้นสะสมสูงสุด</div>${dashTop(D.ser, "shares", DSH.sh)}</div>
+    <div class="card"><div class="ds-ttl">10 อันดับ เงินกู้คงเหลือสูงสุด</div>${dashTop(D.ser, "debt", DSH.dbt)}</div>
+  </div></div>`;
+
+  const set = patch => { S.nw.dash = Object.assign({}, S.nw.dash || {}, patch); save(); drawNWDash(); };
+  $("ds_from").onchange = e => set({from:e.target.value, to:pNum(e.target.value) > pNum(D.to) ? e.target.value : D.to});
+  $("ds_to").onchange = e => set({to:e.target.value, from:pNum(e.target.value) < pNum(D.from) ? e.target.value : D.from});
+  $("ds_rs").onchange = e => set({rs:Math.max(0, +e.target.value || 0)});
+  $("ds_ri").onchange = e => set({ri:Math.max(0, +e.target.value || 0)});
+  $("ds_adj").onchange = e => set({adj:e.target.checked});
+}
+
 /* ============ เว็บใหม่: ใบสรุปชำระรายเดือน + สรุปปันผล ============
    อ้างอิงรูปแบบและสูตรจากไฟล์ใบสรุป พ.ค.–ธ.ค.68
    ปันผลเงินฝาก/หุ้น      = หุ้นสะสมล่าสุดในช่วง × อัตราปันผล × จำนวนเดือน/12
@@ -3175,7 +3342,7 @@ function nwSumDoc(x, D){
 function drawNWDiv(){
   const el = $("tab22"); if(!el) return;
   if(tab !== 22){ el.innerHTML = ""; return; }
-  ["tab20","tab21"].forEach(id=>{ const e = $(id); if(e) e.innerHTML = ""; });
+  ["tab20","tab21","tab23"].forEach(id=>{ const e = $(id); if(e) e.innerHTML = ""; });
   if(!NW.on()){ el.innerHTML = nwStartHTML("ใบสรุป + ปันผล"); bindNwImport(); return; }
   const D = nwDivCfg(), f = S.dvf || "all", q = (S.dvq||"").trim().toLowerCase();
   const all = NW.people().map(x=>({x, s:nwSum(x, D)}));
@@ -7435,7 +7602,7 @@ async function boot(){
 function draw(){
   rebuildPeriods();                     // ★ ช่วงงวดเดินตามข้อมูลจริง — ย้อนดูได้ทุกปี
   // แท็บไหนพัง ให้พังแค่แท็บนั้น อย่าลากทั้งหน้าจอลงไปด้วย
-  [["tab20",drawNWLoan],["tab21",drawNWSave],["tab22",drawNWDiv],["tab10",drawEntry],["tab11",drawOverview],["tab12",drawPeriods],["tab1",drawT1],["tab3",drawT3],
+  [["tab23",drawNWDash],["tab20",drawNWLoan],["tab21",drawNWSave],["tab22",drawNWDiv],["tab10",drawEntry],["tab11",drawOverview],["tab12",drawPeriods],["tab1",drawT1],["tab3",drawT3],
    ["tab4",drawT4],["tab5",drawT5],["tab6",drawT6],["tab7",drawT7],["tab8",drawT8],["tab9",drawT9]].forEach(([id,fn])=>{
     try{ fn(); }
     catch(err){ const el=$(id); if(el) el.innerHTML =
@@ -7472,7 +7639,7 @@ if($("saveNow")) $("saveNow").onclick = () => saveClick($("saveNow"), null);
 
 /* ============ เดินระบบ ============ */
 function all(){ draw(); save(); banner(); }
-const TABFN = {20:"drawNWLoan",21:"drawNWSave",22:"drawNWDiv",1:"drawT1",3:"drawT3",4:"drawT4",5:"drawT5",6:"drawT6",7:"drawT7",8:"drawT8",9:"drawT9",
+const TABFN = {23:"drawNWDash",20:"drawNWLoan",21:"drawNWSave",22:"drawNWDiv",1:"drawT1",3:"drawT3",4:"drawT4",5:"drawT5",6:"drawT6",7:"drawT7",8:"drawT8",9:"drawT9",
                10:"drawEntry",11:"drawOverview",12:"drawPeriods"};
 const OLD_TABS = [10,11,9,12,7,1,8,3,5,6,4];
 $("oldbtn").onclick = () => {
