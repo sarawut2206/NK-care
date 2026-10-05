@@ -461,7 +461,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-39</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-40</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
@@ -2205,10 +2205,12 @@ const NW = {
   drop(no,p){ S.nw.rows = NW.all().filter(r=>!(r.no===no && r.p===p)); }
 };
 const nwStep = (debt, r) => has(r.bal) ? +r.bal : +(debt - num(r.pri) + num(r.loan)).toFixed(2);
+const nwSh = r => +(num(r.sh) + num(r.shx)).toFixed(2);          // หุ้นประจำ + หุ้นเพิ่ม
+const nwOk = r => !has(r.m) || Math.abs(num(r.m) - num(r.int) - num(r.pri) - nwSh(r)) < 0.005;
 /* ยอด ณ ก่อนงวด p */
 function nwBefore(x, p){
   let debt = +x.debt0||0, shares = +x.share0||0;
-  NW.rows(x.no).filter(r=>r.p<p).forEach(r=>{ debt = nwStep(debt, r); shares = +(shares + num(r.sh)).toFixed(2); });
+  NW.rows(x.no).filter(r=>r.p<p).forEach(r=>{ debt = nwStep(debt, r); shares = +(shares + nwSh(r)).toFixed(2); });
   return {debt:+debt.toFixed(2), shares:+shares.toFixed(2)};
 }
 /* สถานะปัจจุบัน */
@@ -2216,7 +2218,7 @@ function nwState(x){
   const rs = NW.rows(x.no), byP = {};
   rs.forEach(r=>byP[r.p] = r);
   let debt = +x.debt0||0, shares = +x.share0||0;
-  rs.forEach(r=>{ debt = nwStep(debt, r); shares = +(shares + num(r.sh)).toFixed(2); });
+  rs.forEach(r=>{ debt = nwStep(debt, r); shares = +(shares + nwSh(r)).toFixed(2); });
   // ค้าง = เดือนที่เลยกำหนดแล้วตั้งแต่ ม.ค.69 ที่ยังมีหนี้ แต่ไม่มีเงินชำระ — นับติดกันล่าสุด
   const nowN = pNum(nowPeriod()), lastDue = isDue(nowPeriod()) ? nowN : nowN - 1;
   let missed = 0, d = +x.debt0||0;
@@ -2228,7 +2230,7 @@ function nwState(x){
   return {rows:rs, debt:+debt.toFixed(2), shares:+shares.toFixed(2), missed,
           last: rs.length ? rs[rs.length-1].p : "", kind: debt > 0.005 ? "loan" : "save",
           paid: +rs.reduce((a,r)=>a+num(r.m),0).toFixed(2), int: +rs.reduce((a,r)=>a+num(r.int),0).toFixed(2),
-          dep: +rs.reduce((a,r)=>a+num(r.sh),0).toFixed(2)};
+          dep: +rs.reduce((a,r)=>a+nwSh(r),0).toFixed(2)};
 }
 const nwNext = no => { const rs = NW.rows(no); return rs.length ? pFrom(pNum(rs[rs.length-1].p) + 1) : P_ANCHOR; };
 
@@ -2261,34 +2263,37 @@ function nfFor(x){
 }
 function nfLoad(){
   const r = NW.row(S.nf.no, S.nf.p);
-  S.nf.vals = r ? Object.fromEntries(["d","m","int","pri","sh","loan","bal","note","relief"].filter(k=>has(r[k])).map(k=>[k, r[k]])) : {};
+  S.nf.vals = r ? Object.fromEntries(["d","m","int","pri","sh","shx","loan","bal","note","relief"].filter(k=>has(r[k])).map(k=>[k, r[k]])) : {};
   S.nf.edit = !!r;
 }
 function nfCheck(x, kind){
   const v = S.nf.vals, b = nwBefore(x, S.nf.p), out = [];
   if(kind==="save" && !num(v.loan)){
-    out.push(has(v.sh) ? `<span class="pill grn">ฝากหุ้น ${B(num(v.sh))}</span>` : '<span class="hint">ใส่ยอดฝากหุ้น</span>');
-    out.push(`<span class="hint">หุ้นสะสมหลังงวดนี้ <b>${B(b.shares + num(v.sh))}</b></span>`);
+    const t = nwSh(v);
+    out.push(has(v.sh)||has(v.shx) ? `<span class="pill grn">ฝากหุ้น ${B(t)}${num(v.shx)?` (ประจำ ${B(num(v.sh))} + เพิ่ม ${B(num(v.shx))})`:""}</span>` : '<span class="hint">ใส่ยอดฝากหุ้น</span>');
+    out.push(`<span class="hint">หุ้นสะสมหลังงวดนี้ <b>${B(b.shares + t)}</b></span>`);
     return out.join(" ");
   }
-  const parts = +(num(v.int) + num(v.pri) + num(v.sh)).toFixed(2), d = +(num(v.m) - parts).toFixed(2);
-  if(has(v.m)) out.push(Math.abs(d) < 0.005 ? `<span class="pill grn">✓ ดอกเบี้ย + เงินต้น + หุ้น = ${B(parts)} ตรงกับยอดชำระ</span>`
+  const parts = +(num(v.int) + num(v.pri) + nwSh(v)).toFixed(2), d = +(num(v.m) - parts).toFixed(2);
+  if(has(v.m)) out.push(Math.abs(d) < 0.005 ? `<span class="pill grn">✓ ดอกเบี้ย + เงินต้น + หุ้นประจำ${num(v.shx)?" + หุ้นเพิ่ม":""} = ${B(parts)} ตรงกับยอดชำระ</span>`
     : `<span class="pill red">${d>0?"แยกยังขาด":"แยกเกินมา"} ${B(Math.abs(d))}</span>`);
   const exp = +(b.debt - num(v.pri) + num(v.loan)).toFixed(2);
   out.push(`<span class="hint">หนี้ก่อนหน้า ${B(b.debt)} − เงินต้น ${B(num(v.pri))}${num(v.loan)?` + กู้เพิ่ม ${B(num(v.loan))}`:""} = <b>${B(exp)}</b></span>`);
   if(has(v.bal) && Math.abs(exp - +v.bal) >= 0.01) out.push(`<span class="pill red">หนี้คงเหลือที่ใส่ไม่ตรง ควรเป็น ${B(exp)}</span>`);
   return out.join(" ");
 }
-/* «แยกยอดให้» — ดอกเบี้ย 1% ของหนี้ก่อนหน้า → ฝากหุ้นตามปกติ → ที่เหลือเป็นเงินต้น */
+/* «แยกยอดให้» — ดอกเบี้ย 1% ของหนี้ก่อนหน้า → หุ้นประจำ → หุ้นเพิ่ม (ถ้าใส่ไว้) → ที่เหลือเป็นเงินต้น */
 function nfSplit(x){
   const v = S.nf.vals, b = nwBefore(x, S.nf.p);
   const m = has(v.m) ? num(v.m) : (+x.inst||0); if(!m) return "ใส่ยอดชำระก่อน";
   let rest = m;
   const int = Math.min(rest, +(b.debt * RATE).toFixed(2)); rest = +(rest - int).toFixed(2);
   const sh  = Math.min(rest, has(v.sh) ? num(v.sh) : (+x.shM||0)); rest = +(rest - sh).toFixed(2);
+  const shx = Math.min(rest, num(v.shx)); rest = +(rest - shx).toFixed(2);
   const pri = Math.min(rest, b.debt); rest = +(rest - pri).toFixed(2);
-  Object.assign(v, {m, int, sh:+(sh + rest).toFixed(2), pri:+pri.toFixed(2), bal:+(b.debt - pri + num(v.loan)).toFixed(2)});
-  return rest > 0.005 ? `จ่ายเกินหนี้ ${B(rest)} บาท — ใส่เป็นฝากหุ้นให้แล้ว` : "";
+  Object.assign(v, {m, int, sh, pri:+pri.toFixed(2), bal:+(b.debt - pri + num(v.loan)).toFixed(2)});
+  const ex = +(shx + rest).toFixed(2); if(ex > 0.005) v.shx = ex; else delete v.shx;
+  return rest > 0.005 ? `จ่ายเกินหนี้ ${B(rest)} บาท — ใส่เป็นหุ้นเพิ่มให้แล้ว` : "";
 }
 
 /* ---------- หน้าทะเบียน (ใช้ทั้งผู้กู้และผู้ฝาก) ---------- */
@@ -2317,37 +2322,39 @@ function nwRegisterTable(x, kind, editable){
   const hShare = H.map(()=>0);
   for(let i=H.length-1; i>=0; i--){ hShare[i] = +back.toFixed(2); back -= H[i].sh; }
   let debt = +x.debt0||0, shares = +x.share0||0;
-  const live = st.rows.map(r=>{ debt = nwStep(debt, r); shares = +(shares + num(r.sh)).toFixed(2); return {r, debt, shares}; });
-  const cols = loan ? 9 : 6;
+  const live = st.rows.map(r=>{ debt = nwStep(debt, r); shares = +(shares + nwSh(r)).toFixed(2); return {r, debt, shares}; });
+  const ex = editable ? 2 : 0, cols = (loan ? 10 : 7) + ex;
   return `<table class="${editable?"":"kt"}"><thead><tr><th class="l">เดือน</th><th class="l">วันที่รับ</th>
-      ${loan ? "<th>ชำระรวม</th><th>ดอกเบี้ย</th><th>เงินต้น</th>" : ""}<th>ฝากหุ้น</th>
-      ${loan ? "<th>หนี้คงเหลือ</th>" : ""}<th>หุ้นสะสม</th><th class="l">หมายเหตุ</th>${editable?"<th></th>":""}</tr></thead><tbody>
+      ${loan ? "<th>ชำระรวม</th><th>ดอกเบี้ย</th><th>เงินต้น</th>" : ""}<th>หุ้นประจำ</th><th>หุ้นเพิ่ม</th>
+      ${loan ? "<th>หนี้คงเหลือ</th>" : ""}<th>หุ้นสะสม</th><th class="l">หมายเหตุ</th>${editable?'<th>ตรวจ</th><th></th>':""}</tr></thead><tbody>
     ${H.map((h,i)=>`<tr class="hrow"><td class="l">${thPer(ymToP(h.ym))} <span class="pill" style="font-size:10px">ใบสรุป</span></td><td class="l">—</td>
       ${loan ? `<td class="${editable?"amt":"n"}">${B(h.pay)}</td><td class="${editable?"amt":"n"}">${B(h.int)}</td>
         <td class="${editable?"amt":"n"}">${B(Math.max(0, h.pay - h.int - h.sh))}</td>` : ""}
-      <td class="${editable?"amt":"n"}">${B(h.sh)}</td>${loan ? `<td class="${editable?"amt":"n"}">${B(h.debt)}</td>` : ""}
-      <td class="${editable?"amt":"n"}">${B(hShare[i])}</td><td></td>${editable?"<td></td>":""}</tr>`).join("")}
+      <td class="${editable?"amt":"n"}">${B(h.sh)}</td><td></td>${loan ? `<td class="${editable?"amt":"n"}">${B(h.debt)}</td>` : ""}
+      <td class="${editable?"amt":"n"}">${B(hShare[i])}</td><td></td>${editable?"<td></td><td></td>":""}</tr>`).join("")}
     <tr class="orow"><td class="l" colspan="2"><b>ยกมา ณ 31 ธ.ค.68</b></td>
-      ${loan ? '<td></td><td></td><td></td>' : ""}<td></td>${loan ? `<td class="${editable?"amt":"n"}"><b>${B(+x.debt0||0)}</b></td>` : ""}
-      <td class="${editable?"amt":"n"}"><b>${B(+x.share0||0)}</b></td><td></td>${editable?"<td></td>":""}</tr>
-    ${live.map(({r, debt, shares})=>{ const ok = !has(r.m) || Math.abs(num(r.m) - num(r.int) - num(r.pri) - num(r.sh)) < 0.005 || !loan;
+      ${loan ? '<td></td><td></td><td></td>' : ""}<td></td><td></td>${loan ? `<td class="${editable?"amt":"n"}"><b>${B(+x.debt0||0)}</b></td>` : ""}
+      <td class="${editable?"amt":"n"}"><b>${B(+x.share0||0)}</b></td><td></td>${editable?"<td></td><td></td>":""}</tr>
+    ${live.map(({r, debt, shares})=>{ const ok = !loan || nwOk(r);
       return `<tr${editable?` data-nr="${esc(r.p)}" style="cursor:pointer${S.nf&&S.nf.p===r.p?";background:var(--faint)":""}" title="คลิกเพื่อแก้ไข"`:""}>
       <td class="l"><b>${thPer(r.p)}</b></td><td class="l">${r.d?thDay(r.d):"—"}</td>
       ${loan ? `<td class="${editable?"amt":"n"}"><b>${B(num(r.m))}</b></td><td class="${editable?"amt":"n"}">${B(num(r.int))}</td>
         <td class="${editable?"amt":"n"}">${B(num(r.pri))}</td>` : ""}
-      <td class="${editable?"amt":"n"}">${B(num(r.sh))}</td>
+      <td class="${editable?"amt":"n"}">${B(num(r.sh))}</td><td class="${editable?"amt":"n"}">${num(r.shx)?B(num(r.shx)):"—"}</td>
       ${loan ? `<td class="${editable?"amt":"n"}">${B(debt)}${num(r.loan)?`<div class="hint">กู้เพิ่ม ${B(num(r.loan))}</div>`:""}</td>` : ""}
       <td class="${editable?"amt":"n"}">${B(shares)}</td>
-      <td class="l">${esc(r.note||"")}${r.relief?" (ผ่อนผัน)":""}${ok?"":` <span class="pill red">ยอดแยกไม่ตรง</span>`}</td>
-      ${editable?`<td><button class="del" data-nd="${esc(r.p)}" title="ลบ">×</button></td>`:""}</tr>`; }).join("")}
-    ${!live.length ? `<tr><td colspan="${cols+(editable?1:0)}" class="hint" style="text-align:left">ยังไม่ได้บันทึกตั้งแต่ ม.ค.69</td></tr>` : ""}
+      <td class="l">${esc(r.note||"")}${r.relief?" (ผ่อนผัน)":""}${ok||editable?"":" (ยอดแยกไม่ตรง)"}</td>
+      ${editable?`<td style="text-align:center">${ok?'<span class="pill grn" title="ดอกเบี้ย + เงินต้น + หุ้น = ยอดชำระ">✓</span>'
+        :`<span class="pill red" title="ยอดแยกไม่เท่ายอดชำระ">ต่าง ${B(+(num(r.m) - num(r.int) - num(r.pri) - nwSh(r)).toFixed(2))}</span>`}</td>
+        <td><button class="del" data-nd="${esc(r.p)}" title="ลบ">×</button></td>`:""}</tr>`; }).join("")}
+    ${!live.length ? `<tr><td colspan="${cols}" class="hint" style="text-align:left">ยังไม่ได้บันทึกตั้งแต่ ม.ค.69</td></tr>` : ""}
   </tbody></table>`;
 }
 
 function nwPanel(x, kind){
   const st = nwState(x), nf = nfFor(x), v = nf.vals, tel = (prof(x.no)||{}).tel;
   const loanForm = kind==="loan" || !!v.loanOpen || num(v.loan) > 0;
-  const inp = (k, lbl) => `<div><label>${lbl}</label><input type="number" step="0.01" data-nf="${k}" value="${has(v[k])?v[k]:""}"></div>`;
+  const inp = (k, lbl, st) => `<div${st?` style="${st}"`:""}><label>${lbl}</label><input type="number" step="0.01" min="0" data-nf="${k}" value="${has(v[k])?v[k]:""}"></div>`;
   const opts = (()=>{ const o = []; for(let n = pNum(nowPeriod()) + 3; n >= pNum(P_ANCHOR); n--){ const p = pFrom(n);
     o.push(`<option value="${p}" ${p===nf.p?"selected":""}>${thPer(p)}${NW.row(x.no,p)?" ✓":""}</option>`); } return o.join(""); })();
   return `<div class="card" style="border-left:4px solid ${kind==="loan"?"var(--brand2)":"var(--green)"}">
@@ -2360,7 +2367,7 @@ function nwPanel(x, kind){
       ${kind==="loan" ? `<div class="stat"><div class="k">หนี้คงเหลือ</div><div class="v">${B(st.debt)}</div><div class="hint">ยกมา ${B(+x.debt0||0)}</div></div>
         <div class="stat"><div class="k">งวดละ</div><div class="v">${x.inst?B(x.inst):"—"}</div></div>` : ""}
       <div class="stat"><div class="k">ทุนเรือนหุ้นสะสม</div><div class="v">${B(st.shares)}</div><div class="hint">ยกมา ${B(+x.share0||0)}</div></div>
-      ${kind==="save" ? `<div class="stat"><div class="k">ฝากปกติเดือนละ</div><div class="v">${x.shM?B(x.shM):"—"}</div></div>` : ""}
+      ${kind==="save" ? `<div class="stat"><div class="k">หุ้นประจำเดือนละ</div><div class="v">${x.shM?B(x.shM):"—"}</div></div>` : ""}
       <div class="stat"><div class="k">บันทึกล่าสุด</div><div class="v" style="font-size:18px">${st.last?thPer(st.last):"ยังไม่มี"}</div></div>
     </div>
 
@@ -2370,27 +2377,26 @@ function nwPanel(x, kind){
     <div class="pf">
       <div><label>เดือน</label><select id="nf_p">${opts}</select></div>
       <div><label>วันที่รับ</label><input type="date" data-nf="d" value="${esc(v.d||"")}"></div>
-      ${loanForm ? inp("m","ชำระรวม") + inp("int","ดอกเบี้ย") + inp("pri","เงินต้น") : ""}
-      ${inp("sh","ฝากหุ้น")}
-      ${loanForm ? inp("bal","หนี้คงเหลือ") : ""}
-      ${loanForm || kind==="save" ? inp("loan", kind==="save" ? "รับเงินกู้ใหม่" : "กู้เพิ่ม") : ""}
+      ${loanForm ? inp("m","ชำระรวม") + inp("int","ดอกเบี้ย") + inp("pri","เงินต้น") + inp("bal","หนี้คงเหลือ") : ""}
+      ${inp("sh","ฝากหุ้นประจำ", loanForm ? "grid-column-start:1" : "") + inp("shx","ฝากหุ้นเพิ่ม")}
+      ${inp("loan", kind==="save" ? "รับเงินกู้ใหม่" : "กู้เพิ่ม")}
       <div style="grid-column:span 2"><label>หมายเหตุ</label><input data-nf="note" value="${esc(v.note||"")}" placeholder="เช่น โอนแทน / เงินสด"></div>
       ${loanForm ? `<div><label>&nbsp;</label><label class="rlf"><input type="checkbox" data-nf="relief" ${v.relief?"checked":""}> ผ่อนผัน</label></div>` : ""}
     </div>
     <div class="pfchk" id="nf_chk">${nfCheck(x, loanForm ? "loan" : "save")}</div>
     <div class="bar" style="margin-top:12px">
-      ${loanForm ? `<button class="ghost" id="nf_split" title="ดอกเบี้ย 1% ของหนี้ก่อนหน้า → ฝากหุ้นตามปกติ → ที่เหลือเป็นเงินต้น">แยกยอดให้</button>`
-                 : (x.shM ? `<button class="ghost" id="nf_norm">ใส่ยอดฝากปกติ ${B(x.shM)}</button>` : "")}
+      ${loanForm ? `<button class="ghost" id="nf_split" title="ดอกเบี้ย 1% ของหนี้ก่อนหน้า → หุ้นประจำ → หุ้นเพิ่ม (ถ้าใส่ไว้) → ที่เหลือเป็นเงินต้น">แยกยอดให้</button>`
+                 : (x.shM ? `<button class="ghost" id="nf_norm">ใส่หุ้นประจำ ${B(x.shM)}</button>` : "")}
       <button id="nf_save">${nf.edit ? "บันทึกการแก้ไข" : "บันทึก " + thPer(nf.p)}</button>
       <button class="ghost" id="nf_clear">ล้างฟอร์ม</button>
       <span class="hint" id="nf_msg"></span>
     </div>
-    <details class="opn" style="margin-top:14px"><summary>แก้ยอดยกมา ณ 31 ธ.ค.68 · งวดละ · ฝากปกติ</summary>
+    <details class="opn" style="margin-top:14px"><summary>แก้ยอดยกมา ณ 31 ธ.ค.68 · งวดละ · หุ้นประจำ</summary>
       <div class="pf">
         <div><label>หุ้นยกมา</label><input type="number" step="0.01" data-no="share0" value="${+x.share0||0}"></div>
         <div><label>หนี้ยกมา</label><input type="number" step="0.01" data-no="debt0" value="${+x.debt0||0}"></div>
         <div><label>งวดละ</label><input type="number" step="0.01" data-no="inst" value="${+x.inst||""}"></div>
-        <div><label>ฝากหุ้นปกติเดือนละ</label><input type="number" step="0.01" data-no="shM" value="${+x.shM||""}"></div>
+        <div><label>หุ้นประจำเดือนละ</label><input type="number" step="0.01" data-no="shM" value="${+x.shM||""}"></div>
         <div style="grid-column:span 2"><label>ชื่อ</label><input data-no="name" value="${esc(x.name)}"></div>
       </div></details>
   </div>`;
@@ -2483,13 +2489,13 @@ function drawNW(kind){
   $("nw_csv").onclick = () => {
     const head = kind==="loan"
       ? ["เลขสมาชิก","ชื่อ","หนี้ยกมา ธ.ค.68","งวดละ","ชำระรวมตั้งแต่ ม.ค.69","ดอกเบี้ย","หนี้คงเหลือ","หุ้นยกมา","หุ้นสะสม","ค้าง (เดือน)","บันทึกล่าสุด"]
-      : ["เลขสมาชิก","ชื่อ","หุ้นยกมา ธ.ค.68","ฝากปกติเดือนละ","ฝากตั้งแต่ ม.ค.69","หุ้นสะสม","บันทึกล่าสุด"];
+      : ["เลขสมาชิก","ชื่อ","หุ้นยกมา ธ.ค.68","หุ้นประจำเดือนละ","ฝากตั้งแต่ ม.ค.69","หุ้นสะสม","บันทึกล่าสุด"];
     const rows = mine.map(({x, st})=> kind==="loan"
       ? [x.no, x.name, f2(x.debt0), f2(x.inst), f2(st.paid), f2(st.int), f2(st.debt), f2(x.share0), f2(st.shares), st.missed, st.last?thPer(st.last):""]
       : [x.no, x.name, f2(x.share0), f2(x.shM), f2(st.dep), f2(st.shares), st.last?thPer(st.last):""]);
-    const detail = mine.flatMap(({x})=>NW.rows(x.no).map(r=>[x.no, x.name, thPer(r.p), r.d||"", f2(r.m), f2(r.int), f2(r.pri), f2(r.sh), f2(r.loan), has(r.bal)?f2(r.bal):"", r.note||""]));
+    const detail = mine.flatMap(({x})=>NW.rows(x.no).map(r=>[x.no, x.name, thPer(r.p), r.d||"", f2(r.m), f2(r.int), f2(r.pri), f2(r.sh), f2(r.shx), f2(r.loan), has(r.bal)?f2(r.bal):"", r.note||""]));
     csvOut(`kbk-${T}.csv`, [[T, head, rows],
-      ["บันทึกรายเดือน", ["เลขสมาชิก","ชื่อ","เดือน","วันที่รับ","ชำระรวม","ดอกเบี้ย","เงินต้น","ฝากหุ้น","กู้เพิ่ม","หนี้คงเหลือ","หมายเหตุ"], detail]]);
+      ["บันทึกรายเดือน", ["เลขสมาชิก","ชื่อ","เดือน","วันที่รับ","ชำระรวม","ดอกเบี้ย","เงินต้น","หุ้นประจำ","หุ้นเพิ่ม","กู้เพิ่ม","หนี้คงเหลือ","หมายเหตุ"], detail]]);
   };
   if(!cur) return;
   const x = cur.x;
@@ -2500,7 +2506,8 @@ function drawNW(kind){
     const ev = (i.type==="checkbox" || i.type==="date") ? "change" : "input";
     i.addEventListener(ev, () => {
       const k = i.dataset.nf;
-      const val = k==="relief" ? i.checked : (k==="d"||k==="note") ? i.value.trim() : (i.value==="" ? "" : +(+i.value).toFixed(2));
+      let val = k==="relief" ? i.checked : (k==="d"||k==="note") ? i.value.trim() : (i.value==="" ? "" : +(+i.value).toFixed(2));
+      if(typeof val==="number" && (val < 0 || !isFinite(val))){ i.value = ""; val = ""; toast("ใส่ตัวเลขติดลบไม่ได้"); }
       if(val==="" || val===false) delete S.nf.vals[k]; else S.nf.vals[k] = val;
       if(k==="loan" && kind==="save" && (num(val)>0) !== !!S.nf.loanShown){ S.nf.loanShown = num(val)>0; drawNW(kind); return; }
       refresh();
@@ -2514,15 +2521,15 @@ function drawNW(kind){
   $("nf_clear").onclick = () => { S.nf.vals = {}; S.nf.edit = false; drawNW(kind); };
   $("nf_save").onclick = () => {
     const v = S.nf.vals, isLoan = loanForm();
-    if(isLoan ? !has(v.m) && !num(v.loan) : !has(v.sh)){ alert(isLoan ? "ใส่ยอดชำระก่อน" : "ใส่ยอดฝากหุ้นก่อน"); return; }
+    if(isLoan ? !has(v.m) && !num(v.loan) : !has(v.sh) && !has(v.shx)){ alert(isLoan ? "ใส่ยอดชำระก่อน" : "ใส่ยอดฝากหุ้นก่อน"); return; }
     if(isLoan && has(v.m)){
-      const d = +(num(v.m) - num(v.int) - num(v.pri) - num(v.sh)).toFixed(2);
+      const d = +(num(v.m) - num(v.int) - num(v.pri) - nwSh(v)).toFixed(2);
       if(Math.abs(d) >= 0.005 && !confirm(`ยอดแยกยังไม่เท่ายอดชำระ (ต่าง ${B(d)} บาท)\nบันทึกไว้ก่อนหรือไม่? แก้ทีหลังได้`)) return;
     }
     const b = nwBefore(x, S.nf.p);
     const rec = isLoan ? {...v, bal: has(v.bal) ? v.bal : +(b.debt - num(v.pri) + num(v.loan)).toFixed(2)}
-                       : {d:v.d, sh:v.sh, m:v.sh, note:v.note};
-    const patch = {}; ["d","m","int","pri","sh","loan","bal","note","relief"].forEach(k=>patch[k] = has(rec[k]) ? rec[k] : "");
+                       : {d:v.d, sh:v.sh, shx:v.shx, m:nwSh(v), note:v.note};
+    const patch = {}; ["d","m","int","pri","sh","shx","loan","bal","note","relief"].forEach(k=>patch[k] = has(rec[k]) ? rec[k] : "");
     const p = S.nf.p;
     NW.set(x.no, p, patch); save();
     toast(`บันทึก ${thPer(p)} ของ ${x.name} แล้ว`);
