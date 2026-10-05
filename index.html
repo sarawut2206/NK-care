@@ -520,7 +520,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-58</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-59</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" title="บันทึกขึ้น Google Sheets เดี๋ยวนี้ (ปกติบันทึกให้เองทุกครั้งที่กรอก)">☁ บันทึกขึ้น Google Sheets</button>
@@ -2533,6 +2533,24 @@ function nfSplit(a){
   return rest > 0.005 ? `จ่ายเกินหนี้ ${B(rest)} บาท — ใส่เป็นหุ้นเพิ่มให้แล้ว` : "";
 }
 
+/* ---------- ผู้ฝากหุ้น: บันทึกเป็นช่วงเดือนครั้งเดียว ---------- */
+const nwDate5 = p => { const a = String(p).split("-"); return `${+a[0] - 543}-${a[1]}-05`; };              // วันที่ 5 ของเดือนนั้น (ค.ศ.)
+function rgMonths(from, to){ const o = []; if(!from || !to) return o; for(let n = pNum(from); n <= pNum(to); n++) o.push(pFrom(n)); return o; }
+function rgInfo(x, a, g){
+  const sh = +g.sh || 0, shx = +g.shx || 0, sv = +g.sv || 0, per = r2(sh + shx + sv), ms = rgMonths(g.from, g.to);
+  if(!ms.length || pNum(g.from) > pNum(g.to)) return '<span class="pill red">เลือกช่วงเดือนให้ถูกต้อง (จากเดือน ต้องไม่เกิน ถึงเดือน)</span>';
+  if(!(per > 0)) return '<span class="hint">ใส่ยอดฝากต่อเดือนอย่างน้อยหนึ่งช่อง</span>';
+  const skip = g.over ? 0 : ms.filter(q => NW.row(x.no, q, a.prod)).length, n = ms.length - skip;
+  return `<span class="pill grn">จะบันทึก ${n} เดือน (${thPer(g.from)} – ${thPer(g.to)}) เดือนละ ${B(per)} = รวม <b>${B(r2(per * n))}</b> บาท</span>`
+    + (skip ? ` <span class="hint">ข้าม ${skip} เดือนที่มีบันทึกอยู่แล้ว</span>` : "") + ' <span class="hint">· วันที่รับ = วันที่ 5 ของแต่ละเดือน</span>';
+}
+function rgApply(x, a, g){
+  const sh = +g.sh || 0, shx = +g.shx || 0, sv = +g.sv || 0, ms = rgMonths(g.from, g.to).filter(q => g.over || !NW.row(x.no, q, a.prod));
+  ms.forEach(q => NW.set(x.no, q, a.prod, {d:nwDate5(q), sh:sh || "", shx:shx || "", sv:sv || "", m:r2(sh + shx + sv), src:""}));
+  if(g.def){ const A = nwAccRef(x, a.prod); A.shM = sh; A.shxM = shx; A.svM = sv; }          // จำเป็นยอดประจำของคนนี้ (ใช้ในตารางคาดการณ์)
+  return ms.length;
+}
+
 /* ---------- แก้ตัวเลขในตารางโดยตรง ---------- */
 /* หนี้คงเหลือของแถวที่บันทึกไว้ตั้งแต่งวด fromP เป็นต้นไป คิดต่อเนื่องใหม่ (กู้ทับ = ยอดกู้ใหม่คงที่ ส่วนต่างปรับตามหนี้ก่อนหน้า) */
 function ceChain(a, fromP){
@@ -2708,6 +2726,25 @@ function nwAcctView(x, kind, prod){
   const rf = nf.refi || null;
   const rfOpts = (() => { const o = [], cur = (rf && rf.start) || pFrom(pNum(nf.p) + 1); for(let n = pNum(nf.p); n <= pNum(nf.p) + 12; n++){ const q = pFrom(n); o.push(`<option value="${q}" ${cur===q?"selected":""}>${thPer(q)}</option>`); } return o.join(""); })();
   const rfIn = (k, lbl, val, step) => `<div><label>${lbl}</label><input type="number" step="${step||"0.01"}" min="0" data-rf="${k}" value="${has(val) ? val : ""}"></div>`;
+  // ผู้ฝากหุ้น: ลงทุกเดือนในช่วงที่เลือกครั้งเดียว (ฝากปกติทุกเดือน)
+  const rgHTML = !loanF ? (() => {
+    const cur = nwCurP(); let first = null; for(let n = pNum(P_ANCHOR); n <= pNum(cur); n++){ const q = pFrom(n); if(!NW.row(x.no, q, prod)){ first = q; break; } }
+    const g = (S.nrg && S.nrg.no === x.no) ? S.nrg : (S.nrg = {no:x.no, from:first || P_ANCHOR, to:cur, sh:a.shM || "", shx:has(a.shxM) && a.shxM ? a.shxM : "", sv:a.svM || "", over:false, def:true});
+    const mo = sel => { const o = []; for(let n = pNum(P_ANCHOR); n <= pNum(cur); n++){ const q = pFrom(n); o.push(`<option value="${q}" ${q === sel ? "selected" : ""}>${nwNoLbl(a, q)} · ${thPer(q)}</option>`); } return o.join(""); };
+    const num2 = (k, lbl) => `<div><label>${lbl}</label><input type="number" step="0.01" min="0" data-rg="${k}" value="${has(g[k]) && g[k] !== "" ? g[k] : ""}"></div>`;
+    return `<details class="opn" id="rg_box" open style="margin:10px 0"><summary>📅 บันทึกเป็นช่วงเดือน — ฝากปกติทุกเดือน ลงครั้งเดียวทั้งช่วง</summary>
+      <p class="hint" style="margin:6px 0">เลือกช่วงเดือนแล้วใส่ยอดฝากต่อเดือนครั้งเดียว ระบบลงให้ทุกเดือนในช่วง <b>วันที่รับ = วันที่ 5 ของแต่ละเดือน</b> · เดือนที่มีบันทึกอยู่แล้วจะข้ามให้ (ติ๊กเขียนทับได้) · แก้รายเดือนทีหลังได้ในตาราง</p>
+      <div class="pf">
+        <div><label>จากเดือน</label><select data-rg="from">${mo(g.from)}</select></div>
+        <div><label>ถึงเดือน</label><select data-rg="to">${mo(g.to)}</select></div>
+        ${num2("sh", "ฝากหุ้นประจำ / เดือน")}${num2("shx", "ฝากหุ้นเพิ่ม / เดือน")}${num2("sv", "สะสมหุ้นเพิ่ม (สมัครใจ) / เดือน")}
+      </div>
+      <div class="bar" style="margin-top:6px;flex-wrap:wrap">
+        <label class="rlf"><input type="checkbox" data-rg="over" ${g.over ? "checked" : ""}> เขียนทับเดือนที่มีบันทึกอยู่แล้ว</label>
+        <label class="rlf"><input type="checkbox" data-rg="def" ${g.def ? "checked" : ""}> จำเป็นยอดประจำของคนนี้ (ใช้ในตารางคาดการณ์)</label>
+        <button id="rg_go" style="margin-left:auto">บันทึกทั้งช่วง</button></div>
+      <div class="pfchk" id="rg_info" style="margin-top:6px">${rgInfo(x, a, g)}</div></details>`;
+  })() : "";
   const rfHTML = loanF ? `<details class="opn" id="rf_box" ${rf ? "open" : ""} style="margin-top:10px"><summary>🔁 กู้ทับ — ขอกู้ใหม่ระหว่างสัญญา (ยอดกู้ใหม่ทบยอดเดิม ได้เงินส่วนต่าง)</summary>
     <p class="hint" style="margin:6px 0">ใช้เมื่อผ่อนไปบางงวดแล้วขอกู้ใหม่ทับ: <b>ยอดกู้ใหม่</b> = ยอดรวมที่ต้องผ่อนต่อ (รวมยอดเดิมที่ยังค้าง) · ได้รับเงินเท่ากับส่วนต่าง · เริ่ม <b>งวดที่ 1 ใหม่</b> ในเดือนที่เลือก · งวดเดิมที่ผ่อนไปแล้วเก็บไว้ในตาราง
       · ใส่ยอดชำระของงวดนี้ด้านบนตามปกติ (ถ้าผ่อนงวดนี้) แล้วกรอกส่วนนี้ ก่อนกดบันทึก</p>
@@ -2740,6 +2777,7 @@ function nwAcctView(x, kind, prod){
       <span class="hint">${pl.m ? `คำนวณจากงวดละ ${B(pl.m)} · หุ้นประจำ ${B(pl.sh)}${pl.shx ? ` + เพิ่ม ${B(pl.shx)}` : ""}${pl.sv ? ` + สะสมเพิ่ม ${B(pl.sv)}` : ""} · ดอกเบี้ย 1% ของหนี้ก่อนหน้า` : (loanF ? "ใส่ «งวดละ» ที่ท้ายหน้า (แก้ยอดยกมา) เพื่อให้คำนวณคาดการณ์ได้" : `คำนวณจากหุ้นประจำ ${B(pl.sh)} ต่อเดือน`)}
         — <b>พิมพ์ตัวเลขลงในช่องของตารางได้เลย</b> (Enter / Tab = บันทึก) · แถวสีจาง = ยังไม่ได้บันทึกจริง ตัวเลขจางๆ ในช่องคือยอดคาดการณ์ กด ⚡ เพื่อใส่ทั้งแถว · ไม่นับในยอดและใบสรุปจนกว่าจะบันทึก</span></div>
 
+    ${rgHTML}
     <div class="eyebrow" style="margin-top:16px">${nf.edit ? `แก้ไข${nwNoLbl(a, nf.p)} · ${thPer(nf.p)}` : "บันทึกงวดถัดไป"} — ${NW_ACCN[prod]}</div>
     <div class="pf">
       <div><label>งวด</label><select id="nf_p">${opts}</select><div class="hint" style="margin-top:3px">โอน ${nwWinLbl(nf.p)}</div></div>
@@ -2964,6 +3002,16 @@ function drawNW(kind){
   if($("ac_start")) $("ac_start").onchange = e => { const A = nwAccRef(x, a.prod), rest = (A.starts || []).slice(1);
     A.starts = e.target.value ? [e.target.value].concat(rest) : rest; save(); drawNW(kind);
     toast(e.target.value ? `งวดที่ 1 ของ${NW_ACCN[a.prod]} = ${thPer(e.target.value)}` : "ยกเลิกการกำหนดงวดที่ 1 — นับตามงวดโอน"); };
+  // ---- บันทึกเป็นช่วงเดือน (ผู้ฝากหุ้น) ----
+  const rgState = () => (S.nrg && S.nrg.no === x.no) ? S.nrg : (S.nrg = {no:x.no});
+  el.querySelectorAll("[data-rg]").forEach(i => i.addEventListener(i.tagName === "SELECT" || i.type === "checkbox" ? "change" : "input", () => {
+    const g = rgState(), k = i.dataset.rg; g[k] = i.type === "checkbox" ? i.checked : i.tagName === "SELECT" ? i.value : (i.value === "" ? "" : +i.value);
+    const inf = $("rg_info"); if(inf) inf.innerHTML = rgInfo(x, a, g); }));
+  if($("rg_go")) $("rg_go").onclick = () => { const g = rgState(), ms = rgMonths(g.from, g.to).filter(q => g.over || !NW.row(x.no, q, a.prod));
+    if(!ms.length || pNum(g.from) > pNum(g.to)){ alert("ไม่มีเดือนที่จะบันทึก — เลือกช่วงเดือนใหม่ หรือเดือนในช่วงมีบันทึกอยู่แล้วทั้งหมด (ติ๊กเขียนทับถ้าต้องการแทนที่)"); return; }
+    if(!(((+g.sh || 0) + (+g.shx || 0) + (+g.sv || 0)) > 0)){ alert("ใส่ยอดฝากต่อเดือนอย่างน้อยหนึ่งช่อง"); return; }
+    if(!confirm(`บันทึก ${x.name}: ${ms.length} เดือน (${thPer(ms[0])} – ${thPer(ms[ms.length - 1])})\nเดือนละ ${B((+g.sh || 0) + (+g.shx || 0) + (+g.sv || 0))} บาท · วันที่รับ = วันที่ 5 ของแต่ละเดือน\n\nบันทึกหรือไม่?`)) return;
+    const n = rgApply(x, a, g); S.nf = null; S.nrg = null; save(); drawNW(kind); toast(`บันทึกเป็นช่วงแล้ว ${n} เดือน — วันที่รับ = วันที่ 5 ของแต่ละเดือน`); };
   el.querySelectorAll("[data-rf]").forEach(i => i.addEventListener(i.tagName === "SELECT" ? "change" : "input", () => {
     if(!S.nf.refi) S.nf.refi = {};
     const k = i.dataset.rf;
