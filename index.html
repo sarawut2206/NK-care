@@ -513,10 +513,10 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-50</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-51</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
-    <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
+    <button class="ghost sm" id="saveNow" title="บันทึกขึ้น Google Sheets เดี๋ยวนี้ (ปกติบันทึกให้เองทุกครั้งที่กรอก)">☁ บันทึกขึ้น Google Sheets</button>
     <button class="ghost sm" id="exp">ส่งออก JSON</button>
     <button class="ghost sm" id="csv">ส่งออก CSV</button>
     <button class="ghost sm" id="impBtn">นำเข้า</button>
@@ -7133,6 +7133,18 @@ function connectRemote(){
   location.reload();
 }
 const EMPTY = {members:[], tx:[], acct:{}, anames:{}, contracts:[], wd:[], profile:{}};
+/* ต่อ Google แล้ว: Sheets ว่าง แต่เบราว์เซอร์เครื่องนี้ยังจำข้อมูลไว้ (ที่กรอกตอนยังไม่ต่อ) → ถามว่าจะส่งขึ้น Sheets เลยไหม
+   ถ้า Sheets มีข้อมูลอยู่แล้ว ไม่แตะ ไม่ทับ */
+function offerLocalPush(r){
+  try{
+    if(S._loadFailed || dataCount()) return;
+    const j = lsLoad(), n = j ? Math.max((j.members||[]).length, (j.nw && j.nw.people ? j.nw.people.length : 0)) : 0;
+    if(!n) return;
+    if(!confirm(`พบข้อมูลที่จำไว้ในเบราว์เซอร์เครื่องนี้ ${n} คน แต่ Google Sheets ยังว่างอยู่\n\nส่งข้อมูลนี้ขึ้น Google Sheets เลยไหม?\n(ถ้ากดยกเลิก ข้อมูลยังอยู่ในเครื่องนี้ ไม่หาย)`)) return;
+    applyBackup(j); all();
+    Promise.resolve(saveNow()).then(ok => { if(ok) return verifyNW(); });
+  }catch(e){}
+}
 
 async function boot(){
   DB = {...EMPTY}; S = freshS();          // มีของใช้เสมอ ต่อให้โหลดพัง ปุ่มก็ยังกดได้
@@ -7151,7 +7163,7 @@ async function boot(){
       setStatus(dataCount()
         ? "โหลดจาก Google Sheets แล้ว · " + dataCount() + " สมาชิก" + (r.user ? " · " + r.user : "")
         : "ต่อ Sheets ได้ แต่ยังไม่มีข้อมูล — เริ่มจากไฟล์ใบสรุปที่แท็บ ทะเบียนผู้กู้", dataCount() ? "ok" : "");
-      if($("saveNow")) $("saveNow").style.display = "";
+      offerLocalPush(r);
     }catch(e){
       const msg = (e && (e.message || e.details)) || String(e) || "ไม่ทราบสาเหตุ";
       S._loadFailed = true;               // อ่านข้อมูลเดิมไม่ได้ — ห้ามบันทึกทับ ไม่งั้นข้อมูลใน Sheets หาย
@@ -7200,7 +7212,14 @@ $("clr").onclick = () => {
 };
 
 if($("saveNow")) $("saveNow").onclick = async () => {
-  if(!inGAS && !REMOTE){ alert("ยังไม่ได้ต่อกับ Google Sheets — ต้องเปิดจากลิงก์ Apps Script (ลงท้าย /exec)"); return; }
+  if(!inGAS && !REMOTE){
+    // ยังไม่ต่อ Google — ข้อมูลอยู่แค่ในเครื่องนี้ พาไปต่อ
+    if(confirm("หน้านี้ยังไม่ได้ต่อกับ Google Sheets — ข้อมูลจำไว้แค่ในเบราว์เซอร์เครื่องนี้\n\n"
+      + "ตกลง = ต่อ Google Sheets จากหน้านี้ด้วยรหัสเชื่อมต่อ (REMOTE_TOKEN) ต่อแล้วระบบจะถามว่าจะส่งข้อมูลที่จำไว้ขึ้น Sheets เลยไหม\n"
+      + "ยกเลิก = ไปเปิดโปรแกรมจากลิงก์ Apps Script (/exec) แทน")){ connectRemote(); }
+    else if(GAS_URL){ window.open(GAS_URL, "_blank", "noopener"); }
+    return;
+  }
   const b = $("saveNow"); b.disabled = true;
   const ok = await saveNow();
   if(ok && NW.on()) await verifyNW();
