@@ -139,6 +139,8 @@
 4. เมนูเดียวกัน → **ตั้งค่ารหัสเชื่อมต่อ** และ **ตั้งค่ากุญแจ AI**
 5. **Deploy → New deployment → Web app** · Execute as: **Me** · Who has access: **Anyone**
 6. แก้ `index.html` แล้ว push ขึ้น GitHub — ลิงก์ `/exec` ได้ของใหม่เองภายในไม่กี่นาที
+   - ⚠ Apps Script ตัดทุกอย่างที่หน้าตาเหมือน comment ใน `<script>` ทิ้ง แม้จะอยู่ในข้อความ
+     ห้ามเขียน `/*` หรือ `//` ในข้อความ (ใช้ `image/*`, `https:\/\/` แทน) — ตรวจก่อน push ด้วย `node tools/gas_strip_check.js`
 7. ทุกครั้งที่แก้ `Code.gs` ต้อง **Deploy → Manage deployments → ✏️ → New version → Deploy**
 
 ### สองทางที่เปิดโปรแกรมได้

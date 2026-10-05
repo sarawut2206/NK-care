@@ -504,7 +504,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-44</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-45</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
@@ -2891,7 +2891,7 @@ function niHTML(x){
   const I = S.nimp && S.nimp.no===x.no ? S.nimp : null;
   let body = `<div class="bar" style="margin:8px 0">
       <button class="ghost sm" id="ni_img">📷 เลือกรูปตารางผ่อน (ให้ AI อ่าน)</button>
-      <input type="file" id="ni_file" accept="image/*,application/pdf" multiple hidden>
+      <input type="file" id="ni_file" accept="image/\u002a,application/pdf" multiple hidden>
       <span class="hint">เลือกได้หลายรูปพร้อมกัน ถ้าตารางยาวหลายหน้า</span><span class="hint" id="ni_msg"></span></div>
     <details><summary class="hint" style="cursor:pointer">หรือวางตารางที่คัดลอกมา (Excel / เว็บ)</summary>
       <textarea id="ni_txt" rows="5" style="width:100%;margin-top:6px;font-family:var(--mono,monospace);font-size:12px"
@@ -3562,7 +3562,7 @@ function attachPanel(cid){
     const f = e.target.files[0]; if(!f) return;
     if(typeof pdfjsLib === "undefined"){ $("at_m").className="msg bad";
       $("at_m").textContent="โหลดตัวอ่าน PDF ไม่ได้ — ต้องต่อเน็ตครั้งแรก"; return; }
-    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https:\/\/cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
     $("at_m").className="msg"; $("at_m").textContent = "กำลังอ่าน " + f.name + " …";
     try{
       const txt = await pdfText(await f.arrayBuffer());
@@ -4045,7 +4045,7 @@ function drawT2(){
   <div class="card" style="border-left:4px solid var(--brand2)">
     <div class="eyebrow">ให้ AI อ่านให้ — สำหรับรูปภาพ หรือ PDF ที่อ่านเองไม่ออก</div>
     <div class="bar">
-      <input type="file" id="aiin" accept="image/*,application/pdf" multiple hidden>
+      <input type="file" id="aiin" accept="image/\u002a,application/pdf" multiple hidden>
       <button id="aibtn">เลือกรูปภาพ / PDF ให้ AI อ่าน</button>
       <input id="aihint" placeholder="บอก AI เพิ่มเติม (ไม่บังคับ) เช่น «อ่านเฉพาะเดือน ก.ค.»" style="max-width:340px">
       <span class="msg" id="aimsg"></span>
@@ -4378,7 +4378,7 @@ function drawT2(){
     const fs = [...e.target.files]; if(!fs.length) return;
     if(typeof pdfjsLib === "undefined"){ $("pdfmsg").className="msg bad";
       $("pdfmsg").textContent="โหลดตัวอ่าน PDF ไม่สำเร็จ (ไม่มีเน็ต?) — ใช้วิธีวางข้อความแทนได้"; return; }
-    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https:\/\/cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
     let add=0, dup=0, files=0, unk=new Set();
     const seen = new Set(S.tx.map(txKey));
     for(const f of fs){
@@ -6679,7 +6679,7 @@ const inGAS = typeof google !== "undefined" && google.script && google.script.ru
 /* ★ ที่อยู่ Apps Script ของกองทุน — ฝังไว้ในโปรแกรม จะได้ไม่ต้องพิมพ์ URL เองทุกเครื่อง
       แก้ตรงนี้ที่เดียวเมื่อ Deploy ใหม่แล้วได้ลิงก์ใหม่
       หมายเหตุ: ใส่แค่ «ที่อยู่» เท่านั้น รหัสเชื่อมต่อไม่ฝังไว้ เพราะไฟล์นี้เปิดสาธารณะบน GitHub */
-const GAS_URL = "https://script.google.com/macros/s/AKfycbxfdQ1Z9Y2KDxfMgMhKE73UiucnGgNyFG5RflG5SgAXnyFj0gfL11NaWPOfAlLHh2yPwg/exec";
+const GAS_URL = "https:\/\/script.google.com/macros/s/AKfycbxfdQ1Z9Y2KDxfMgMhKE73UiucnGgNyFG5RflG5SgAXnyFj0gfL11NaWPOfAlLHh2yPwg/exec";
 const REMOTE_KEY = "kbk_remote_v1";
 function remoteConf(){ try{ const t = localStorage.getItem(REMOTE_KEY); return t ? JSON.parse(t) : null; }catch(e){ return null; } }
 let REMOTE = !inGAS ? remoteConf() : null;
