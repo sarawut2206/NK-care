@@ -312,39 +312,65 @@ function buildSheets(){
     Object.keys(pp).sort().map(function(k){ var a = pp[k];
       return [perLabel_(k), a.n, r2_(a.m), r2_(a.int), r2_(a.pri), r2_(a.shB), r2_(a.shE), r2_(a.fee)]; }));
 
-  // ---- เว็บใหม่: ทะเบียนผู้กู้ / ทะเบียนผู้ฝาก ----
+  // ---- เว็บใหม่: ทะเบียนผู้กู้ / ทะเบียนผู้ฝาก — แยกสินเชื่อสามัญ / ดูแลกัน / ฝากหุ้นอื่น แล้วรวมเป็นยอดของคนเดียวกัน ----
   var nw = st.nw;
   if(nw && nw.people && nw.people.length){
-    var byNo = {};
-    (nw.rows || []).forEach(function(r){ (byNo[r.no] = byNo[r.no] || []).push(r); });
-    var reg = nw.people.filter(function(x){ return !x.out; }).map(function(x){   // ไม่รวมคนที่ลาออก
-      var rs = (byNo[x.no] || []).sort(function(a, b){ return a.p < b.p ? -1 : 1; });
-      var debt = n_(x.debt0), sh = n_(x.share0), paid = 0, it = 0, dep = 0;
-      rs.forEach(function(r){
-        debt = has_(r.bal) ? +r.bal : r2_(debt - n_(r.pri) + n_(r.loan));
-        var s2 = n_(r.sh) + n_(r.shx);                       // หุ้นประจำ + หุ้นเพิ่ม
-        sh = r2_(sh + s2); paid += n_(r.m); it += n_(r.int); dep += s2; });
-      return {x:x, rs:rs, debt:r2_(debt), sh:sh, paid:r2_(paid), it:r2_(it), dep:r2_(dep),
-              last: rs.length ? perLabel_(rs[rs.length - 1].p) : ""};
+    var PN = {sam:"สินเชื่อสามัญ", dk:"สินเชื่อดูแลกัน", free:"ฝากหุ้น (ไม่ผูกสัญญา)"}, KS = ["sam", "dk", "free"];
+    var accOf = function(x, k){                       // รองรับข้อมูลรุ่นเก่าที่ยังไม่แยกสัญญา
+      if(x.acc){
+        var A = x.acc[k] || {}, ac = x.acc, used = n_((ac.sam || {}).share0) + n_((ac.dk || {}).share0);
+        return {debt0: k === "free" ? 0 : n_(A.debt0), share0: k === "free" ? Math.max(0, r2_(n_(x.share0) - used)) : n_(A.share0),
+                inst: k === "free" ? 0 : n_(A.inst), shM: n_(A.shM)};
+      }
+      var loan = n_(x.debt0) > 0;
+      if(k === "sam")  return {debt0: loan ? n_(x.debt0) : 0, share0: loan ? n_(x.share0) : 0, inst: n_(x.inst), shM: loan ? n_(x.shM) : 0};
+      if(k === "free") return {debt0: 0, share0: loan ? 0 : n_(x.share0), inst: 0, shM: loan ? 0 : n_(x.shM)};
+      return {debt0: 0, share0: 0, inst: 0, shM: 0};
+    };
+    var prodOf = function(r, x){ return r.prod || (((x && n_(x.debtF || x.debt0) > 0) || n_(r.int) || n_(r.pri) || n_(r.loan)) ? "sam" : "free"); };
+    var people = nw.people.filter(function(x){ return !x.out; }), pmap = {}, byNo = {};       // ไม่รวมคนที่ลาออก
+    people.forEach(function(x){ pmap[x.no] = x; });
+    (nw.rows || []).forEach(function(r){ if(pmap[r.no]) (byNo[r.no] = byNo[r.no] || []).push(r); });
+    var reg = people.map(function(x){
+      var rs = (byNo[x.no] || []).slice().sort(function(a, b){ return a.p < b.p ? -1 : a.p > b.p ? 1 : 0; });
+      var o = {x:x, rs:rs, by:{}, debt:0, sh:0, paid:0, it:0, dep:0, shM:0, last: rs.length ? perLabel_(rs[rs.length - 1].p) : ""};
+      KS.forEach(function(k){
+        var a = accOf(x, k), debt = a.debt0, sh = a.share0, paid = 0, it = 0, dep = 0;
+        rs.filter(function(r){ return prodOf(r, x) === k; }).forEach(function(r){
+          debt = has_(r.bal) ? +r.bal : r2_(debt - n_(r.pri) + n_(r.loan));
+          var s2 = n_(r.sh) + n_(r.shx);                      // หุ้นประจำ + หุ้นเพิ่ม
+          sh = r2_(sh + s2); paid += n_(r.m); it += n_(r.int); dep += s2; });
+        o.by[k] = {a:a, debt:r2_(debt), sh:r2_(sh), paid:r2_(paid), it:r2_(it), dep:r2_(dep)};
+        o.debt += debt; o.sh += sh; o.paid += paid; o.it += it; o.dep += dep; o.shM += a.shM; });
+      ["debt", "sh", "paid", "it", "dep", "shM"].forEach(function(k){ o[k] = r2_(o[k]); });
+      return o;
     });
+
+    // ทะเบียนผู้กู้ — หนึ่งแถวต่อสัญญา (สามัญ / ดูแลกัน)
+    var loanRows = [];
+    reg.forEach(function(o){ ["sam", "dk"].forEach(function(k){ var b = o.by[k];
+      if(b.debt > 0.005) loanRows.push([o.x.no, o.x.name, PN[k], b.a.debt0, b.a.inst, b.paid, b.it, b.debt, b.a.share0, b.sh, o.last]); }); });
     sheetOut_("ทะเบียนผู้กู้",
-      ["เลขสมาชิก","ชื่อ","หนี้ยกมา ธ.ค.68","งวดละ","ชำระรวมตั้งแต่ ม.ค.69","ดอกเบี้ย","หนี้คงเหลือ","หุ้นยกมา","หุ้นสะสม","บันทึกล่าสุด"],
-      reg.filter(function(a){ return a.debt > 0.005; }).map(function(a){
-        return [a.x.no, a.x.name, n_(a.x.debt0), n_(a.x.inst), a.paid, a.it, a.debt, n_(a.x.share0), a.sh, a.last]; }));
+      ["เลขสมาชิก","ชื่อ","ประเภทสินเชื่อ","หนี้ยกมา ธ.ค.68","งวดละ","ชำระรวมตั้งแต่ ม.ค.69","ดอกเบี้ย","หนี้คงเหลือ","หุ้นยกมา (ประเภทนี้)","หุ้นสะสม (ประเภทนี้)","บันทึกล่าสุด"], loanRows);
     sheetOut_("ทะเบียนผู้ฝาก",
-      ["เลขสมาชิก","ชื่อ","หุ้นยกมา ธ.ค.68","หุ้นประจำเดือนละ","ฝากตั้งแต่ ม.ค.69","หุ้นสะสม","บันทึกล่าสุด"],
-      reg.filter(function(a){ return a.debt <= 0.005; }).map(function(a){
-        return [a.x.no, a.x.name, n_(a.x.share0), n_(a.x.shM), a.dep, a.sh, a.last]; }));
+      ["เลขสมาชิก","ชื่อ","หุ้นยกมา ธ.ค.68","หุ้นประจำเดือนละ","ฝากตั้งแต่ ม.ค.69","หุ้นสะสมรวม","บันทึกล่าสุด"],
+      reg.filter(function(o){ return o.debt <= 0.005; }).map(function(o){
+        return [o.x.no, o.x.name, n_(o.x.share0), o.shM, o.dep, o.sh, o.last]; }));
+    // สรุปรายคน — ยอดรวมทุกสัญญา ใช้คิดเงินคืนดอกเบี้ยและปันผลสิ้นปี
+    sheetOut_("สรุปรายคน (เว็บใหม่)",
+      ["เลขสมาชิก","ชื่อ","หนี้คงเหลือรวม","หนี้สามัญ","หนี้ดูแลกัน","หุ้นสะสมรวม","หุ้นสามัญ","หุ้นดูแลกัน","หุ้นอื่น (ไม่ผูกสัญญา)",
+       "ชำระรวมตั้งแต่ ม.ค.69","ดอกเบี้ยรวมตั้งแต่ ม.ค.69","บันทึกล่าสุด"],
+      reg.map(function(o){ return [o.x.no, o.x.name, o.debt, o.by.sam.debt, o.by.dk.debt, o.sh, o.by.sam.sh, o.by.dk.sh, o.by.free.sh, o.paid, o.it, o.last]; }));
     var allRows = [];
-    reg.forEach(function(a){ a.rs.forEach(function(r){
-      allRows.push([r.p, a.x.no, a.x.name, r.d || "", n_(r.m), n_(r.int), n_(r.pri), n_(r.sh), n_(r.shx),
+    reg.forEach(function(o){ o.rs.forEach(function(r){
+      allRows.push([r.p, o.x.no, o.x.name, PN[prodOf(r, o.x)], r.d || "", n_(r.m), n_(r.int), n_(r.pri), n_(r.sh), n_(r.shx),
                     n_(r.loan), has_(r.bal) ? +r.bal : "", r.note || ""]); }); });
-    allRows.sort(function(a, b){ return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : (a[1] < b[1] ? -1 : 1); });
+    allRows.sort(function(a, b){ return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : (a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0); });
     // งวดที่ 1 = พ.ค.68 · โอนได้ 25 ของเดือนก่อน – 5 ของเดือนนั้น
     allRows.forEach(function(r){ var a = String(r[0]).split("-");
       r.unshift((+a[0])*12 + (+a[1]) - (2568*12 + 5) + 1); r[1] = perLabel_(r[1]); });
     sheetOut_("บันทึกรายเดือน (เว็บใหม่)",
-      ["งวดที่","เดือน","เลขสมาชิก","ชื่อ","วันที่รับ","ชำระรวม","ดอกเบี้ย","เงินต้น","หุ้นประจำ","หุ้นเพิ่ม","กู้เพิ่ม","หนี้คงเหลือ","หมายเหตุ"], allRows);
+      ["งวดที่","เดือน","เลขสมาชิก","ชื่อ","ประเภท","วันที่รับ","ชำระรวม","ดอกเบี้ย","เงินต้น","หุ้นประจำ","หุ้นเพิ่ม","กู้เพิ่ม","หนี้คงเหลือ","หมายเหตุ"], allRows);
   }
 
   return "สร้างชีทอ่านง่ายเรียบร้อย";
