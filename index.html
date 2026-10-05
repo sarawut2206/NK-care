@@ -387,6 +387,7 @@ details.opn[open] summary{margin-bottom:9px}
 .toast.on{opacity:1}
 
 /* ---------- เว็บใหม่ ---------- */
+.pe > *{min-width:0}                 /* ตารางกว้างเลื่อนในกรอบ ไม่ดันทั้งหน้า */
 .nwr{color:#111827;font-size:13px}
 .nwr .r-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;border-bottom:1px solid #e5e7eb;padding-bottom:10px;margin-bottom:10px}
 .nwr .org{font-weight:800;font-size:14px}
@@ -486,7 +487,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-42</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-43</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
@@ -2233,8 +2234,9 @@ const nwCurP = () => nwPOfDate(nwToday());                      // งวดท�
 const nwDays = (a, b) => Math.round((new Date(b+"T00:00:00") - new Date(a+"T00:00:00")) / 864e5);
 const NW = {
   on(){ return !!(S.nw && Array.isArray(S.nw.people) && S.nw.people.length); },
-  people(){ return (S.nw && S.nw.people) || []; },
-  person(no){ return NW.people().find(x=>x.no===no) || null; },
+  everyone(){ return (S.nw && S.nw.people) || []; },
+  people(){ return NW.everyone().filter(x=>!x.out); },              // ไม่รวมคนที่ลาออก
+  person(no){ return NW.everyone().find(x=>x.no===no) || null; },
   all(){ if(!S.nw) S.nw = {people:[], rows:[]}; if(!Array.isArray(S.nw.rows)) S.nw.rows = []; return S.nw.rows; },
   rows(no){ return NW.all().filter(r=>r.no===no).sort(LG.byP); },
   row(no,p){ return NW.all().find(r=>r.no===no && r.p===p) || null; },
@@ -2247,7 +2249,8 @@ const NW = {
 };
 const nwStep = (debt, r) => has(r.bal) ? +r.bal : +(debt - num(r.pri) + num(r.loan)).toFixed(2);
 const nwSh = r => +(num(r.sh) + num(r.shx)).toFixed(2);          // หุ้นประจำ + หุ้นเพิ่ม
-const nwOk = r => !has(r.m) || Math.abs(num(r.m) - num(r.int) - num(r.pri) - nwSh(r)) < 0.005;
+const NW_TOL = 0.011;                                              // ต่างไม่เกิน 1 สตางค์ = ปัดเศษ ถือว่าตรง
+const nwOk = r => !has(r.m) || Math.abs(num(r.m) - num(r.int) - num(r.pri) - nwSh(r)) < NW_TOL;
 /* ยอด ณ ก่อนงวด p */
 function nwBefore(x, p){
   let debt = +x.debt0||0, shares = +x.share0||0;
@@ -2286,11 +2289,13 @@ function nwImport(file, html){
     + `เป็นยอด ณ สิ้น ธ.ค.68 แล้วเริ่มบันทึกต่อตั้งแต่ ม.ค.69\n\n`
     + (kept ? `รายการที่บันทึกไว้แล้ว ${kept} แถว จะยังอยู่ครบ — เปลี่ยนเฉพาะยอดยกมา\n\n` : "")
     + "เริ่มทะเบียนจากไฟล์นี้หรือไม่?")) return;
-  const prev = {}; NW.people().forEach(x=>prev[x.no] = x);
+  const prev = {}; NW.everyone().forEach(x=>prev[x.no] = x);
   S.nw = {asOf:"2568-12", file, at:new Date().toISOString().slice(0,10),
     people: list.map(r=>({no:r.no, name:(prev[r.no] && prev[r.no].name) || r.name,
       share0:+r.share.toFixed(2), debt0:+r.debt.toFixed(2), inst:r.inst, shM:r.shM,
-      hist:(r.hist||[]).map(h=>({ym:h.ym, int:h.int, sh:h.sh, pay:h.pay, debt:h.debt}))})).sort(byNo),
+      hist:(r.hist||[]).map(h=>({ym:h.ym, int:h.int, sh:h.sh, pay:h.pay, debt:h.debt})),
+      ...(prev[r.no] && prev[r.no].out ? {out:prev[r.no].out} : {}),
+      ...(prev[r.no] && prev[r.no].shxM ? {shxM:prev[r.no].shxM, shM:prev[r.no].shM} : {})})).sort(byNo),
     rows: NW.on() ? NW.all() : []};
   S.nsel = {}; S.nf = null;
   all();
@@ -2323,7 +2328,7 @@ function nfCheck(x, kind){
     return out.join(" ");
   }
   const parts = +(num(v.int) + num(v.pri) + nwSh(v)).toFixed(2), d = +(num(v.m) - parts).toFixed(2);
-  if(has(v.m)) out.push(Math.abs(d) < 0.005 ? `<span class="pill grn">✓ ดอกเบี้ย + เงินต้น + หุ้นประจำ${num(v.shx)?" + หุ้นเพิ่ม":""} = ${B(parts)} ตรงกับยอดชำระ</span>`
+  if(has(v.m)) out.push(Math.abs(d) < NW_TOL ? `<span class="pill grn">✓ ดอกเบี้ย + เงินต้น + หุ้นประจำ${num(v.shx)?" + หุ้นเพิ่ม":""} = ${B(parts)} ${Math.abs(d) < 0.005 ? "ตรงกับยอดชำระ" : "ต่างจากยอดชำระ 1 สตางค์ (ปัดเศษ)"}</span>`
     : `<span class="pill red">${d>0?"แยกยังขาด":"แยกเกินมา"} ${B(Math.abs(d))}</span>`);
   const exp = +(b.debt - num(v.pri) + num(v.loan)).toFixed(2);
   out.push(`<span class="hint">หนี้ก่อนหน้า ${B(b.debt)} − เงินต้น ${B(num(v.pri))}${num(v.loan)?` + กู้เพิ่ม ${B(num(v.loan))}`:""} = <b>${B(exp)}</b></span>`);
@@ -2337,7 +2342,7 @@ function nfSplit(x){
   let rest = m;
   const int = Math.min(rest, +(b.debt * RATE).toFixed(2)); rest = +(rest - int).toFixed(2);
   const sh  = Math.min(rest, has(v.sh) ? num(v.sh) : (+x.shM||0)); rest = +(rest - sh).toFixed(2);
-  const shx = Math.min(rest, num(v.shx)); rest = +(rest - shx).toFixed(2);
+  const shx = Math.min(rest, has(v.shx) ? num(v.shx) : (+x.shxM||0)); rest = +(rest - shx).toFixed(2);
   const pri = Math.min(rest, b.debt); rest = +(rest - pri).toFixed(2);
   Object.assign(v, {m, int, sh, pri:+pri.toFixed(2), bal:+(b.debt - pri + num(v.loan)).toFixed(2)});
   const ex = +(shx + rest).toFixed(2); if(ex > 0.005) v.shx = ex; else delete v.shx;
@@ -2392,7 +2397,7 @@ function nwRegisterTable(x, kind, editable){
       <td class="${editable?"amt":"n"}">${B(num(r.sh))}</td><td class="${editable?"amt":"n"}">${num(r.shx)?B(num(r.shx)):"—"}</td>
       ${loan ? `<td class="${editable?"amt":"n"}">${B(debt)}${num(r.loan)?`<div class="hint">กู้เพิ่ม ${B(num(r.loan))}</div>`:""}</td>` : ""}
       <td class="${editable?"amt":"n"}">${B(shares)}</td>
-      <td class="l">${esc(r.note||"")}${r.relief?" (ผ่อนผัน)":""}${ok||editable?"":" (ยอดแยกไม่ตรง)"}</td>
+      <td class="l">${esc(r.note||"")}${r.relief?" (ผ่อนผัน)":""}${r.src==="plan"?(editable?' <span class="pill" style="font-size:10px" title="เติมจากตารางผ่อน — กดแถวเพื่อแก้/ยืนยัน">ตามตารางผ่อน</span>':" (ตามตารางผ่อน)"):""}${ok||editable?"":" (ยอดแยกไม่ตรง)"}</td>
       ${editable?`<td style="text-align:center">${ok?'<span class="pill grn" title="ดอกเบี้ย + เงินต้น + หุ้น = ยอดชำระ">✓</span>'
         :`<span class="pill red" title="ยอดแยกไม่เท่ายอดชำระ">ต่าง ${B(+(num(r.m) - num(r.int) - num(r.pri) - nwSh(r)).toFixed(2))}</span>`}</td>
         <td><button class="del" data-nd="${esc(r.p)}" title="ลบ">×</button></td>`:""}</tr>`; }).join("")}
@@ -2412,7 +2417,8 @@ function nwPanel(x, kind){
       ${st.missed && kind==="loan" ? `<span class="pill red">ค้าง ${st.missed} เดือน</span>` : ""}
       ${tel?`<span class="hint">โทร ${esc(tel)}</span>`:""}
       <button class="ghost sm" id="nw_p1" style="margin-left:auto">พิมพ์ทะเบียนคนนี้</button>
-      <button class="ghost sm" id="nw_p2" title="ตามรูปแบบใบสรุปเดิม ช่วงและอัตราตั้งที่แท็บ ใบสรุป + ปันผล">ใบสรุป + ปันผล</button></div>
+      <button class="ghost sm" id="nw_p2" title="ตามรูปแบบใบสรุปเดิม ช่วงและอัตราตั้งที่แท็บ ใบสรุป + ปันผล">ใบสรุป + ปันผล</button>
+      <button class="ghost sm" id="nw_out" style="color:var(--danger)" title="ลบออกจากทะเบียน — กู้คืนได้">ลาออก / ลบสมาชิก</button></div>
     <div class="stats" style="margin-bottom:12px">
       ${kind==="loan" ? `<div class="stat"><div class="k">หนี้คงเหลือ</div><div class="v">${B(st.debt)}</div><div class="hint">ยกมา ${B(+x.debt0||0)}</div></div>
         <div class="stat"><div class="k">งวดละ</div><div class="v">${x.inst?B(x.inst):"—"}</div></div>` : ""}
@@ -2421,6 +2427,8 @@ function nwPanel(x, kind){
       <div class="stat"><div class="k">บันทึกล่าสุด</div><div class="v" style="font-size:18px">${st.last?thPer(st.last):"ยังไม่มี"}</div></div>
     </div>
 
+    <details class="opn" id="ni_box" ${(S.nimp && S.nimp.no===x.no) || S.nimpOpen ? "open" : ""} style="margin-bottom:12px">
+      <summary>📷 นำเข้าตารางผ่อน — เติมงวดที่ยังว่างจนถึงงวดปัจจุบัน</summary>${niHTML(x)}</details>
     <div class="tbl" style="max-height:440px">${nwRegisterTable(x, kind, true)}</div>
 
     <div class="eyebrow" style="margin-top:16px">${nf.edit ? `แก้ไขงวดที่ ${nwRound(nf.p)} · ${thPer(nf.p)}` : "บันทึกงวดถัดไป"}</div>
@@ -2447,6 +2455,7 @@ function nwPanel(x, kind){
         <div><label>หนี้ยกมา</label><input type="number" step="0.01" data-no="debt0" value="${+x.debt0||0}"></div>
         <div><label>งวดละ</label><input type="number" step="0.01" data-no="inst" value="${+x.inst||""}"></div>
         <div><label>หุ้นประจำเดือนละ</label><input type="number" step="0.01" data-no="shM" value="${+x.shM||""}"></div>
+        <div><label>หุ้นเพิ่มเดือนละ</label><input type="number" step="0.01" data-no="shxM" value="${+x.shxM||""}"></div>
         <div style="grid-column:span 2"><label>ชื่อ</label><input data-no="name" value="${esc(x.name)}"></div>
       </div></details>
   </div>`;
@@ -2542,6 +2551,7 @@ function drawNW(kind){
           <span class="sub">${a.st.last ? "ล่าสุด " + thPer(a.st.last) : "ยังไม่ได้บันทึก"}${a.st.missed && kind==="loan" ? ` · <b style="color:var(--red)">ค้าง ${a.st.missed} เดือน</b>` : ""}</span></button>`).join("")
           || '<p class="hint" style="padding:10px 4px">ไม่พบ</p>'}
       </div>
+      ${nwOutHTML()}
     </div>
     <div class="pe-r">${cur ? nwPanel(cur.x, kind) : `<div class="card"><p class="hint">ยังไม่มีคนใน${T}</p></div>`}</div>
   </div></div>
@@ -2565,8 +2575,13 @@ function drawNW(kind){
     csvOut(`kbk-${T}.csv`, [[T, head, rows],
       ["บันทึกรายเดือน", ["เลขสมาชิก","ชื่อ","งวดที่","เดือน","วันที่รับ","ชำระรวม","ดอกเบี้ย","เงินต้น","หุ้นประจำ","หุ้นเพิ่ม","กู้เพิ่ม","หนี้คงเหลือ","หมายเหตุ"], detail]]);
   };
+  bindNwOut(kind);
   if(!cur) return;
   const x = cur.x;
+  if(S.nimpOpen && !(S.nimp && S.nimp.no===x.no)) S.nimpOpen = false;
+  bindNi(x, kind);
+  $("ni_box").ontoggle = e => { S.nimpOpen = e.target.open; };
+  $("nw_out").onclick = () => nwResign(x, kind);
   const loanForm = () => kind==="loan" || num(S.nf.vals.loan) > 0;
   $("nw_p1").onclick = () => nwPrint(nwDocHTML(x, kind));
   $("nw_p2").onclick = () => nwPrint(nwSumDoc(x, nwDivCfg()));
@@ -2588,19 +2603,19 @@ function drawNW(kind){
   $("nf_p").onchange = e => { S.nf.p = e.target.value; nfLoad(); drawNW(kind); };
   if($("nf_split")) $("nf_split").onclick = () => { const w = nfSplit(x); if(w && !/^จ่ายเกิน/.test(w)){ alert(w); return; }
     drawNW(kind); if(w) $("nf_msg").textContent = w; };
-  if($("nf_norm")) $("nf_norm").onclick = () => { S.nf.vals.sh = +x.shM; drawNW(kind); };
+  if($("nf_norm")) $("nf_norm").onclick = () => { S.nf.vals.sh = +x.shM; if(+x.shxM) S.nf.vals.shx = +x.shxM; drawNW(kind); };
   $("nf_clear").onclick = () => { S.nf.vals = {}; S.nf.edit = false; drawNW(kind); };
   $("nf_save").onclick = () => {
     const v = S.nf.vals, isLoan = loanForm();
     if(isLoan ? !has(v.m) && !num(v.loan) : !has(v.sh) && !has(v.shx)){ alert(isLoan ? "ใส่ยอดชำระก่อน" : "ใส่ยอดฝากหุ้นก่อน"); return; }
     if(isLoan && has(v.m)){
       const d = +(num(v.m) - num(v.int) - num(v.pri) - nwSh(v)).toFixed(2);
-      if(Math.abs(d) >= 0.005 && !confirm(`ยอดแยกยังไม่เท่ายอดชำระ (ต่าง ${B(d)} บาท)\nบันทึกไว้ก่อนหรือไม่? แก้ทีหลังได้`)) return;
+      if(Math.abs(d) >= NW_TOL && !confirm(`ยอดแยกยังไม่เท่ายอดชำระ (ต่าง ${B(d)} บาท)\nบันทึกไว้ก่อนหรือไม่? แก้ทีหลังได้`)) return;
     }
     const b = nwBefore(x, S.nf.p);
     const rec = isLoan ? {...v, bal: has(v.bal) ? v.bal : +(b.debt - num(v.pri) + num(v.loan)).toFixed(2)}
                        : {d:v.d, sh:v.sh, shx:v.shx, m:nwSh(v), note:v.note};
-    const patch = {}; ["d","m","int","pri","sh","shx","loan","bal","note","relief"].forEach(k=>patch[k] = has(rec[k]) ? rec[k] : "");
+    const patch = {}; ["d","m","int","pri","sh","shx","loan","bal","note","relief","src"].forEach(k=>patch[k] = has(rec[k]) ? rec[k] : "");
     const p = S.nf.p;
     NW.set(x.no, p, patch); save();
     toast(`บันทึก ${thPer(p)} ของ ${x.name} แล้ว`);
@@ -2775,6 +2790,220 @@ function drawNWDiv(){
   $("dv_csv").onclick = () => csvOut(`kbk-ใบสรุปปันผล-${nwAdYm(D.from)}-${nwAdYm(D.to)}.csv`, [[`ใบสรุป + ปันผล ${nwRangeLbl(D)} (${Math.max(0, pNum(D.to)-pNum(D.from)+1)} เดือน · หุ้น ${pct(D.rs)} · ดอกเบี้ย ${pct(D.ri)})`,
     ["เลขสมาชิก","ชื่อ","สถานะ","หุ้นสะสมล่าสุด","หนี้คงค้างล่าสุด","ดอกเบี้ยที่ชำระ","ฝากหุ้น","ชำระรวม","ปันผลหุ้น","เฉลี่ยคืนดอกเบี้ย","รวมรับ"],
     list.map(({x,s})=>[x.no, x.name, s.loan?"ผู้กู้":"ผู้ฝาก", f2(s.shares), f2(s.debt), f2(s.int), f2(s.sh), f2(s.pay), f2(s.divS), f2(s.divI), f2(s.tot)])]]);
+}
+
+/* ============ เว็บใหม่: นำเข้าตารางผ่อน (รูป / วางข้อความ) ============
+   อ่านตาราง → จับคู่ «งวดที่ในตาราง» กับงวดโอนด้วยยอดคงเหลือ → เติมงวดที่ยังว่างจนถึงงวดปัจจุบัน
+   ช่องที่อ่านไม่ได้เว้นว่าง · แก้ได้ทุกช่องก่อนบันทึก                                              */
+const NI_COLS = [["m","ยอดส่ง"],["pri","เงินต้น"],["int","ดอกเบี้ย"],["sh","ฝากหุ้น"],["shx","ฝากเพิ่ม"],["bal","คงเหลือ"]];
+const niNum = v => { if(v==null || v==="") return null; const n = +String(v).replace(/[,\s฿บาท]/g,""); return isFinite(n) && n >= 0 ? +n.toFixed(2) : null; };
+
+/* ข้อความที่คัดลอกจาก Excel / เว็บ / PDF — บรรทัดละงวด: งวดที่ ยอดส่ง เงินต้น ดอกเบี้ย ฝากหุ้น [ฝากเพิ่ม] คงเหลือ */
+function niParseText(txt){
+  const lines = String(txt||"").split(/\r?\n/);
+  let order = null;
+  const head = lines.find(l => /ดอก/.test(l) && /(คงเหลือ|ต้น)/.test(l));
+  if(head){
+    const cells = head.split(/\t|\s{2,}|\|/).map(c=>c.trim()).filter(Boolean);
+    const key = c => /งวด/.test(c) ? "n" : /เพิ่ม/.test(c) ? "shx" : /คงเหลือ|คงค้าง/.test(c) ? "bal" : /ดอก/.test(c) ? "int"
+      : /ต้น/.test(c) ? "pri" : /หุ้น|ฝาก/.test(c) ? "sh" : /ส่ง|ชำระ|รวม/.test(c) ? "m" : null;
+    const o = cells.map(key).filter(Boolean);
+    if(o[0]==="n" && o.includes("bal")) order = o.slice(1);
+  }
+  const rows = [];
+  lines.forEach(l=>{
+    const t = (l.match(/-?\d[\d,]*(?:\.\d+)?/g) || []).map(s=>s.replace(/,/g,""));
+    if(t.length < 4 || !/^\d{1,3}$/.test(t[0])) return;
+    const n = +t[0], v = t.slice(1).map(niNum);
+    const o = order && order.length === v.length ? order
+      : v.length >= 6 ? ["m","pri","int","sh","shx","bal"] : v.length === 5 ? ["m","pri","int","sh","bal"] : ["m","pri","int","bal"];
+    const r = {n}; o.forEach((k,i)=>{ if(v[i] != null) r[k] = v[i]; });
+    rows.push(r);
+  });
+  return niClean(rows);
+}
+function niClean(rows){
+  const by = {};
+  (rows||[]).forEach(r=>{ const n = +r.n; if(!(n >= 1 && n <= 600)) return;
+    const o = by[n] || (by[n] = {n});
+    NI_COLS.forEach(([k])=>{ const v = niNum(r[k]); if(v != null && o[k] == null) o[k] = v; }); });
+  return Object.values(by).sort((a,b)=>a.n - b.n);
+}
+/* ยอดหนี้ที่รู้แล้วของแต่ละงวด — ใบสรุป + ยกมา + ที่บันทึกแล้ว */
+function niKnown(x){
+  const k = {};
+  nwSeries(x).forEach(s=>{ k[pNum(s.p)] = s.debt; });
+  k[pNum(P_ANCHOR) - 1] = +x.debt0||0;
+  return k;
+}
+/* หา «งวดที่ 1 ของตาราง = งวดโอนไหน» จากยอดคงเหลือที่ตรงกัน */
+function niAlign(x, rows){
+  const known = niKnown(x), keys = Object.keys(known).map(Number);
+  let best = null;
+  rows.forEach(r=>{ if(r.bal == null) return;
+    keys.forEach(kn=>{ if(Math.abs(known[kn] - r.bal) < 0.6 && known[kn] > 0.005){
+      const off = kn - (r.n - 1);                       // งวดโอนของแถวที่ 1 (เป็น pNum)
+      const hit = rows.filter(q=>q.bal != null && known[off + q.n - 1] != null && Math.abs(known[off + q.n - 1] - q.bal) < 0.6).length;
+      if(!best || hit > best.hit) best = {first: pFrom(off), hit};
+    } }); });
+  return best;
+}
+/* ตรวจตัวเลขแต่ละแถว */
+function niCheck(rows, rate){
+  const R = rate || RATE, out = {};
+  rows.forEach((r,i)=>{
+    const msg = [], prev = i>0 && rows[i-1].n === r.n-1 ? rows[i-1].bal : (r.bal != null && r.pri != null ? r.bal + r.pri : null);
+    if(prev != null && r.bal != null && r.pri != null && Math.abs(prev - r.pri - r.bal) > 0.05) msg.push("คงเหลือไม่ต่อเนื่อง");
+    if(prev != null && r.int != null && Math.abs(prev * R - r.int) > 0.05) msg.push(`ดอกเบี้ยควรเป็น ${B(prev*R)}`);
+    if(r.m != null && r.pri != null && r.int != null){
+      const d = r.m - r.pri - r.int - (r.sh||0) - (r.shx||0); if(Math.abs(d) > 0.05) msg.push(`ยอดส่งต่าง ${B(d)}`); }
+    const miss = NI_COLS.filter(([k])=>r[k] == null).map(([,l])=>l);
+    if(miss.length) msg.push("ว่าง: " + miss.join(", "));
+    out[r.n] = msg;
+  });
+  return out;
+}
+/* แถวที่จะลงทะเบียน: งวด 9 (ม.ค.69) ถึงงวดปัจจุบัน */
+function niPlan(x, I){
+  const firstN = pNum(I.first), lo = pNum(P_ANCHOR), hi = pNum(nwCurP());
+  return I.rows.map(r=>({r, p: pFrom(firstN + r.n - 1)})).filter(o=>pNum(o.p) >= lo && pNum(o.p) <= hi)
+    .map(o=>({...o, has: !!NW.row(x.no, o.p)}));
+}
+
+function niHTML(x){
+  const I = S.nimp && S.nimp.no===x.no ? S.nimp : null;
+  const ai = inGAS || REMOTE;
+  let body = `<div class="bar" style="margin:8px 0">
+      <button class="ghost sm" id="ni_img" ${ai?"":'disabled title="ต้องเปิดจากลิงก์ Apps Script — AI ทำงานผ่าน Google"'}>📷 เลือกรูปตารางผ่อน (ให้ AI อ่าน)</button>
+      <input type="file" id="ni_file" accept="image/*,application/pdf" multiple hidden>
+      <span class="hint">เลือกได้หลายรูปพร้อมกัน ถ้าตารางยาวหลายหน้า</span><span class="hint" id="ni_msg"></span></div>
+    <details><summary class="hint" style="cursor:pointer">หรือวางตารางที่คัดลอกมา (Excel / เว็บ)</summary>
+      <textarea id="ni_txt" rows="5" style="width:100%;margin-top:6px;font-family:var(--mono,monospace);font-size:12px"
+        placeholder="งวดที่  ยอดส่งต่อเดือน  เงินต้น  ดอกเบี้ย  ฝากหุ้น  ฝากเพิ่ม  ยอดคงเหลือ&#10;1  3,000.00  1,838.00  982.00  150.00  30.00  96,362.00"></textarea>
+      <button class="ghost sm" id="ni_parse">อ่านจากข้อความ</button></details>`;
+  if(!I) return body;
+  const plan = niPlan(x, I), chk = niCheck(I.rows, (I.meta && I.meta.rate) ? I.meta.rate/100 : RATE);
+  const sel = (()=>{ const o = []; for(let n = pNum(NW_R1) - 24; n <= pNum(nwCurP()); n++){ const p = pFrom(n);
+    o.push(`<option value="${p}" ${p===I.first?"selected":""}>${nwRound(p) >= 1 ? "งวด " + nwRound(p) + " · " : ""}${thPer(p)}</option>`); } return o.join(""); })();
+  const add = plan.filter(o=>!o.has || I.over).length;
+  const M = I.meta || {};
+  body += `<div class="keybox" style="margin-top:8px">
+    <div class="bar" style="margin:0 0 6px;flex-wrap:wrap">
+      <b>อ่านได้ ${I.rows.length} งวด</b>
+      ${M.terms?`<span class="pill">${M.terms} งวด</span>`:""}${M.inst?`<span class="pill">ส่งเดือนละ ${B(M.inst)}</span>`:""}
+      ${has(M.sh)?`<span class="pill">ฝากหุ้น ${B(M.sh)}</span>`:""}${has(M.shx)?`<span class="pill">ฝากเพิ่ม ${B(M.shx)}</span>`:""}
+      <label style="margin-left:auto">งวดที่ 1 ของตาราง = <select id="ni_first" style="width:auto">${sel}</select></label>
+    </div>
+    <p class="hint" style="margin:0 0 6px">${I.auto ? `✓ จับคู่อัตโนมัติจากยอดคงเหลือ — ตรงกับยอดที่มีอยู่ ${I.auto} งวด` : '⚠ จับคู่จากยอดคงเหลือไม่ได้ — เลือกเองว่างวดที่ 1 ของตารางคือเดือนไหน'}
+      · จะเติมงวด ${nwRound(P_ANCHOR)} (${thPer(P_ANCHOR)}) ถึงงวด ${nwRound(nwCurP())} (${thPer(nwCurP())}) · แก้ตัวเลขได้ทุกช่อง</p>
+    <div class="tbl" style="max-height:380px"><table><thead><tr><th>ตาราง</th><th class="l">งวดโอน</th>
+      ${NI_COLS.map(([,l])=>`<th>${l}</th>`).join("")}<th class="l">ตรวจ</th></tr></thead><tbody>
+      ${plan.map(({r,p,has:h})=>`<tr${h && !I.over?' style="opacity:.55"':""}><td>${r.n}</td>
+        <td class="l"><b>งวด ${nwRound(p)}</b> · ${thPer(p)}${h?` <span class="pill" style="font-size:10px">${I.over?"เขียนทับ":"มีแล้ว ข้าม"}</span>`:""}</td>
+        ${NI_COLS.map(([k])=>`<td><input type="number" step="0.01" min="0" data-ni="${r.n}|${k}" value="${r[k]!=null?r[k]:""}" style="width:108px;padding:4px 6px;font-size:12.5px;text-align:right"></td>`).join("")}
+        <td class="l">${(chk[r.n]||[]).length ? (chk[r.n]).map(m=>`<span class="pill red" style="font-size:10px">${m}</span>`).join(" ") : '<span class="pill grn">✓</span>'}</td></tr>`).join("")
+        || `<tr><td colspan="9" class="hint" style="text-align:left">ไม่มีงวดในช่วง ${thPer(P_ANCHOR)} – ${thPer(nwCurP())} — ตรวจว่า «งวดที่ 1 ของตาราง» ถูกเดือนไหม</td></tr>`}
+    </tbody></table></div>
+    <div class="bar" style="margin-top:8px;flex-wrap:wrap">
+      <label class="rlf"><input type="checkbox" id="ni_over" ${I.over?"checked":""}> เขียนทับงวดที่บันทึกไว้แล้ว</label>
+      ${has(M.sh) ? `<label class="rlf"><input type="checkbox" id="ni_def" ${I.def!==false?"checked":""}> ตั้งฝากหุ้น ${B(M.sh)}${has(M.shx)?` + ฝากเพิ่ม ${B(M.shx)}`:""} เป็นยอดประจำของคนนี้</label>` : ""}
+      <button id="ni_save" ${add?"":"disabled"} style="margin-left:auto">บันทึกลงทะเบียน ${add} งวด</button>
+      <button class="ghost" id="ni_cancel">ยกเลิก</button>
+    </div></div>`;
+  return body;
+}
+
+/* อ่านตารางแล้วเตรียมให้ตรวจ */
+function niLoad(x, rows, meta, src){
+  rows = niClean(rows);
+  if(!rows.length){ toast("อ่านไม่พบแถวตารางผ่อน"); return false; }
+  const a = niAlign(x, rows);
+  meta = Object.assign({}, meta||{});
+  const mode = k => { const c = {}; rows.forEach(r=>{ if(r[k] != null) c[r[k]] = (c[r[k]]||0) + 1; });
+    const top = Object.entries(c).sort((p,q)=>q[1]-p[1])[0]; return top && top[1] >= 2 ? +top[0] : null; };
+  [["sh","sh"],["shx","shx"],["inst","m"]].forEach(([k, col])=>{ if(meta[k] == null){ const v = mode(col); if(v != null) meta[k] = v; } });
+  S.nimp = {no:x.no, rows, meta, src, first: a ? a.first : P_ANCHOR, auto: a ? a.hit : 0, over:false, def:true};
+  return true;
+}
+function bindNi(x, kind){
+  const redraw = () => { S.nimpOpen = true; drawNW(kind); };
+  if($("ni_img")) $("ni_img").onclick = () => $("ni_file").click();
+  if($("ni_file")) $("ni_file").onchange = async e => {
+    const files = [...e.target.files]; e.target.value = ""; if(!files.length) return;
+    const b64 = f => new Promise((ok,no)=>{ const r = new FileReader();
+      r.onload = () => ok(String(r.result).split(",")[1]); r.onerror = () => no(new Error("อ่านไฟล์ไม่ได้")); r.readAsDataURL(f); });
+    let rows = [], meta = {};
+    for(let i=0; i<files.length; i++){
+      const f = files[i]; $("ni_msg").textContent = `AI กำลังอ่าน ${f.name} (${i+1}/${files.length}) …`;
+      try{
+        const r = await gas("aiSchedule", JSON.stringify({kind: /pdf/i.test(f.type)?"pdf":"image", mime: f.type||"image/png",
+          data: await b64(f), no: x.no, name: x.name}));
+        const j = typeof r==="string" ? JSON.parse(r) : r;
+        if(j.error){ $("ni_msg").innerHTML = `<b style="color:var(--danger)">AI: ${esc(j.error)}</b>`; return; }
+        rows = rows.concat(j.rows||[]);
+        Object.keys(j.meta||{}).forEach(k=>{ if(meta[k]==null && j.meta[k]!=null) meta[k] = j.meta[k]; });
+      }catch(err){ $("ni_msg").innerHTML = `<b style="color:var(--danger)">เรียก AI ไม่สำเร็จ: ${esc(err.message||err)}</b>`
+        + ' — ถ้าเพิ่งอัปเดต Code.gs ต้อง Deploy เวอร์ชันใหม่ก่อน หรือใช้ «วางตารางที่คัดลอกมา» แทน'; return; }
+    }
+    if(niLoad(x, rows, meta, "ai")) redraw();
+  };
+  if($("ni_parse")) $("ni_parse").onclick = () => { if(niLoad(x, niParseText($("ni_txt").value), {}, "text")) redraw(); };
+  const I = S.nimp && S.nimp.no===x.no ? S.nimp : null; if(!I) return;
+  $("ni_first").onchange = e => { I.first = e.target.value; I.auto = 0; redraw(); };
+  $("ni_over").onchange = e => { I.over = e.target.checked; redraw(); };
+  if($("ni_def")) $("ni_def").onchange = e => { I.def = e.target.checked; };
+  document.querySelectorAll("[data-ni]").forEach(inp=>inp.onchange = () => {
+    const [n, k] = inp.dataset.ni.split("|"), r = I.rows.find(q=>q.n===+n); if(!r) return;
+    const v = niNum(inp.value); if(v == null) delete r[k]; else r[k] = v;
+    if(inp.value !== "" && v == null){ inp.value = ""; toast("ใส่ตัวเลขติดลบไม่ได้"); }
+    redraw();
+  });
+  $("ni_cancel").onclick = () => { S.nimp = null; redraw(); };
+  $("ni_save").onclick = () => {
+    const todo = niPlan(x, I).filter(o=>!o.has || I.over); if(!todo.length) return;
+    if(!confirm(`บันทึกตามตารางผ่อน ${todo.length} งวด ของ ${x.no} ${x.name}\n`
+      + `งวด ${nwRound(todo[0].p)} (${thPer(todo[0].p)}) ถึงงวด ${nwRound(todo[todo.length-1].p)} (${thPer(todo[todo.length-1].p)})\n`
+      + "วันที่รับเว้นว่างไว้ — ใส่เองทีหลังได้ · แก้ทีละงวดได้โดยกดแถวในตาราง")) return;
+    todo.forEach(({r, p})=>{
+      const patch = {}; ["d","m","int","pri","sh","shx","loan","bal","note","relief","src"].forEach(k=>patch[k] = "");
+      ["m","int","pri","sh","shx","bal"].forEach(k=>{ if(r[k] != null) patch[k] = r[k]; });
+      if(patch.shx === 0) patch.shx = "";
+      patch.src = "plan";
+      if(I.over){ const old = NW.row(x.no, p); if(old){ if(old.d) patch.d = old.d; if(old.note) patch.note = old.note; } }
+      NW.set(x.no, p, patch);
+    });
+    if(I.def && has(I.meta.sh)){ x.shM = +I.meta.sh; x.shxM = has(I.meta.shx) ? +I.meta.shx : 0; }
+    if(has(I.meta.inst) && !x.inst) x.inst = +I.meta.inst;
+    S.nimp = null; S.nf = null; save(); drawNW(kind);
+    toast(`บันทึกตามตารางผ่อน ${todo.length} งวดแล้ว`);
+  };
+}
+
+/* ---------- ลาออก / ลบสมาชิก ---------- */
+function nwResign(x, kind){
+  const st = nwState(x);
+  if(!confirm(`ลบ ${x.no} ${x.name} ออกจากทะเบียน (ลาออก)?\n\n`
+    + `หุ้นสะสม ${B(st.shares)} บาท${st.debt > 0.005 ? ` · ⚠ ยังมีหนี้คงเหลือ ${B(st.debt)} บาท` : ""}\n\n`
+    + "ข้อมูลยังเก็บไว้ในรายการ «สมาชิกที่ลาออก» ท้ายรายชื่อ — กู้คืนหรือลบถาวรได้ภายหลัง")) return;
+  x.out = nwToday(); S.nsel[kind] = null; S.nf = null; if(S.nimp && S.nimp.no===x.no) S.nimp = null;
+  save(); drawNW(kind); toast(`${x.name} ลาออกแล้ว — ไม่แสดงในทะเบียนและใบสรุป`);
+}
+function nwOutHTML(){
+  const out = NW.everyone().filter(x=>x.out); if(!out.length) return "";
+  return `<details class="opn" style="margin-top:10px"><summary>สมาชิกที่ลาออก (${out.length})</summary>
+    ${out.map(x=>`<div class="bar" style="margin:6px 0;gap:6px"><span class="no">${esc(x.no)}</span><span style="flex:1">${esc(x.name)}
+      <span class="hint">· ${thDay(x.out)}</span></span>
+      <button class="ghost sm" data-nrs="${esc(x.no)}">กู้คืน</button>
+      <button class="ghost sm" data-ndel="${esc(x.no)}" style="color:var(--danger)">ลบถาวร</button></div>`).join("")}</details>`;
+}
+function bindNwOut(kind){
+  document.querySelectorAll("[data-nrs]").forEach(b=>b.onclick = () => { const x = NW.person(b.dataset.nrs); if(!x) return;
+    delete x.out; save(); drawNW(kind); toast(`กู้คืน ${x.name} แล้ว`); });
+  document.querySelectorAll("[data-ndel]").forEach(b=>b.onclick = () => { const x = NW.person(b.dataset.ndel); if(!x) return;
+    const n = NW.rows(x.no).length;
+    if(!confirm(`ลบ ${x.no} ${x.name} ถาวร?\nรวมรายการที่บันทึกไว้ ${n} งวด — ลบแล้วกู้คืนไม่ได้ (ยกเว้นจากไฟล์สำรอง JSON)`)) return;
+    S.nw.people = NW.everyone().filter(p=>p !== x); S.nw.rows = NW.all().filter(r=>r.no !== x.no);
+    save(); drawNW(kind); toast("ลบถาวรแล้ว"); });
 }
 
 /* ============ ตรวจสอบ — ระบบกันปัญหาเดิมกลับมา ============ */

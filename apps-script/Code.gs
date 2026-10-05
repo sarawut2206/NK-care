@@ -100,6 +100,7 @@ function doPost(e){
       case "getData":   out = readAll_();                       break;
       case "saveState": out = {ok:true, saved: writeAll_(req.payload)}; break;
       case "ai":        out = JSON.parse(ai(req.payload));       break;
+      case "aiSchedule": out = JSON.parse(aiSchedule(req.payload)); break;
       case "ping":      out = {ok:true, ai: !!aiKey_(), time: now_()}; break;
       default: throw new Error("ไม่รู้จักคำสั่ง: " + req.action);
     }
@@ -300,7 +301,7 @@ function buildSheets(){
   if(nw && nw.people && nw.people.length){
     var byNo = {};
     (nw.rows || []).forEach(function(r){ (byNo[r.no] = byNo[r.no] || []).push(r); });
-    var reg = nw.people.map(function(x){
+    var reg = nw.people.filter(function(x){ return !x.out; }).map(function(x){   // ไม่รวมคนที่ลาออก
       var rs = (byNo[x.no] || []).sort(function(a, b){ return a.p < b.p ? -1 : 1; });
       var debt = n_(x.debt0), sh = n_(x.share0), paid = 0, it = 0, dep = 0;
       rs.forEach(function(r){
@@ -472,6 +473,110 @@ function ai(payload){
       });
 
     return JSON.stringify({rows: rows, used: used, limit: AI_DAILY_MAX});
+  }catch(err){
+    return JSON.stringify({error: String((err && err.message) || err)});
+  }
+}
+
+/* ============ AI อ่านรูปตารางผ่อน (เว็บใหม่) ============
+   ตัวเลขที่อ่านไม่ได้ให้ส่ง -1 → ฝั่งหน้าเว็บเว้นว่างให้ผู้ใช้ใส่เอง                    */
+var AI_SCHED_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["meta", "rows"],
+  properties: {
+    meta: {
+      type: "object",
+      additionalProperties: false,
+      required: ["terms", "rate", "sh", "shx", "inst"],
+      properties: {
+        terms: {type: "number", description: "จำนวนงวดทั้งหมด ไม่มีให้ใส่ -1"},
+        rate:  {type: "number", description: "อัตราดอกเบี้ยต่อเดือน หน่วย % เช่น 1.00 ไม่มีให้ใส่ -1"},
+        sh:    {type: "number", description: "ฝากหุ้นประจำต่อเดือน ไม่มีให้ใส่ -1"},
+        shx:   {type: "number", description: "ฝากหุ้นเพิ่มต่อเดือน ไม่มีให้ใส่ -1"},
+        inst:  {type: "number", description: "รวมยอดชำระต่อเดือน ไม่มีให้ใส่ -1"}
+      }
+    },
+    rows: {
+      type: "array",
+      description: "ทุกแถวของตารางผ่อนที่เห็นในรูป เรียงตามงวด",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["n", "m", "pri", "int", "sh", "shx", "bal"],
+        properties: {
+          n:   {type: "number", description: "งวดที่"},
+          m:   {type: "number", description: "ยอดส่งต่อเดือน อ่านไม่ได้ให้ใส่ -1"},
+          pri: {type: "number", description: "เงินต้น อ่านไม่ได้ให้ใส่ -1"},
+          int: {type: "number", description: "ดอกเบี้ย อ่านไม่ได้ให้ใส่ -1"},
+          sh:  {type: "number", description: "ฝากหุ้น อ่านไม่ได้หรือไม่มีคอลัมน์ให้ใส่ -1"},
+          shx: {type: "number", description: "ฝากเพิ่ม อ่านไม่ได้หรือไม่มีคอลัมน์ให้ใส่ -1"},
+          bal: {type: "number", description: "ยอดคงเหลือหลังงวดนี้ อ่านไม่ได้ให้ใส่ -1"}
+        }
+      }
+    }
+  }
+};
+
+/**
+ * payload = JSON string {kind:"pdf"|"image", mime, data(base64), no, name}
+ * คืน JSON string {meta, rows:[{n,m,pri,int,sh,shx,bal}], used, limit} หรือ {error}
+ */
+function aiSchedule(payload){
+  try{
+    var key = aiKey_();
+    if(!key) throw new Error("ยังไม่ได้ตั้ง AI_KEY — เมนู กบข.นข. → ตั้งค่ากุญแจ AI");
+    var p = (typeof payload === "string") ? JSON.parse(payload) : payload;
+    if(!p || !p.data) throw new Error("ไม่มีไฟล์ส่งมา");
+    var used = bumpQuota_();
+    if(used > AI_DAILY_MAX) throw new Error("วันนี้ใช้ AI ครบ " + AI_DAILY_MAX + " ครั้งแล้ว พรุ่งนี้ค่อยใช้ใหม่");
+
+    var isPdf = (p.kind === "pdf") || /pdf/i.test(p.mime || "");
+    var media = isPdf
+      ? {type: "document", source: {type: "base64", media_type: "application/pdf", data: p.data}}
+      : {type: "image",    source: {type: "base64", media_type: p.mime || "image/png", data: p.data}};
+    var prompt = "นี่คือรูปตารางผ่อนชำระเงินกู้ของสมาชิกกองทุน" + (p.no ? " (สมาชิก " + p.no + " " + (p.name || "") + ")" : "")
+      + " อ่านทุกแถวของตารางแล้วส่งกลับตามโครงสร้างที่กำหนด\n\n"
+      + "กติกา\n"
+      + "• คอลัมน์ทั่วไป: งวดที่ · ยอดส่งต่อเดือน · เงินต้น · ดอกเบี้ย · ฝากหุ้น · ฝากเพิ่ม · ยอดคงเหลือ\n"
+      + "• คัดตัวเลขให้ตรงตามรูปทุกหลัก ทศนิยม 2 ตำแหน่ง ห้ามปัด ห้ามคำนวณเติมเอง ห้ามเดา\n"
+      + "• ช่องที่อ่านไม่ชัด ว่าง หรือไม่มีคอลัมน์นั้น ให้ใส่ -1\n"
+      + "• ยอดคงเหลือ 0 ให้ใส่ 0 (ไม่ใช่ -1)\n"
+      + "• meta อ่านจากส่วนหัวเหนือตาราง (จำนวนงวด อัตราดอกเบี้ย ฝากหุ้นประจำ ฝากหุ้นเพิ่ม รวมยอดชำระต่อเดือน) ไม่มีให้ใส่ -1\n";
+
+    var res = UrlFetchApp.fetch("https://api.anthropic.com/v1/messages", {
+      method: "post",
+      contentType: "application/json",
+      headers: {"x-api-key": key, "anthropic-version": "2023-06-01", "anthropic-beta": "server-side-fallback-2026-07-01"},
+      payload: JSON.stringify({
+        model: AI_MODEL, max_tokens: 16000, fallbacks: "default",
+        output_config: {effort: "high", format: {type: "json_schema", schema: AI_SCHED_SCHEMA}},
+        messages: [{role: "user", content: [media, {type: "text", text: prompt}]}]
+      }),
+      muteHttpExceptions: true
+    });
+    var code = res.getResponseCode(), txt = res.getContentText();
+    if(code !== 200){
+      var detail = "";
+      try{ detail = JSON.parse(txt).error.message; }catch(err){ detail = txt.slice(0, 200); }
+      throw new Error("Claude ตอบกลับรหัส " + code + " — " + detail);
+    }
+    var msg = JSON.parse(txt);
+    if(msg.stop_reason === "refusal") throw new Error("AI ปฏิเสธการอ่านไฟล์นี้");
+    var out = "";
+    (msg.content || []).forEach(function(b){ if(b.type === "text") out += b.text; });
+    var parsed;
+    try{ parsed = JSON.parse(out); }catch(err){ throw new Error("AI ตอบกลับไม่เป็นรูปแบบที่ตกลงไว้"); }
+
+    var v = function(x){ x = +x; return (isFinite(x) && x >= 0) ? Math.round(x * 100) / 100 : null; };   // -1 = ว่าง
+    var meta = {}, M = parsed.meta || {};
+    ["terms", "rate", "sh", "shx", "inst"].forEach(function(k){ var x = v(M[k]); if(x !== null) meta[k] = x; });
+    var rows = (parsed.rows || []).filter(function(r){ return r && +r.n >= 1; }).map(function(r){
+      var o = {n: Math.round(+r.n)};
+      ["m", "pri", "int", "sh", "shx", "bal"].forEach(function(k){ var x = v(r[k]); if(x !== null) o[k] = x; });
+      return o;
+    });
+    return JSON.stringify({meta: meta, rows: rows, used: used, limit: AI_DAILY_MAX});
   }catch(err){
     return JSON.stringify({error: String((err && err.message) || err)});
   }
