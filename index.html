@@ -513,7 +513,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-54</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-55</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" title="บันทึกขึ้น Google Sheets เดี๋ยวนี้ (ปกติบันทึกให้เองทุกครั้งที่กรอก)">☁ บันทึกขึ้น Google Sheets</button>
@@ -2287,8 +2287,9 @@ const NW_ACC = ["sam", "dk", "free"];
 const NW_ACCN = {sam:"สินเชื่อสามัญ", dk:"สินเชื่อดูแลกัน", free:"ฝากหุ้น (ไม่ผูกสัญญา)"};
 const NW_ACCS = {sam:"สามัญ", dk:"ดูแลกัน", free:"ฝากหุ้นอื่น"};
 /* ข้อมูลรุ่นเก่า (หนึ่งคนหนึ่งบัญชี) → แยกบัญชีย่อย: หนี้และหุ้นเดิมเข้า «สามัญ» (ไม่มีหนี้ = ฝากหุ้น) แก้แยกสองสัญญาได้ที่ «แก้ยอดยกมา» */
-function nwMig(){
-  const w = S && S.nw; if(!w || w.v >= 2) return;
+function nwMig(){ nwMigObj(S && S.nw); }
+function nwMigObj(w){
+  if(!w || w.v >= 2) return;
   const rows = Array.isArray(w.rows) ? w.rows : (w.rows = []), people = w.people || [], byNo = {};
   people.forEach(x => {
     byNo[x.no] = x; if(x.acc) return;
@@ -7095,13 +7096,38 @@ $("csv").onclick = () => {
   ]);
 };
 $("impBtn").onclick = () => $("imp").click();
+/* รวมทะเบียนใหม่จากไฟล์สำรองเข้ากับที่มีอยู่ — เพิ่มรายการที่ขาด · แถวซ้ำใช้อันที่แก้ล่าสุด · ไม่ลบของเดิม */
+function nwMergeIn(inc){
+  nwMigObj(inc); NW.all();
+  const cur = S.nw, st = {addP:0, addR:0, upd:0}, key = r => `${r.no}|${r.p}|${r.prod}`, have = new Map(cur.rows.map(r => [key(r), r]));
+  (inc.rows || []).forEach(r => { const k = key(r), o = have.get(k);
+    if(!o){ cur.rows.push(r); have.set(k, r); st.addR++; } else if((+r.ts || 0) > (+o.ts || 0)){ Object.assign(o, r); st.upd++; } });
+  const cp = {}; cur.people.forEach(x => cp[x.no] = x);
+  const empty = a => !(a && (a.debt0 || a.share0 || a.inst || a.shM || (a.starts && a.starts.length)));
+  (inc.people || []).forEach(x => { const o = cp[x.no];
+    if(!o){ cur.people.push(x); st.addP++; return; }
+    ["sam", "dk", "free"].forEach(k => { const a = (o.acc || {})[k], b = (x.acc || {})[k]; if(!b) return;
+      if(empty(a) && !empty(b)){ nwAccRef(o, k); o.acc[k] = JSON.parse(JSON.stringify(b)); }
+      else if(a) ["inst", "shM", "shxM", "hz", "starts"].forEach(f => { if((a[f] === undefined || a[f] === 0 || (Array.isArray(a[f]) && !a[f].length)) && b[f]) a[f] = JSON.parse(JSON.stringify(b[f])); }); });
+    if(x.out && !o.out) o.out = x.out; });
+  cur.people.sort(byNo);
+  return st;
+}
 $("imp").onchange = e => { const fr = new FileReader();
-  fr.onload = () => { try{
-      applyBackup(JSON.parse(fr.result));
-      sel = null; all();
-      setStatus("นำเข้าแล้ว · " + (DB.members.length||0) + " สมาชิก · " + LG.all().length + " รายการรับชำระ"
-        + (inGAS ? " — กำลังบันทึกขึ้น Google Sheets…" : " — จำไว้ในเครื่องนี้แล้ว"));
-      if(inGAS) doSave(); else lsSave();
+  fr.onload = async () => { try{
+      const j = JSON.parse(fr.result), inc = j.nw && j.nw.people && j.nw.people.length ? j.nw : null;
+      if(inc && NW.on()){                                       // ในระบบมีทะเบียนใหม่แล้ว → รวม ไม่ทับ
+        nwMigObj(inc);
+        if(!confirm(`ไฟล์สำรองนี้มีทะเบียนใหม่ ${inc.people.length} คน · ${(inc.rows||[]).length} รายการ\nตอนนี้ในระบบมี ${NW.people().length} คน · ${NW.all().length} รายการ\n\n`
+          + "ตกลง = รวมเข้าด้วยกัน (เพิ่มรายการที่ยังไม่มี · ไม่ลบของเดิม)\nยกเลิก = ไม่ทำอะไร")) return;
+        const rest = Object.fromEntries(Object.entries(j).filter(([k, v]) => k !== "nw" && (Array.isArray(v) ? v.length : (v && typeof v === "object" ? Object.keys(v).length : v != null))));
+        applyBackup(rest);
+        const st = nwMergeIn(inc); sel = null; all();
+        toast(`รวมแล้ว: เพิ่มรายการ ${st.addR} · อัปเดต ${st.upd} · เพิ่มคน ${st.addP}`);
+      } else { applyBackup(j); sel = null; all(); }
+      setStatus("นำเข้าแล้ว · " + dataCount() + " สมาชิก · " + LG.all().length + " รายการรับชำระ"
+        + ((inGAS || REMOTE) ? " — กำลังบันทึกขึ้น Google Sheets…" : " — จำไว้ในเครื่องนี้แล้ว"));
+      if(inGAS || REMOTE){ const ok = await saveNow(); if(ok && NW.on()) await verifyNW(); } else lsSave();
     } catch(err){ alert("ไฟล์ไม่ถูกต้อง: " + err.message); } };
   fr.readAsText(e.target.files[0]); };
 
@@ -7171,8 +7197,12 @@ function banner(){
       + '<button class="ghost sm" id="bnrDisc" style="margin-left:6px">เลิกต่อ</button></span>');
     const b = $("bnrDisc"); if(b) b.onclick = () => { if(confirm("เลิกต่อกับ Sheets ทางนี้?")){ localStorage.removeItem(REMOTE_KEY); location.reload(); } };
   } else {
+    const nl = lsCount();
     box("var(--red)", "#FDF3F3",
-      '<b style="color:var(--red)">คุณกำลังเปิดไฟล์จากเครื่อง — ไม่ได้ต่อกับ Google Sheets</b>'
+      (nl ? '<b style="color:var(--red)">⚠ มีข้อมูล ' + nl + ' คนที่กรอกไว้ในเครื่องนี้ แต่ยังไม่ได้ขึ้น Google Sheets</b>'
+        + '<p class="hint" style="margin:5px 0 7px">กู้ข้อมูลขึ้น Sheets: 1) กด <b>ส่งออกไฟล์สำรอง (JSON)</b> 2) กด <b>เปิดจาก Google Sheets</b> 3) ที่หน้านั้นกด <b>นำเข้า</b> เลือกไฟล์ที่ส่งออก (ระบบรวมให้ ไม่ทับของเดิม)</p>'
+        + '<div class="bar"><button class="cta" id="bnrExp">ส่งออกไฟล์สำรอง (JSON)</button></div>' : "")
+      + '<b style="color:var(--red)">คุณกำลังเปิดไฟล์จากเครื่อง — ไม่ได้ต่อกับ Google Sheets</b>'
       + '<p class="hint" style="margin:5px 0 7px">ข้อมูลอยู่แค่เบราว์เซอร์เครื่องนี้ กรรมการคนอื่นไม่เห็น · '
       + 'ทางที่ปลอดภัยสุดคือ<b>เปิดจากลิงก์ Apps Script</b> (ลงท้าย /exec) โดยตรง</p>'
       + '<div class="bar">'
@@ -7181,6 +7211,7 @@ function banner(){
       + '<span class="hint">ทางแรกล็อกอินด้วยบัญชี Google ไม่ต้องใช้รหัส · ทางที่สองใช้รหัสที่กรรมการฝ่ายการเงินให้มา ใส่ครั้งเดียวต่อเครื่อง</span></div>');
     const o = $("bnrOpen"); if(o) o.onclick = () => window.open(GAS_URL, "_blank", "noopener");
     const b = $("bnrConn"); if(b) b.onclick = () => connectRemote();
+    const xe = $("bnrExp"); if(xe) xe.onclick = () => $("exp").click();
   }
 }
 function connectRemote(){
@@ -7207,8 +7238,16 @@ function offerLocalPush(r){
   }catch(e){}
 }
 
+const lsCount = () => { const j = lsLoad(); return j ? Math.max((j.members || []).length, (j.nw && j.nw.people ? j.nw.people.length : 0)) : 0; };
 async function boot(){
-  DB = {...EMPTY}; S = freshS();          // มีของใช้เสมอ ต่อให้โหลดพัง ปุ่มก็ยังกดได้
+  DB = {...EMPTY}; S = freshS();
+  // หน้านี้บันทึกลง Google Sheets ไม่ได้ถ้าไม่ผ่านลิงก์ /exec หรือไม่ได้ต่อด้วยรหัส — ไม่ให้กรอกข้อมูลลงเครื่องเงียบๆ
+  if(!inGAS && !REMOTE && GAS_URL && /github\.io$/.test(location.hostname) && !/[?&]local\b/.test(location.search) && !lsCount()){
+    document.body.innerHTML = '<div style="font:16px/1.7 sans-serif;max-width:560px;margin:60px auto;padding:0 20px;color:#0B2C6B">'
+      + '<b>กำลังไปที่ลิงก์ Apps Script …</b><p>ข้อมูลที่กรอกจะบันทึกลง Google Sheets ให้เองเมื่อเปิดจากลิงก์นั้น</p>'
+      + '<p><a href="' + GAS_URL + '">ถ้าไม่ไปเอง กดที่นี่</a></p></div>';
+    location.replace(GAS_URL); return;
+  }          // มีของใช้เสมอ ต่อให้โหลดพัง ปุ่มก็ยังกดได้
   if(inGAS || REMOTE){
     setStatus("กำลังโหลดข้อมูลจาก Google Sheets…");
     try{ draw(); }catch(e){}
