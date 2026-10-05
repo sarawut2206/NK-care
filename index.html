@@ -360,6 +360,32 @@ table.hmx th.nm,table.hmx td.nm{position:sticky;left:0;min-width:190px;border-ri
 table.hmx td.nm{background:var(--card);z-index:1}
 table.hmx th.nm{z-index:3}
 
+/* ---------- กรอกทีละคน ---------- */
+.pe{display:grid;grid-template-columns:minmax(250px,300px) 1fr;gap:15px;align-items:start}
+@media(max-width:860px){.pe{grid-template-columns:1fr}}
+.pe-l{padding:12px;display:flex;flex-direction:column}
+.pe-l .seg2{display:flex}
+.pe-list{overflow:auto;max-height:66vh;margin-top:8px;border-top:1px solid var(--faint)}
+.pl{display:grid;grid-template-columns:auto 1fr auto;gap:1px 8px;width:100%;text-align:left;background:#fff;color:var(--ink);
+  border:0;border-bottom:1px solid var(--faint);border-radius:0;padding:8px;font-family:inherit;font-weight:400;font-size:13.5px;align-items:baseline}
+.pl:hover{filter:none;background:var(--faint)}
+.pl.on{background:var(--faint);box-shadow:inset 3px 0 0 var(--brand2)}
+.pl b{font-weight:600}
+.pl .amt{font-family:"IBM Plex Mono",monospace;font-size:12.5px}
+.pl .sub{grid-column:2/4;font-size:11px;color:var(--soft)}
+.pf{display:grid;grid-template-columns:repeat(auto-fit,minmax(122px,1fr));gap:10px;align-items:end}
+.pf input,.pf select{padding:7px 9px;font-size:14px}
+.pfchk{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;min-height:26px}
+.rlf{display:flex;gap:6px;align-items:center;font-weight:400;font-size:12.5px;color:var(--soft);margin:4px 0 0}
+.rlf input[type=checkbox]{width:15px;height:15px;accent-color:var(--green)}
+details.opn{border:1px solid var(--rule);border-radius:9px;padding:9px 12px;background:var(--paper)}
+details.opn summary{cursor:pointer;font-weight:600;font-size:13px;color:var(--brand)}
+details.opn[open] summary{margin-bottom:9px}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:9px 18px;
+  border-radius:999px;font-weight:600;font-size:14px;box-shadow:0 6px 18px rgba(0,0,0,.18);z-index:80;opacity:0;
+  transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:1}
+
 @page{size:A4 portrait;margin:15mm 14mm 18mm}
 @media print{
   html,body{background:#fff!important;padding:0;margin:0;font-size:11px;
@@ -419,7 +445,7 @@ table.hmx th.nm{z-index:3}
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-37</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-38</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
@@ -536,7 +562,8 @@ const esc = s => String(s??"").replace(/[<>&"]/g, c => ({"<":"&lt;",">":"&gt;","
 let S = null;
 function freshS(){ return { contracts: DB.contracts.map(c=>({...c})), tx: DB.tx.slice(),
           acct: {...DB.acct}, assign: {}, cut: 20, profile: {}, pick: null, per: {}, watch: null, rule: {}, fprod: "", fno: "", fd1: "", fd2: "",
-          ledger: [], ep: "", ef: "all", eq: "", oy: "", pp: "", py: "", ps: null, psq: "", pso: "no", rf: "", rt: "" }; }
+          ledger: [], ep: "", ef: "all", eq: "", oy: "", pp: "", py: "", ps: null, psq: "", pso: "no", rf: "", rt: "",
+          em: "person", pk: "loan", pq: "", sp: null, pf: null, open: null, opPlan: null }; }
 let sel = null, tab = 10;
 const txKey = t => `${t.a}|${t.d}|${t.t}|${t.m}`;
 const memOf = t => t.fixNo || t.no || S.acct[t.a] || "";   // ★ fixNo = ระบุเจ้าของเอง (ฝากชำระแทน)
@@ -575,7 +602,7 @@ function applyBackup(j){
   if(j.acct)      S.acct      = {...j.acct};
   if(j.contracts) S.contracts = j.contracts;
   if(j.tx)        S.tx        = j.tx;
-  ["profile","assign","per","rule","cut","pdfg","ledger"].forEach(k=>{ if(j[k]!==undefined) S[k]=j[k]; });
+  ["profile","assign","per","rule","cut","pdfg","ledger","open"].forEach(k=>{ if(j[k]!==undefined) S[k]=j[k]; });
   if(j.board && j.board.list && j.board.list.length){
     BOARD.list = j.board.list;
     if(j.board.year) BOARD.year = j.board.year;
@@ -585,7 +612,7 @@ function applyBackup(j){
 
 function pack(){ return {members:DB.members, anames:DB.anames, wd:DB.wd,
   contracts:S.contracts, tx:S.tx, acct:S.acct, assign:S.assign,
-  profile:S.profile, per:S.per, rule:S.rule, cut:S.cut, pdfg:S.pdfg, ledger:S.ledger||[],
+  profile:S.profile, per:S.per, rule:S.rule, cut:S.cut, pdfg:S.pdfg, ledger:S.ledger||[], open:S.open||null,
   board:{list:BOARD.list, year:BOARD.year, meet:BOARD.meet}}; }
 async function doSave(){
   if(_saving){ _again = true; return; }
@@ -1174,7 +1201,9 @@ function entryRowHTML(r, p){
       ${LG.get(p,r.m.no,r.cid) ? '<button class="del" data-clr title="ล้างแถวนี้">×</button>' : ""}</td></tr>`;
 }
 
-function drawEntry(){
+function drawEntry(){ if((S.em||"person")==="person") drawPerson(); else drawGrid(); }
+
+function drawGrid(){
   const el = $("tab10"); if(!el) return;
   if(!S.ep) S.ep = nowPeriod();
   const p = S.ep, q = (S.eq||"").trim().toLowerCase(), f = S.ef || "all";
@@ -1186,7 +1215,7 @@ function drawEntry(){
   });
   const nLoan = vis.filter(r=>r.kind==="loan").length;
 
-  el.innerHTML = `
+  el.innerHTML = entryModeBar() + `
   <div class="card">
     <div class="bar" style="margin:0">
       <span class="pnav"><button class="ghost sm" id="e_prev" title="งวดก่อนหน้า">◀</button>
@@ -1214,6 +1243,7 @@ function drawEntry(){
     ไม่เท่ายอดรับรวม หรือหนี้คงเหลือไม่ต่อจากงวดก่อน · ปุ่ม <b>เติมตามงวด</b> ช่วยกรอกตามงวดละของสัญญา
     กดเองเท่านั้น ระบบไม่เติมให้โดยไม่ถาม · ปุ่ม «สลิป» คือเงินโอนจากสเตทเมนท์ที่เคยนำเข้าไว้ ใช้เทียบเท่านั้น</p>`;
 
+  bindModeBar();
   const go = d => { const n = pNum(p)+d; S.ep = pFrom(n); drawEntry(); };
   $("e_prev").onclick = () => go(-1);
   $("e_next").onclick = () => go(1);
@@ -1718,6 +1748,412 @@ function slipLedgerHTML(m){
         <div>( ${esc(CHAIR())} )</div><div class="rl">ประธานกลุ่มบุคคล</div></div>
     </div>
   </div>`;
+}
+
+/* ======================================================================
+   กรอกทีละคน — แยกผู้กู้ / ผู้ฝาก
+   ----------------------------------------------------------------------
+   ยอดยกมา ณ สิ้น ธ.ค.68 : หุ้นยกมา = สมาชิก.share · หนี้ยกมา = สัญญา.bal0
+   เริ่มกรอกงวด ม.ค.69 (= P_ANCHOR) เป็นต้นไป ทุกรายการลงสมุดรับชำระชุดเดียวกับแท็บอื่น
+   ผู้กู้ = ยังมีหนี้คงเหลือ (หรือยังไม่ทราบยอด) · ผู้ฝาก = ไม่มีหนี้แล้ว
+   ====================================================================== */
+const byNo = (a,b) => String(a.no).localeCompare(String(b.no));
+function liveLoans(no){
+  return contractsOf(no).filter(c=>!NODEBT(c.prod) && !settledAt(c))
+    .map(c=>({c, r:runContract(c)})).filter(x=>!x.r.balKnown || x.r.bal>0.005);
+}
+function shareCid(no){ const sc = contractsOf(no).find(c=>NODEBT(c.prod)); return sc ? sc.id : ""; }
+function lastEntry(no, cid){
+  const es = LG.all().filter(e=>e.no===no && (e.cid||"")===(cid||"")).sort(LG.byP);
+  return es.length ? es[es.length-1] : null;
+}
+function nextP(no, cid){ const e = lastEntry(no, cid); return e ? pFrom(pNum(e.p)+1) : P_ANCHOR; }
+function toast(msg){
+  let t = $("toast"); if(!t){ t = document.createElement("div"); t.id = "toast"; t.className = "toast"; document.body.appendChild(t); }
+  t.textContent = msg; t.classList.add("on");
+  clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove("on"), 1800);
+}
+
+/* ---- แถบเลือกวิธีกรอก + ปุ่มนำเข้ายอดยกมา (ใช้ทั้งสองหน้า) ---- */
+function entryModeBar(){
+  const em = S.em || "person";
+  return `<div class="bar" style="margin:0 0 12px">
+    <span class="seg2" id="em">${[["person","กรอกทีละคน"],["grid","กรอกทั้งงวด"]]
+      .map(([k,t])=>`<button data-em="${k}" class="${em===k?"on":""}">${t}</button>`).join("")}</span>
+    <span class="hint">${em==="person" ? "เลือกชื่อทางซ้าย แล้วบันทึกทีละงวด" : "ทุกคนในงวดเดียว แบบตาราง"}</span>
+    <button class="ghost sm" id="op_imp" style="margin-left:auto" title="อ่านไฟล์ใบสรุปชำระรายเดือน (HTML) แล้วตั้งหุ้นยกมาและหนี้ยกมาให้ทุกคน">นำเข้ายอดยกมาจากใบสรุป</button>
+    <input type="file" id="op_file" accept=".html,.htm,text/html" hidden>
+  </div>
+  <div id="op_box"></div>`;
+}
+function bindModeBar(){
+  document.querySelectorAll("#em [data-em]").forEach(b=>b.onclick = () => { S.em = b.dataset.em; drawEntry(); });
+  $("op_imp").onclick = () => $("op_file").click();
+  $("op_file").onchange = async e => {
+    const f = e.target.files[0]; e.target.value = ""; if(!f) return;
+    const list = parseOpening(await f.text());
+    if(!list.length){ alert("ไม่พบใบสรุปรายคนในไฟล์นี้ — ต้องเป็นไฟล์ใบสรุปชำระรายเดือนที่มีรหัสสมาชิก หุ้นสะสม และหนี้คงค้าง"); return; }
+    S.opPlan = {file:f.name, rows:openPlan(list)};
+    renderOpenPreview();
+  };
+  renderOpenPreview();
+}
+
+/* ======================================================================
+   นำเข้ายอดยกมาจากไฟล์ «ใบสรุปชำระรายเดือน + สรุปปันผล»
+   ====================================================================== */
+function parseOpening(html){
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const money = t => +String(t||"").replace(/[^\d.\-]/g,"") || 0;
+  /* ยอดประจำล่าสุด = ยอดที่จ่ายซ้ำติดกันอย่างน้อย 2 เดือนครั้งล่าสุด (ยอดก้อนเดียวผิดปกติไม่นับ) */
+  const regular = arr => {
+    const a = arr.map(v=>+v.toFixed(2)).filter(v=>v>0); if(!a.length) return 0;
+    for(let i=a.length-1; i>0; i--) if(a[i]===a[i-1]) return a[i];
+    const c = {}; a.forEach(v=>c[v]=(c[v]||0)+1);
+    return +Object.keys(c).sort((x,y)=>c[y]-c[x] || +y - +x)[0];
+  };
+  return [...doc.querySelectorAll("section.receipt")].map(sec=>{
+    const kv = {};
+    sec.querySelectorAll(".kv").forEach(d=>{ const b = d.querySelector("b"); if(!b) return;
+      kv[b.textContent.replace(/:\s*$/,"").trim()] = d.textContent.slice(b.textContent.length).trim(); });
+    const rows = [...sec.querySelectorAll(".trow")].map(r=>[...r.children].map(x=>x.textContent.trim()))
+      .filter(a=>/^\d{4}-\d{2}$/.test(a[0]))
+      .map(a=>({ym:a[0], int:money(a[1]), sh:money(a[2]), pay:money(a[3]), debt:money(a[4])}));
+    return {
+      no:   String(kv["รหัสสมาชิก"]||"").trim(),
+      name: String(kv["ชื่อ"]||"").replace(/^(คุณ|คูณ)\s*/,"").replace(/\s+/g," ").trim(),
+      share: money(kv["หุ้นสะสม (ล่าสุดในช่วง)"]),
+      debt:  money(kv["หนี้คงค้าง (ล่าสุดในช่วง)"]),
+      inst:  regular(rows.map(r=>r.pay)),
+      shM:   regular(rows.map(r=>r.sh)),
+      months: rows.length
+    };
+  }).filter(x=>x.no);
+}
+/* แผนว่าจะทำอะไรกับแต่ละคน — ยังไม่แตะข้อมูลจริง */
+function openPlan(list){
+  return list.map(x=>{
+    const m = DB.members.find(z=>z.no===x.no) || null;
+    const loans = m ? contractsOf(x.no).filter(c=>!NODEBT(c.prod) && !settledAt(c)) : [];
+    const act = x.debt > 0.005 ? (loans.length===0 ? "new" : loans.length===1 ? "set" : "split")
+                               : (loans.length ? "close" : "save");
+    return {...x, m, loans, act};
+  }).sort(byNo);
+}
+/* จำนวนงวดที่เหลือโดยประมาณ — ใช้กำหนดว่างวดไหนต้องชำระ เฉพาะบัญชีที่สร้างใหม่จากใบสรุป */
+function estTerms(debt, inst, shM){
+  let b = debt, n = 0;
+  while(b > 0.005 && n < 240){
+    const pri = Math.min(b, inst - shM - b*RATE);
+    if(pri <= 0.005) return 0;                               // งวดละไม่พอแม้แต่ดอกเบี้ย — ไม่กำหนดงวด
+    b -= pri; n++;
+  }
+  return n;
+}
+const OP_ACT = {new:"สร้างบัญชีเงินกู้ยกมา", set:"ตั้งหนี้ยกมาให้สัญญาเดิม", split:"มีหลายสัญญา — แบ่งหนี้เองหลังนำเข้า",
+                close:"ตั้งหนี้คงเหลือเป็น 0 ตามใบสรุป", save:"ตั้งหุ้นยกมา"};
+function renderOpenPreview(){
+  const box = $("op_box"); if(!box) return;
+  const P = S.opPlan; if(!P){ box.innerHTML = ""; return; }
+  const rows = P.rows, nB = rows.filter(r=>r.debt>0.005).length;
+  const miss = DB.members.filter(m=>!rows.some(r=>r.no===m.no));
+  const instOf = r => r.loans.length===1 ? +r.loans[0].inst||0 : 0;
+  box.innerHTML = `<div class="card" style="border-left:4px solid var(--accent)">
+    <div class="eyebrow">ตรวจก่อนนำเข้ายอดยกมา — ${esc(P.file)}</div>
+    <p class="hint" style="margin:0 0 9px">พบ <b>${rows.length}</b> คน · ผู้กู้ <b>${nB}</b> · ผู้ฝาก <b>${rows.length-nB}</b> ·
+      หุ้นรวม <b>${B(rows.reduce((a,r)=>a+r.share,0))}</b> · หนี้รวม <b>${B(rows.reduce((a,r)=>a+r.debt,0))}</b> บาท ·
+      เป็นยอด ณ สิ้น ธ.ค.68 แล้วเริ่มกรอกงวด ม.ค.69 · <b>ยังไม่มีอะไรถูกบันทึกจนกว่าจะกดยืนยัน</b></p>
+    <div class="tbl" style="max-height:50vh"><table><thead><tr><th class="l">สมาชิก</th><th class="l">ประเภท</th>
+      <th>หุ้นยกมา</th><th>หนี้ยกมา</th><th>งวดละ (ทะเบียน → ใบสรุป)</th><th class="l">สิ่งที่จะทำ</th></tr></thead><tbody>
+      ${rows.map(r=>{ const ti = instOf(r), diff = r.debt>0.005 && ti && r.inst && Math.abs(ti-r.inst)>0.005;
+        return `<tr><td class="l"><span class="no">${esc(r.no)}</span>${esc(r.m ? r.m.name : r.name)}
+            ${r.m ? "" : ' <span class="pill yel">สมาชิกใหม่</span>'}</td>
+          <td class="l"><span class="pill ${r.debt>0.005?"":"grn"}">${r.debt>0.005?"ผู้กู้":"ผู้ฝาก"}</span></td>
+          <td class="amt">${B(r.share)}</td><td class="amt">${r.debt>0.005?`<b>${B(r.debt)}</b>`:"—"}</td>
+          <td class="amt">${r.debt>0.005 ? (ti ? `${B(ti)}${diff?` → <b style="color:var(--accent-ink)">${B(r.inst)}</b>`:""}` : B(r.inst)) : "—"}</td>
+          <td class="l"><span class="pill ${r.act==="split"?"red":r.act==="new"?"yel":""}">${OP_ACT[r.act]}</span>
+            ${r.act==="set"||r.act==="close" ? `<span class="hint">${r.loans.map(c=>esc(c.code||c.prod)).join(", ")}</span>` : ""}</td></tr>`; }).join("")}
+    </tbody></table></div>
+    ${miss.length ? `<p class="hint" style="margin-top:8px">มีในทะเบียนแต่ไม่มีในใบสรุป ${miss.length} คน — จะไม่ถูกแก้:
+      ${miss.map(m=>`${esc(m.no)} ${esc(m.name)}`).join(" · ")}</p>` : ""}
+    <label class="rlf" style="margin-top:10px"><input type="checkbox" id="op_inst">
+      เปลี่ยน «งวดละ» ในทะเบียนสัญญาเป็นยอดล่าสุดจากใบสรุปด้วย (เฉพาะแถวที่มีลูกศร →)</label>
+    <div class="bar" style="margin-top:12px"><button id="op_ok">ยืนยันนำเข้า</button>
+      <button class="ghost" id="op_cancel">ยกเลิก</button>
+      <span class="hint">นำเข้าซ้ำได้ — จะเขียนทับเฉพาะหุ้นยกมาและหนี้ยกมา รายการที่กรอกไว้ในสมุดไม่ถูกแตะ</span></div>
+  </div>`;
+  $("op_cancel").onclick = () => { S.opPlan = null; renderOpenPreview(); };
+  $("op_ok").onclick = () => {
+    const upd = $("op_inst").checked, n = applyOpening(P.rows, upd);
+    S.open = {asOf:"2568-12", file:P.file, at:new Date().toISOString().slice(0,10),
+              split:P.rows.filter(r=>r.act==="split").map(r=>r.no)};
+    S.opPlan = null; all();
+    toast(`นำเข้ายอดยกมา ${n} คนแล้ว`);
+  };
+}
+function applyOpening(rows, updInst){
+  rows.forEach(r=>{
+    let m = DB.members.find(z=>z.no===r.no);
+    if(!m){ m = {no:r.no, name:r.name, share:0}; DB.members.push(m); }
+    m.share = +r.share.toFixed(2);
+    if(r.shM) m.shM = r.shM;
+    if(r.act==="new"){
+      const id = "OPEN" + r.no;
+      if(!S.contracts.some(c=>c.id===id)) S.contracts.push({id, no:r.no, prod:"สามัญ", code:`ยกมา-68/${r.no}`,
+        d:"2025-12-31", legacy:true, t0:0, terms:estTerms(r.debt, r.inst, r.shM), inst:r.inst, shareM:r.shM,
+        amt:+r.debt.toFixed(2), bal0:+r.debt.toFixed(2), open:0, fromSummary:true});
+      else S.contracts.find(c=>c.id===id).bal0 = +r.debt.toFixed(2);
+    } else if(r.act==="set"){
+      const c = r.loans[0];
+      c.bal0 = +r.debt.toFixed(2);
+      if(r.inst && (!(+c.inst) || updInst)) c.inst = r.inst;
+      if(r.shM && !(+c.shareM)) c.shareM = r.shM;
+    } else if(r.act==="close"){
+      r.loans.forEach(c=>c.bal0 = 0);
+    }
+  });
+  DB.members.sort(byNo);
+  return rows.length;
+}
+
+/* ======================================================================
+   หน้ากรอกทีละคน
+   ====================================================================== */
+function personRows(){
+  return DB.members.slice().sort(byNo).map(m=>{
+    const L = liveLoans(m.no), le = LG.ofMember(m.no);
+    return {m, L, kind: L.length ? "loan" : "save",
+      debt: +L.reduce((a,x)=>a + (x.r.balKnown ? x.r.bal : 0), 0).toFixed(2),
+      unk: L.some(x=>!x.r.balKnown), shares: runMember(m).shares,
+      last: le.length ? le[le.length-1].p : ""};
+  });
+}
+/* ฟอร์มของคนที่เลือก — เก็บใน S.pf พิมพ์ค้างไว้แล้วสลับหน้าก็ยังอยู่ */
+function pfFor(x){
+  const loan = x.kind==="loan";
+  const cids = loan ? x.L.map(l=>l.c.id) : [shareCid(x.m.no)];
+  if(!S.pf || S.pf.no!==x.m.no || !cids.includes(S.pf.cid)){
+    const cid = cids[0];
+    S.pf = {no:x.m.no, cid, p:nextP(x.m.no, cid), vals:{}};
+    pfLoad();
+  }
+  return S.pf;
+}
+function pfLoad(){
+  const e = LG.get(S.pf.p, S.pf.no, S.pf.cid);
+  S.pf.vals = e ? Object.fromEntries(["d","m","int","pri","shB","shE","fee","bal","note","relief"].filter(k=>has(e[k])).map(k=>[k, e[k]])) : {};
+  S.pf.edit = !!e;
+}
+function pfCheckHTML(x){
+  const v = S.pf.vals, loan = x.kind==="loan";
+  if(!loan) return has(v.m) ? `<span class="pill grn">ฝากหุ้น ${B(num(v.m))} บาท</span>` : '<span class="hint">ใส่ยอดฝาก</span>';
+  const c = S.contracts.find(k=>k.id===S.pf.cid);
+  const parts = LPARTS.reduce((a,k)=>a+num(v[k]),0), d = +(num(v.m) - parts).toFixed(2);
+  const prev = c ? prevBal(c, S.pf.p) : null, out = [];
+  if(!has(v.m)) out.push('<span class="hint">ใส่ยอดรับรวม</span>');
+  else out.push(Math.abs(d)<0.005 ? `<span class="pill grn">✓ ยอดแยกรวม ${B(parts)} ตรงกับยอดรับ</span>`
+    : `<span class="pill red">${d>0?"แยกยังขาด":"แยกเกินมา"} ${B(Math.abs(d))}</span>`);
+  if(prev!=null){
+    const exp = +(prev - num(v.pri)).toFixed(2);
+    out.push(`<span class="hint">หนี้ก่อนหน้า ${B(prev)} − เงินต้น ${B(num(v.pri))} = <b>${B(exp)}</b></span>`);
+    if(has(v.bal) && Math.abs(exp - +v.bal) >= 0.01) out.push(`<span class="pill red">หนี้คงเหลือที่ใส่ไม่ตรง ควรเป็น ${B(exp)}</span>`);
+  } else out.push('<span class="pill yel">ยังไม่รู้หนี้ก่อนหน้า — ใส่หนี้ยกมาด้านบน</span>');
+  return out.join(" ");
+}
+/* ปุ่ม «แยกยอดให้» — แบ่งยอดรับตามลำดับสัญญาข้อ 2.2: ดอกเบี้ย → หุ้นประจำ → หุ้นเพิ่ม → เงินต้น */
+function pfSplit(){
+  const c = S.contracts.find(k=>k.id===S.pf.cid), v = S.pf.vals, p = S.pf.p;
+  if(!c) return "ไม่พบสัญญา";
+  const prev = prevBal(c, p); if(prev==null) return "ยังไม่รู้หนี้ก่อนหน้า — ใส่หนี้ยกมาด้านบนก่อน";
+  const tn = tnAt(c, p), D = tn ? dueOn(c, p, tn) : null;
+  const m = has(v.m) ? num(v.m) : (+c.inst||0); if(!m) return "ใส่ยอดรับรวมก่อน";
+  const flat = PROD[c.prod] && PROD[c.prod].method==="flat";
+  const int = +((flat ? (+c.amt||0) : prev) * RATE).toFixed(2);
+  const wantB = has(v.shB) ? num(v.shB) : (D ? +D.base||0 : (+c.shareM||0));
+  const wantE = has(v.shE) ? num(v.shE) : (D ? +D.extra||0 : 0);
+  let rest = +(m - num(v.fee)).toFixed(2);
+  const gi = Math.min(rest, int);   rest = +(rest-gi).toFixed(2);
+  const gb = Math.min(rest, wantB); rest = +(rest-gb).toFixed(2);
+  const ge = Math.min(rest, wantE); rest = +(rest-ge).toFixed(2);
+  const gp = Math.min(rest, prev);  rest = +(rest-gp).toFixed(2);
+  Object.assign(v, {m, int:gi, shB:gb, shE:+(ge+rest).toFixed(2), pri:+gp.toFixed(2), bal:+(prev-gp).toFixed(2)});
+  return rest>0.005 ? `จ่ายเกินหนี้ ${B(rest)} บาท — ใส่เป็นหุ้นเพิ่มให้แล้ว ตรวจอีกครั้ง` : "";
+}
+
+function personPanel(x){
+  const m = x.m, loan = x.kind==="loan", pf = pfFor(x), v = pf.vals;
+  const c = loan ? S.contracts.find(k=>k.id===pf.cid) : null;
+  const tel = (prof(m.no)||{}).tel;
+  const es = LG.ofMember(m.no).slice().reverse();
+  const inp = (k, lbl, attrs="") => `<div><label>${lbl}</label><input type="number" step="0.01" data-pf="${k}" value="${has(v[k])?v[k]:""}" ${attrs}></div>`;
+  const opts = (()=>{ let lo = pNum(P_ANCHOR) - 12, hi = pNum(nowPeriod()) + 3, o = [];
+    for(let n=hi; n>=lo; n--){ const p = pFrom(n);
+      o.push(`<option value="${p}" ${p===pf.p?"selected":""}>${thPer(p)}${LG.get(p,m.no,pf.cid)?" ✓":""}</option>`); }
+    return o.join(""); })();
+  const splitNote = S.open && (S.open.split||[]).includes(m.no) && x.L.some(l=>!has(l.c.bal0))
+    ? `<p class="hint" style="color:var(--red);margin:0 0 8px"><b>ใบสรุปให้หนี้รวมของคนนี้ไว้ก้อนเดียว แต่มี ${x.L.length} สัญญา</b> — แบ่งหนี้ยกมาลงแต่ละสัญญาด้านล่าง</p>` : "";
+
+  return `<div class="card" style="border-left:4px solid ${loan?"var(--brand2)":"var(--green)"}">
+    <div class="eyebrow"><span class="no">${esc(m.no)}</span>${esc(m.name)}
+      <span class="pill ${loan?"":"grn"}">${loan?"ผู้กู้":"ผู้ฝาก"}</span>${tel?`<span class="hint">โทร ${esc(tel)}</span>`:""}</div>
+    <div class="stats" style="margin-bottom:10px">
+      <div class="stat"><div class="k">ทุนเรือนหุ้นสะสม</div><div class="v">${B(x.shares)}</div></div>
+      ${loan ? `<div class="stat"><div class="k">หนี้คงเหลือ</div><div class="v">${x.unk && !x.debt ? "ยังไม่ทราบ" : B(x.debt)}</div></div>
+        <div class="stat"><div class="k">งวดละ</div><div class="v">${B(x.L.reduce((a,l)=>a+(+l.c.inst||0),0))}</div></div>`
+      : `<div class="stat"><div class="k">ฝากปกติเดือนละ</div><div class="v">${m.shM?B(m.shM):"—"}</div></div>`}
+      <div class="stat"><div class="k">บันทึกล่าสุด</div><div class="v" style="font-size:18px">${x.last?thPer(x.last):"ยังไม่มี"}</div></div>
+    </div>
+
+    <details class="opn" ${!es.length?"open":""}><summary>ยอดยกมา ณ 31 ธ.ค.68 — แก้ได้</summary>
+      ${splitNote}
+      <div class="pf">
+        <div><label>หุ้นยกมา</label><input type="number" step="0.01" data-om="share" value="${+m.share||0}"></div>
+        ${loan ? x.L.map(l=>`
+          <div><label>หนี้ยกมา${x.L.length>1?` · ${esc(l.c.code||l.c.prod)}`:""}</label>
+            <input type="number" step="0.01" data-oc="${l.c.id}:bal0" value="${has(l.c.bal0)?l.c.bal0:""}" placeholder="ยังไม่ได้ใส่"></div>
+          <div><label>งวดละ${x.L.length>1?` · ${esc(l.c.code||l.c.prod)}`:""}</label>
+            <input type="number" step="0.01" data-oc="${l.c.id}:inst" value="${+l.c.inst||""}"></div>
+          <div><label>หุ้นต่องวด</label><input type="number" step="0.01" data-oc="${l.c.id}:shareM" value="${+l.c.shareM||""}"></div>`).join("")
+        : `<div><label>ฝากปกติเดือนละ</label><input type="number" step="0.01" data-om="shM" value="${+m.shM||""}"></div>`}
+      </div></details>
+
+    <div class="eyebrow" style="margin-top:14px">${pf.edit ? "แก้ไขรายการ" : "บันทึกการชำระ"}</div>
+    <div class="pf">
+      <div><label>งวด</label><select id="pf_p">${opts}</select></div>
+      ${loan && x.L.length>1 ? `<div><label>สัญญา</label><select id="pf_c">${x.L.map(l=>`<option value="${l.c.id}" ${l.c.id===pf.cid?"selected":""}>${esc(l.c.code||l.c.prod)}</option>`).join("")}</select></div>` : ""}
+      <div><label>วันที่รับ</label><input type="date" data-pf="d" value="${esc(v.d||"")}"></div>
+      ${loan ? inp("m","ยอดรับรวม") + inp("int","ดอกเบี้ย") + inp("pri","เงินต้น") + inp("shB","หุ้นประจำ") + inp("shE","หุ้นเพิ่ม")
+              + inp("fee","ค่าทวงถาม") + inp("bal","หนี้คงเหลือ")
+             : inp("m","ยอดฝากหุ้น")}
+      <div style="grid-column:span 2"><label>หมายเหตุ</label><input data-pf="note" value="${esc(v.note||"")}" placeholder="เช่น โอนแทน / เงินสด"></div>
+      ${loan ? `<div><label>&nbsp;</label><label class="rlf"><input type="checkbox" data-pf="relief" ${v.relief?"checked":""}> ผ่อนผัน</label></div>` : ""}
+    </div>
+    <div class="pfchk" id="pf_chk">${pfCheckHTML(x)}</div>
+    <div class="bar" style="margin-top:12px">
+      ${loan ? `<button class="ghost" id="pf_split" title="แบ่งยอดรับตามสัญญาข้อ 2.2: ดอกเบี้ย 1% ของหนี้ก่อนหน้า → หุ้นประจำ → หุ้นเพิ่ม → เงินต้น">แยกยอดให้</button>`
+             : (m.shM ? `<button class="ghost" id="pf_norm">ใส่ยอดฝากปกติ ${B(m.shM)}</button>` : "")}
+      <button id="pf_save">${pf.edit ? "บันทึกการแก้ไข" : "บันทึก " + thPer(pf.p)}</button>
+      <button class="ghost" id="pf_clear">ล้างฟอร์ม</button>
+      ${pf.edit ? `<button class="ghost" id="pf_del" style="color:var(--red)">ลบรายการงวดนี้</button>` : ""}
+      <span class="hint" id="pf_msg"></span>
+    </div>
+
+    <div class="eyebrow" style="margin-top:16px">ประวัติ ${es.length} รายการ</div>
+    ${es.length ? `<div class="tbl" style="max-height:380px"><table><thead><tr><th class="l">งวด</th>
+      ${loan && x.L.length>1 ? '<th class="l">สัญญา</th>' : ""}<th class="l">วันที่รับ</th><th>ยอดรับ</th>
+      ${loan ? "<th>ดอกเบี้ย</th><th>เงินต้น</th><th>หุ้น</th><th>คงเหลือ</th>" : "<th>หุ้น</th>"}<th class="l">ตรวจ</th><th></th></tr></thead><tbody>
+      ${es.map(e=>{ const ok = !has(e.m) || Math.abs(LG.diff(e))<0.005, cc = e.cid && S.contracts.find(k=>k.id===e.cid);
+        return `<tr data-pe="${esc(e.p)}|${esc(e.cid||"")}" style="cursor:pointer${e.p===pf.p&&(e.cid||"")===pf.cid?";background:var(--faint)":""}" title="คลิกเพื่อแก้ไข">
+          <td class="l"><b>${thPer(e.p)}</b></td>${loan && x.L.length>1 ? `<td class="l hint">${esc(cc?(cc.code||cc.prod):"ฝากหุ้น")}</td>` : ""}
+          <td class="l">${e.d?thDay(e.d):"—"}</td><td class="amt"><b>${B(num(e.m))}</b></td>
+          ${loan ? `<td class="amt">${B(num(e.int))}</td><td class="amt">${B(num(e.pri))}</td><td class="amt">${B(LG.sh(e))}</td>
+            <td class="amt">${has(e.bal)?B(+e.bal):"—"}</td>` : `<td class="amt">${B(LG.sh(e))}</td>`}
+          <td class="l">${ok?'<span class="pill grn">✓</span>':`<span class="pill red">ต่าง ${B(LG.diff(e))}</span>`}${e.note?` <span class="hint">${esc(e.note)}</span>`:""}</td>
+          <td><button class="del" data-pdel="${esc(e.p)}|${esc(e.cid||"")}" title="ลบ">×</button></td></tr>`; }).join("")}
+    </tbody></table></div>` : '<p class="hint">ยังไม่มีรายการ — เริ่มบันทึกงวดแรกได้เลย</p>'}
+  </div>`;
+}
+
+function drawPerson(){
+  const el = $("tab10"); if(!el) return;
+  const all = personRows(), kind = S.pk || "loan";
+  const q = (S.pq||"").trim().toLowerCase();
+  const list = all.filter(x=>x.kind===kind && (!q || `${x.m.no} ${x.m.name}`.toLowerCase().includes(q)));
+  const nL = all.filter(x=>x.kind==="loan").length, nS = all.length - nL;
+  if(!S.sp || !all.some(x=>x.m.no===S.sp)) S.sp = (list[0] && list[0].m.no) || null;
+  const cur = all.find(x=>x.m.no===S.sp) || null;
+  const sumL = all.filter(x=>x.kind==="loan").reduce((a,x)=>a+x.debt,0);
+  const sumS = all.reduce((a,x)=>a+x.shares,0);
+
+  el.innerHTML = entryModeBar() + `
+  ${!S.open && !S.opPlan ? `<div class="card" style="border-left:4px solid var(--accent);padding:12px 16px">
+      <b>ยังไม่ได้ตั้งยอดยกมา ณ สิ้น ธ.ค.68</b>
+      <span class="hint">— กด «นำเข้ายอดยกมาจากใบสรุป» ด้านบน เลือกไฟล์ใบสรุปชำระรายเดือน ระบบจะตั้งหุ้นยกมาและหนี้ยกมาให้ทุกคน
+      หรือพิมพ์ยอดยกมาเองทีละคนในช่อง «ยอดยกมา» ก็ได้</span></div>`
+    : S.open ? `<p class="hint" style="margin:-4px 0 10px">ยอดยกมา ณ สิ้น ธ.ค.68 จากไฟล์ ${esc(S.open.file||"")} · นำเข้าเมื่อ ${S.open.at?thDay(S.open.at):""}</p>` : ""}
+  <div class="pe">
+    <div class="card pe-l">
+      <span class="seg2" id="pk" style="width:100%">${[["loan",`ผู้กู้ ${nL}`],["save",`ผู้ฝาก ${nS}`]]
+        .map(([k,t])=>`<button data-pk="${k}" class="${kind===k?"on":""}" style="flex:1">${t}</button>`).join("")}</span>
+      <input id="pq" placeholder="ค้นชื่อ / เลขสมาชิก" value="${esc(S.pq||"")}" style="margin-top:9px">
+      <div class="hint" style="margin-top:6px">${kind==="loan" ? `หนี้คงเหลือรวม <b>${B(sumL)}</b>` : `ทุนเรือนหุ้นรวมทุกคน <b>${B(sumS)}</b>`}</div>
+      <div class="pe-list">
+        ${list.map(x=>`<button class="pl ${x.m.no===S.sp?"on":""}" data-sp="${esc(x.m.no)}">
+          <span class="no">${esc(x.m.no)}</span><b>${esc(x.m.name)}</b>
+          <span class="amt">${x.kind==="loan" ? (x.unk && !x.debt ? "?" : B0(x.debt)) : B0(x.shares)}</span>
+          <span class="sub">${x.last ? "บันทึกล่าสุด " + thPer(x.last) : "ยังไม่มีรายการ"}${x.kind==="loan"&&x.unk?" · ยังไม่รู้หนี้ยกมา":""}</span></button>`).join("")
+          || '<p class="hint" style="padding:10px 4px">ไม่พบ</p>'}
+      </div>
+    </div>
+    <div class="pe-r">${cur ? personPanel(cur) : '<div class="card"><p class="hint">ยังไม่มีสมาชิก — นำเข้ายอดยกมาจากใบสรุปก่อน</p></div>'}</div>
+  </div>`;
+
+  bindModeBar();
+  document.querySelectorAll("#pk [data-pk]").forEach(b=>b.onclick = () => { S.pk = b.dataset.pk; S.sp = null; drawPerson(); });
+  $("pq").oninput = e => { S.pq = e.target.value; drawPerson(); const i = $("pq"); i.focus(); i.setSelectionRange(i.value.length, i.value.length); };
+  el.querySelectorAll("[data-sp]").forEach(b=>b.onclick = () => { S.sp = b.dataset.sp; S.pf = null; drawPerson(); });
+  if(!cur) return;
+  const x = cur, loan = x.kind==="loan";
+
+  // ยอดยกมา — บันทึกทันทีที่แก้
+  el.querySelectorAll("[data-om]").forEach(i=>i.onchange = () => {
+    x.m[i.dataset.om] = i.value==="" ? 0 : +(+i.value).toFixed(2); save(); drawPerson(); toast("แก้ยอดยกมาแล้ว"); });
+  el.querySelectorAll("[data-oc]").forEach(i=>i.onchange = () => {
+    const [id, k] = i.dataset.oc.split(":"), c = S.contracts.find(z=>z.id===id); if(!c) return;
+    if(i.value==="") delete c[k]; else c[k] = +(+i.value).toFixed(2);
+    save(); drawPerson(); toast("แก้ยอดยกมาแล้ว"); });
+
+  // ฟอร์ม
+  const refresh = () => { $("pf_chk").innerHTML = pfCheckHTML(x); };
+  el.querySelectorAll("[data-pf]").forEach(i=>{
+    const ev = (i.type==="checkbox" || i.type==="date") ? "change" : "input";
+    i.addEventListener(ev, () => {
+      const k = i.dataset.pf;
+      const val = k==="relief" ? i.checked : (k==="d"||k==="note") ? i.value.trim() : (i.value==="" ? "" : +(+i.value).toFixed(2));
+      if(val==="" || val===false) delete S.pf.vals[k]; else S.pf.vals[k] = val;
+      refresh();
+    });
+    i.addEventListener("keydown", ev => { if(ev.key==="Enter"){ ev.preventDefault(); $("pf_save").click(); } });
+  });
+  $("pf_p").onchange = e => { S.pf.p = e.target.value; pfLoad(); drawPerson(); };
+  if($("pf_c")) $("pf_c").onchange = e => { S.pf.cid = e.target.value; S.pf.p = nextP(x.m.no, S.pf.cid); pfLoad(); drawPerson(); };
+  if($("pf_split")) $("pf_split").onclick = () => {
+    const w = pfSplit();
+    if(w && !/^จ่ายเกิน/.test(w)){ alert(w); return; }
+    drawPerson(); if(w) $("pf_msg").textContent = w;
+  };
+  if($("pf_norm")) $("pf_norm").onclick = () => { S.pf.vals.m = +x.m.shM; drawPerson(); };
+  $("pf_clear").onclick = () => { S.pf.vals = {}; S.pf.edit = false; drawPerson(); };
+  if($("pf_del")) $("pf_del").onclick = () => {
+    if(!confirm(`ลบรายการงวด ${thPer(S.pf.p)} ของ ${x.m.name}?`)) return;
+    LG.drop(S.pf.p, x.m.no, S.pf.cid); save(); S.pf = null; drawPerson(); toast("ลบแล้ว"); };
+  $("pf_save").onclick = () => {
+    const v = S.pf.vals;
+    if(!has(v.m)){ alert("ใส่ยอดรับก่อน"); return; }
+    if(loan){
+      const d = +(num(v.m) - LPARTS.reduce((a,k)=>a+num(v[k]),0)).toFixed(2);
+      if(Math.abs(d)>=0.005 && !confirm(`ยอดแยกยังไม่เท่ายอดรับ (ต่าง ${B(d)} บาท)\nจะบันทึกไว้ก่อนหรือไม่? แก้ทีหลังได้`)) return;
+    }
+    const p = S.pf.p, rec = loan ? {...v} : {d:v.d, m:v.m, shB:v.m, shE:"", note:v.note};
+    // ล้างค่าเดิมที่ไม่ได้อยู่ในฟอร์มด้วย ไม่ให้ตัวเลขเก่าค้าง
+    const patch = {}; ["d","m","int","pri","shB","shE","fee","bal","note","relief"].forEach(k=>patch[k] = has(rec[k]) ? rec[k] : "");
+    LG.set(p, x.m.no, S.pf.cid, patch);
+    save();
+    toast(`บันทึก ${thPer(p)} ของ ${x.m.name} แล้ว`);
+    S.pf = {no:x.m.no, cid:S.pf.cid, p:nextP(x.m.no, S.pf.cid), vals:{}}; pfLoad();
+    drawPerson();
+  };
+  el.querySelectorAll("[data-pe]").forEach(tr=>tr.onclick = ev => {
+    if(ev.target.closest("[data-pdel]")) return;
+    const [p, cid] = tr.dataset.pe.split("|");
+    S.pf = {no:x.m.no, cid, p, vals:{}}; pfLoad(); drawPerson();
+    const f = $("pf_p"); if(f) f.scrollIntoView({behavior:"smooth", block:"center"});
+  });
+  el.querySelectorAll("[data-pdel]").forEach(b=>b.onclick = () => {
+    const [p, cid] = b.dataset.pdel.split("|");
+    if(!confirm(`ลบรายการงวด ${thPer(p)}?`)) return;
+    LG.drop(p, x.m.no, cid); save(); if(S.pf && S.pf.p===p) S.pf = null; drawPerson(); toast("ลบแล้ว");
+  });
 }
 
 /* ============ ตรวจสอบ — ระบบกันปัญหาเดิมกลับมา ============ */
