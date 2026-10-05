@@ -513,7 +513,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-53</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-54</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" title="บันทึกขึ้น Google Sheets เดี๋ยวนี้ (ปกติบันทึกให้เองทุกครั้งที่กรอก)">☁ บันทึกขึ้น Google Sheets</button>
@@ -7185,7 +7185,7 @@ function banner(){
 }
 function connectRemote(){
   const url = prompt("URL Apps Script (ลงท้าย /exec) — ใส่ให้แล้ว กด ตกลง ได้เลย:",
-                     (REMOTE&&REMOTE.url) || GAS_URL || "");
+                     GAS_URL || (REMOTE&&REMOTE.url) || "");        // ใช้ลิงก์ล่าสุดของโปรแกรมก่อน ไม่เอาลิงก์เก่าที่เคยจำไว้
   if(!url) return;
   const token = prompt("วางรหัสเชื่อมต่อ (REMOTE_TOKEN ที่ตั้งไว้ใน Apps Script):", "");
   if(!token) return;
