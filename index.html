@@ -504,7 +504,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-46</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-47</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
@@ -2562,6 +2562,9 @@ function drawNW(kind){
     <span class="hint">เริ่มจาก ${esc(S.nw.file||"ใบสรุป")} · ยกมา ณ 31 ธ.ค.68</span>
     <button class="ghost sm" id="nw_all" style="margin-left:auto">พิมพ์${T}ทั้งหมด</button>
     <button class="ghost sm" id="nw_csv">ส่งออก CSV</button>
+    <button class="ghost sm" id="nw_ni" title="เลือกรูปตารางผ่อนได้หลายคนพร้อมกัน ระบบดูเลขสมาชิกในรูปแล้วจับคู่ให้">📷 นำเข้าตารางผ่อน (หลายคนได้)</button>
+    <input type="file" id="nw_nifile" accept="image/\u002a,application/pdf" multiple hidden>
+    <span class="hint" id="nw_nimsg"></span>
     <button class="ghost sm" id="nw_imp" title="อ่านใบสรุปใหม่ — เปลี่ยนเฉพาะยอดยกมา รายการที่บันทึกแล้วอยู่ครบ">นำเข้าใบสรุปใหม่</button>
     <input type="file" id="nw_file" accept=".html,.htm,text/html" hidden>
   </div>
@@ -2615,6 +2618,8 @@ function drawNW(kind){
       ["บันทึกรายเดือน", ["เลขสมาชิก","ชื่อ","งวดที่","เดือน","วันที่รับ","ชำระรวม","ดอกเบี้ย","เงินต้น","หุ้นประจำ","หุ้นเพิ่ม","กู้เพิ่ม","หนี้คงเหลือ","หมายเหตุ"], detail]]);
   };
   bindNwOut(kind);
+  $("nw_ni").onclick = () => { if(inGAS || REMOTE) return $("nw_nifile").click(); niNoAI(); niBindGo(); };
+  $("nw_nifile").onchange = e => { const files = [...e.target.files]; e.target.value = ""; if(files.length) niReadFiles(files, cur ? cur.x : null); };
   if(!cur) return;
   const x = cur.x;
   if(S.nimpOpen && !(S.nimp && S.nimp.no===x.no)) S.nimpOpen = false;
@@ -2841,7 +2846,7 @@ const niNum = v => { if(v==null || v==="") return null; const n = +String(v).rep
 function niParseText(txt){
   const lines = String(txt||"").split(/\r?\n/);
   let order = null;
-  const head = lines.find(l => /ดอก/.test(l) && /(คงเหลือ|ต้น)/.test(l));
+  const head = lines.find(l => /งวด/.test(l) && /ดอก/.test(l) && /(คงเหลือ|ต้น)/.test(l));
   if(head){
     const cells = head.split(/\t|\s{2,}|\|/).map(c=>c.trim()).filter(Boolean);
     const key = c => /งวด/.test(c) ? "n" : /เพิ่ม/.test(c) ? "shx" : /คงเหลือ|คงค้าง/.test(c) ? "bal" : /ดอก/.test(c) ? "int"
@@ -2860,6 +2865,27 @@ function niParseText(txt){
     rows.push(r);
   });
   return niClean(rows);
+}
+/* ส่วนหัวของ «เครื่องคำนวณวงเงินกู้สูงสุด»: เลขสมาชิก ชื่อ จำนวนงวด อัตรา หุ้น ยอดส่ง วงเงิน */
+function niParseHead(txt){
+  const t = String(txt||""), m = {}, g = re => { const r = t.match(re); return r ? r[1] : null; };
+  const no = g(/เลขที่สมาชิก\s*[:：]?\s*(\d{1,4})/); if(no) m.no = no;
+  const nm = g(/ชื่อ\s*[:：]?\s*([^\n\r]+)/); if(nm) m.name = nm.trim();
+  [["terms", /จำนวนงวด\s*[:：]?\s*(\d+)/], ["rate", /อัตราดอกเบี้ย[^\d\n]*(\d+(?:\.\d+)?)/],
+   ["sh",   /ฝากเงินหุ้นประจำ\s*[:：]?\s*([\d,]+(?:\.\d+)?)/],
+   ["shx",  /ฝากหุ้นเพิ่ม\s*(?:\(\s*[\d.]+\s*%\s*\))?\s*[:：]?\s*([\d,]+(?:\.\d+)?)/],
+   ["inst", /รวมยอดชำระต่อเดือน\s*[:：]?\s*([\d,]+(?:\.\d+)?)/], ["loan", /วงเงินกู้สูงสุด\s*[:：]?\s*([\d,]+(?:\.\d+)?)/]
+  ].forEach(([k, re]) => { const v = g(re); const n = v == null ? null : niNum(v); if(n != null) m[k] = n; });
+  return m;
+}
+const niNameKey = n => String(n||"").replace(/นางสาว|น\.ส\.|นาย|นาง|คุณ|\s/g, "");
+/* หาสมาชิกจากเลขที่ (001 / 1) ก่อน ไม่ได้ค่อยดูชื่อ */
+function niFindPerson(no, name){
+  const d = String(no||"").replace(/\D/g, "");
+  if(d){ const p = NW.person(d.padStart(3, "0")) || NW.person(d); if(p) return p; }
+  const k = niNameKey(name);
+  if(k.length >= 4) return NW.people().find(p => { const q = niNameKey(p.name); return q === k || q.includes(k) || k.includes(q); }) || null;
+  return null;
 }
 function niClean(rows){
   const by = {};
@@ -2888,10 +2914,11 @@ function niAlign(x, rows){
   return best;
 }
 /* ตรวจตัวเลขแต่ละแถว */
-function niCheck(rows, rate){
+function niCheck(rows, rate, loan0){
   const R = rate || RATE, out = {};
   rows.forEach((r,i)=>{
-    const msg = [], prev = i>0 && rows[i-1].n === r.n-1 ? rows[i-1].bal : (r.bal != null && r.pri != null ? r.bal + r.pri : null);
+    const msg = [], prev = i>0 && rows[i-1].n === r.n-1 ? rows[i-1].bal
+      : (r.n === 1 && loan0 != null ? loan0 : (r.bal != null && r.pri != null ? r.bal + r.pri : null));
     if(prev != null && r.bal != null && r.pri != null && Math.abs(prev - r.pri - r.bal) > 0.05) msg.push("คงเหลือไม่ต่อเนื่อง");
     if(prev != null && r.int != null && Math.abs(prev * R - r.int) > 0.05) msg.push(`ดอกเบี้ยควรเป็น ${B(prev*R)}`);
     if(r.m != null && r.pri != null && r.int != null){
@@ -2914,24 +2941,27 @@ function niHTML(x){
   let body = `<div class="bar" style="margin:8px 0">
       <button class="ghost sm" id="ni_img">📷 เลือกรูปตารางผ่อน (ให้ AI อ่าน)</button>
       <input type="file" id="ni_file" accept="image/\u002a,application/pdf" multiple hidden>
-      <span class="hint">เลือกได้หลายรูปพร้อมกัน ถ้าตารางยาวหลายหน้า</span><span class="hint" id="ni_msg"></span></div>
+      <span class="hint">เลือกได้หลายรูปพร้อมกัน — ตารางยาวหลายหน้า หรือหลายคนในครั้งเดียว (ระบบดูเลขสมาชิกในรูป)</span><span class="hint" id="ni_msg"></span></div>
     <details><summary class="hint" style="cursor:pointer">หรือวางตารางที่คัดลอกมา (Excel / เว็บ)</summary>
       <textarea id="ni_txt" rows="5" style="width:100%;margin-top:6px;font-family:var(--mono,monospace);font-size:12px"
         placeholder="งวดที่  ยอดส่งต่อเดือน  เงินต้น  ดอกเบี้ย  ฝากหุ้น  ฝากเพิ่ม  ยอดคงเหลือ&#10;1  3,000.00  1,838.00  982.00  150.00  30.00  96,362.00"></textarea>
       <button class="ghost sm" id="ni_parse">อ่านจากข้อความ</button></details>`;
   if(!I) return body;
-  const plan = niPlan(x, I), chk = niCheck(I.rows, (I.meta && I.meta.rate) ? I.meta.rate/100 : RATE);
+  const plan = niPlan(x, I), chk = niCheck(I.rows, (I.meta && I.meta.rate) ? I.meta.rate/100 : RATE, I.meta && has(I.meta.loan) ? I.meta.loan : null);
   const sel = (()=>{ const o = []; for(let n = pNum(NW_R1) - 24; n <= pNum(nwCurP()); n++){ const p = pFrom(n);
     o.push(`<option value="${p}" ${p===I.first?"selected":""}>${nwRound(p) >= 1 ? "งวด " + nwRound(p) + " · " : ""}${thPer(p)}</option>`); } return o.join(""); })();
   const add = plan.filter(o=>!o.has || I.over).length;
   const M = I.meta || {};
   body += `<div class="keybox" style="margin-top:8px">
     <div class="bar" style="margin:0 0 6px;flex-wrap:wrap">
-      <b>อ่านได้ ${I.rows.length} งวด</b>
-      ${M.terms?`<span class="pill">${M.terms} งวด</span>`:""}${M.inst?`<span class="pill">ส่งเดือนละ ${B(M.inst)}</span>`:""}
+      <b>อ่านได้ ${I.rows.length} งวด</b>${I.qn > 1 ? ` <span class="pill grn">คนที่ ${I.qi} / ${I.qn}</span>` : ""}
+      ${has(M.loan)?`<span class="pill">วงเงิน ${B(M.loan)}</span>`:""}${M.terms?`<span class="pill">${M.terms} งวด</span>`:""}${M.inst?`<span class="pill">ส่งเดือนละ ${B(M.inst)}</span>`:""}
       ${has(M.sh)?`<span class="pill">ฝากหุ้น ${B(M.sh)}</span>`:""}${has(M.shx)?`<span class="pill">ฝากเพิ่ม ${B(M.shx)}</span>`:""}
       <label style="margin-left:auto">งวดที่ 1 ของตาราง = <select id="ni_first" style="width:auto">${sel}</select></label>
     </div>
+    ${I.detNo || I.detName ? (() => { const a = niNameKey(I.detName), b = niNameKey(x.name), same = !a || !b || a.includes(b) || b.includes(a);
+      return `<p class="hint" style="margin:0 0 6px">${same ? "✓" : "⚠"} ในรูปคือสมาชิก ${esc(I.detNo||"")} ${esc(I.detName||"")}`
+        + (same ? "" : ` — ชื่อไม่ตรงกับในทะเบียน (<b>${esc(x.name)}</b>) ตรวจให้แน่ใจว่าเป็นคนเดียวกันก่อนบันทึก`) + "</p>"; })() : ""}
     <p class="hint" style="margin:0 0 6px">${I.auto ? `✓ จับคู่อัตโนมัติจากยอดคงเหลือ — ตรงกับยอดที่มีอยู่ ${I.auto} งวด` : '⚠ จับคู่จากยอดคงเหลือไม่ได้ — เลือกเองว่างวดที่ 1 ของตารางคือเดือนไหน'}
       · จะเติมงวด ${nwRound(P_ANCHOR)} (${thPer(P_ANCHOR)}) ถึงงวด ${nwRound(nwCurP())} (${thPer(nwCurP())}) · แก้ตัวเลขได้ทุกช่อง</p>
     <div class="tbl" style="max-height:380px"><table><thead><tr><th>ตาราง</th><th class="l">งวดโอน</th>
@@ -2946,7 +2976,7 @@ function niHTML(x){
       <label class="rlf"><input type="checkbox" id="ni_over" ${I.over?"checked":""}> เขียนทับงวดที่บันทึกไว้แล้ว</label>
       ${has(M.sh) ? `<label class="rlf"><input type="checkbox" id="ni_def" ${I.def!==false?"checked":""}> ตั้งฝากหุ้น ${B(M.sh)}${has(M.shx)?` + ฝากเพิ่ม ${B(M.shx)}`:""} เป็นยอดประจำของคนนี้</label>` : ""}
       <button id="ni_save" ${add?"":"disabled"} style="margin-left:auto">บันทึกลงทะเบียน ${add} งวด</button>
-      <button class="ghost" id="ni_cancel">ยกเลิก</button>
+      <button class="ghost" id="ni_cancel">${S.niq && S.niq.length ? "ข้ามคนนี้" : "ยกเลิก"}</button>
     </div></div>`;
   return body;
 }
@@ -2963,37 +2993,71 @@ function niLoad(x, rows, meta, src){
   S.nimp = {no:x.no, rows, meta, src, first: a ? a.first : P_ANCHOR, auto: a ? a.hit : 0, over:false, def:true};
   return true;
 }
+const niMsg = h => ["ni_msg", "nw_nimsg"].forEach(id => { const e = $(id); if(e) e.innerHTML = h; });
+const niNoAI = () => niMsg('<b style="color:var(--danger)">อ่านรูปด้วย AI ต้องเปิดโปรแกรมจากลิงก์ Apps Script (ลงท้าย /exec)</b>'
+  + ' — หน้านี้ยังไม่ได้ต่อกับ Google Sheets' + (GAS_URL ? ' <button class="ghost sm" id="ni_go">เปิดลิงก์ /exec</button>' : "")
+  + ' · หรือใช้ «วางตารางที่คัดลอกมา» ในหน้าของแต่ละคนแทน');
+function niBindGo(){ const g = $("ni_go"); if(g) g.onclick = () => window.open(GAS_URL, "_blank", "noopener"); }
+
+/* จัดกลุ่มตามคน → เข้าคิว → เปิดทีละคนให้ตรวจ แล้วบันทึก/ข้าม แล้วต่อคนถัดไป */
+function niRoute(groups, fb){
+  const q = [], miss = [];
+  groups.forEach(g => {
+    const x = (g.no || g.name) ? niFindPerson(g.no, g.name) : fb;
+    if(!x){ miss.push(((g.no || "") + " " + (g.name || "")).trim() || "ไม่พบเลขสมาชิกในรูป"); return; }
+    const ex = q.find(o => o.no === x.no);
+    if(ex){ ex.rows = ex.rows.concat(g.rows); Object.keys(g.meta).forEach(k => { if(ex.meta[k] == null) ex.meta[k] = g.meta[k]; }); }
+    else q.push({no:x.no, detNo:g.no||"", name:g.name||"", rows:g.rows.slice(), meta:Object.assign({}, g.meta), src:g.src});
+  });
+  S.niq = q; S.niqN = q.length; S.niqI = 0;
+  niMsg(miss.length ? `<b style="color:var(--danger)">ไม่พบสมาชิกในทะเบียน: ${esc(miss.join(", "))}</b>` : "");
+  if(!q.length){ toast("ไม่มีรูปที่จับคู่กับสมาชิกได้"); return false; }
+  return niNext();
+}
+function niNext(){
+  while(S.niq && S.niq.length){
+    const g = S.niq.shift(), x = NW.person(g.no); if(!x) continue;
+    S.niqI = (S.niqI || 0) + 1;
+    if(!niLoad(x, g.rows, g.meta, g.src)) continue;
+    Object.assign(S.nimp, {detNo:g.detNo, detName:g.name, qi:S.niqI, qn:S.niqN});
+    const kind = nwState(x).kind, T = kind === "loan" ? 20 : 21;
+    S.nsel[kind] = x.no; S.nf = null; S.nimpOpen = true;
+    if(tab === T) drawNW(kind); else goTab(T);
+    return true;
+  }
+  S.nimp = null; return false;
+}
+function niDone(kind){ S.nimp = null; if(!(S.niq && S.niq.length && niNext())) drawNW(kind); }
+
+/* ให้ AI อ่านรูป/PDF ทีละไฟล์ — ไฟล์ที่ไม่มีหัว ถือว่าเป็นหน้าถัดไปของคนเดิม */
+async function niReadFiles(files, fb){
+  const b64 = f => new Promise((ok, no) => { const r = new FileReader();
+    r.onload = () => ok(String(r.result).split(",")[1]); r.onerror = () => no(new Error("อ่านไฟล์ไม่ได้")); r.readAsDataURL(f); });
+  const groups = []; let cur = null;
+  for(let i = 0; i < files.length; i++){
+    const f = files[i]; niMsg(`AI กำลังอ่าน ${esc(f.name)} (${i+1}/${files.length}) …`);
+    try{
+      const r = await gas("aiSchedule", JSON.stringify({kind: /pdf/i.test(f.type) ? "pdf" : "image", mime: f.type || "image/png", data: await b64(f)}));
+      const j = typeof r === "string" ? JSON.parse(r) : r;
+      if(j.error){ niMsg(`<b style="color:var(--danger)">AI: ${esc(j.error)}</b>`); return; }
+      const M = Object.assign({}, j.meta || {}), no = M.no ? String(M.no).replace(/\D/g, "") : "", name = M.name ? String(M.name) : "";
+      delete M.no; delete M.name;
+      if(!cur || (no && cur.no && no !== cur.no) || (!no && name && cur.name && niNameKey(name) !== niNameKey(cur.name))){
+        cur = {no, name, rows:[], meta:{}, src:"ai"}; groups.push(cur); }
+      if(no && !cur.no) cur.no = no; if(name && !cur.name) cur.name = name;
+      cur.rows = cur.rows.concat(j.rows || []);
+      Object.keys(M).forEach(k => { if(cur.meta[k] == null && M[k] != null) cur.meta[k] = M[k]; });
+    }catch(err){ niMsg(`<b style="color:var(--danger)">เรียก AI ไม่สำเร็จ: ${esc(err.message||err)}</b>`
+      + ' — ถ้าเพิ่งอัปเดต Code.gs ต้อง Deploy เวอร์ชันใหม่ก่อน หรือใช้ «วางตารางที่คัดลอกมา» แทน'); return; }
+  }
+  niRoute(groups, fb);
+}
 function bindNi(x, kind){
   const redraw = () => { S.nimpOpen = true; drawNW(kind); };
-  if($("ni_img")) $("ni_img").onclick = () => {
-    if(inGAS || REMOTE) return $("ni_file").click();
-    // ยังไม่ได้ต่อกับ Google — AI อ่านรูปทำงานผ่าน Apps Script เท่านั้น
-    $("ni_msg").innerHTML = '<b style="color:var(--danger)">อ่านรูปด้วย AI ต้องเปิดโปรแกรมจากลิงก์ Apps Script (ลงท้าย /exec)</b>'
-      + ' — หน้านี้ยังไม่ได้ต่อกับ Google Sheets'
-      + (GAS_URL ? ' <button class="ghost sm" id="ni_go">เปิดลิงก์ /exec</button>' : "")
-      + ' · หรือใช้ «วางตารางที่คัดลอกมา» ด้านล่างแทน';
-    const g = $("ni_go"); if(g) g.onclick = () => window.open(GAS_URL, "_blank", "noopener");
-  };
-  if($("ni_file")) $("ni_file").onchange = async e => {
-    const files = [...e.target.files]; e.target.value = ""; if(!files.length) return;
-    const b64 = f => new Promise((ok,no)=>{ const r = new FileReader();
-      r.onload = () => ok(String(r.result).split(",")[1]); r.onerror = () => no(new Error("อ่านไฟล์ไม่ได้")); r.readAsDataURL(f); });
-    let rows = [], meta = {};
-    for(let i=0; i<files.length; i++){
-      const f = files[i]; $("ni_msg").textContent = `AI กำลังอ่าน ${f.name} (${i+1}/${files.length}) …`;
-      try{
-        const r = await gas("aiSchedule", JSON.stringify({kind: /pdf/i.test(f.type)?"pdf":"image", mime: f.type||"image/png",
-          data: await b64(f), no: x.no, name: x.name}));
-        const j = typeof r==="string" ? JSON.parse(r) : r;
-        if(j.error){ $("ni_msg").innerHTML = `<b style="color:var(--danger)">AI: ${esc(j.error)}</b>`; return; }
-        rows = rows.concat(j.rows||[]);
-        Object.keys(j.meta||{}).forEach(k=>{ if(meta[k]==null && j.meta[k]!=null) meta[k] = j.meta[k]; });
-      }catch(err){ $("ni_msg").innerHTML = `<b style="color:var(--danger)">เรียก AI ไม่สำเร็จ: ${esc(err.message||err)}</b>`
-        + ' — ถ้าเพิ่งอัปเดต Code.gs ต้อง Deploy เวอร์ชันใหม่ก่อน หรือใช้ «วางตารางที่คัดลอกมา» แทน'; return; }
-    }
-    if(niLoad(x, rows, meta, "ai")) redraw();
-  };
-  if($("ni_parse")) $("ni_parse").onclick = () => { if(niLoad(x, niParseText($("ni_txt").value), {}, "text")) redraw(); };
+  if($("ni_img")) $("ni_img").onclick = () => { if(inGAS || REMOTE) return $("ni_file").click(); niNoAI(); niBindGo(); };
+  if($("ni_file")) $("ni_file").onchange = e => { const files = [...e.target.files]; e.target.value = ""; if(files.length) niReadFiles(files, x); };
+  if($("ni_parse")) $("ni_parse").onclick = () => { const t = $("ni_txt").value, M = niParseHead(t), no = M.no || "", name = M.name || "";
+    delete M.no; delete M.name; niRoute([{no, name, rows:niParseText(t), meta:M, src:"text"}], x); };
   const I = S.nimp && S.nimp.no===x.no ? S.nimp : null; if(!I) return;
   $("ni_first").onchange = e => { I.first = e.target.value; I.auto = 0; redraw(); };
   $("ni_over").onchange = e => { I.over = e.target.checked; redraw(); };
@@ -3004,7 +3068,7 @@ function bindNi(x, kind){
     if(inp.value !== "" && v == null){ inp.value = ""; toast("ใส่ตัวเลขติดลบไม่ได้"); }
     redraw();
   });
-  $("ni_cancel").onclick = () => { S.nimp = null; redraw(); };
+  $("ni_cancel").onclick = () => niDone(kind);
   $("ni_save").onclick = () => {
     const todo = niPlan(x, I).filter(o=>!o.has || I.over); if(!todo.length) return;
     if(!confirm(`บันทึกตามตารางผ่อน ${todo.length} งวด ของ ${x.no} ${x.name}\n`
@@ -3020,8 +3084,9 @@ function bindNi(x, kind){
     });
     if(I.def && has(I.meta.sh)){ x.shM = +I.meta.sh; x.shxM = has(I.meta.shx) ? +I.meta.shx : 0; }
     if(has(I.meta.inst) && !x.inst) x.inst = +I.meta.inst;
-    S.nimp = null; S.nf = null; save(); drawNW(kind);
-    toast(`บันทึกตามตารางผ่อน ${todo.length} งวดแล้ว`);
+    S.nf = null; save();
+    toast(`บันทึกตามตารางผ่อน ${todo.length} งวดของ ${x.no} แล้ว`);
+    niDone(kind);
   };
 }
 

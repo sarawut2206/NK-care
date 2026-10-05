@@ -488,8 +488,11 @@ var AI_SCHED_SCHEMA = {
     meta: {
       type: "object",
       additionalProperties: false,
-      required: ["terms", "rate", "sh", "shx", "inst"],
+      required: ["no", "name", "terms", "rate", "sh", "shx", "inst", "loan"],
       properties: {
+        no:    {type: "string", description: "เลขที่สมาชิกที่พิมพ์อยู่ส่วนหัว เช่น 001 ไม่มีส่วนหัวให้ใส่ค่าว่าง"},
+        name:  {type: "string", description: "ชื่อสมาชิกที่พิมพ์อยู่ส่วนหัว ไม่มีให้ใส่ค่าว่าง"},
+        loan:  {type: "number", description: "วงเงินกู้สูงสุด (ยอดกู้ตั้งต้น) ไม่มีให้ใส่ -1"},
         terms: {type: "number", description: "จำนวนงวดทั้งหมด ไม่มีให้ใส่ -1"},
         rate:  {type: "number", description: "อัตราดอกเบี้ยต่อเดือน หน่วย % เช่น 1.00 ไม่มีให้ใส่ -1"},
         sh:    {type: "number", description: "ฝากหุ้นประจำต่อเดือน ไม่มีให้ใส่ -1"},
@@ -535,8 +538,13 @@ function aiSchedule(payload){
     var media = isPdf
       ? {type: "document", source: {type: "base64", media_type: "application/pdf", data: p.data}}
       : {type: "image",    source: {type: "base64", media_type: p.mime || "image/png", data: p.data}};
-    var prompt = "นี่คือรูปตารางผ่อนชำระเงินกู้ของสมาชิกกองทุน" + (p.no ? " (สมาชิก " + p.no + " " + (p.name || "") + ")" : "")
-      + " อ่านทุกแถวของตารางแล้วส่งกลับตามโครงสร้างที่กำหนด\n\n"
+    var prompt = "นี่คือรูปตารางผ่อนชำระเงินกู้ของสมาชิกกองทุน (มักเป็นหน้าพิมพ์ของ «เครื่องคำนวณวงเงินกู้สูงสุด») "
+      + "อ่านส่วนหัวและทุกแถวของตารางแล้วส่งกลับตามโครงสร้างที่กำหนด\n\n"
+      + "ส่วนหัวอยู่เหนือตาราง มีบรรทัดประมาณ: เลขที่สมาชิก · ชื่อ · จำนวนงวด · อัตราดอกเบี้ย/เดือน · ฝากเงินหุ้นประจำ · ฝากหุ้นเพิ่ม · "
+      + "ยอดชำระ (เงินต้น + ดอกเบี้ย) · รวมยอดชำระต่อเดือน · วงเงินกู้สูงสุด\n"
+      + "• no = เลขที่สมาชิก, name = ชื่อ (ตัดคำนำหน้า «คุณ» ออกได้), loan = วงเงินกู้สูงสุด, inst = รวมยอดชำระต่อเดือน (ไม่ใช่ยอดชำระเงินต้น+ดอกเบี้ย)\n"
+      + "• sh = ฝากเงินหุ้นประจำ, shx = ฝากหุ้นเพิ่ม (เอาจำนวนเงิน ไม่เอาตัวเลขเปอร์เซ็นต์ในวงเล็บ)\n"
+      + "• รูปที่เป็นหน้าถัดไปของตารางเดิมจะไม่มีส่วนหัว ให้ใส่ no และ name เป็นค่าว่าง\n\n"
       + "กติกา\n"
       + "• คอลัมน์ทั่วไป: งวดที่ · ยอดส่งต่อเดือน · เงินต้น · ดอกเบี้ย · ฝากหุ้น · ฝากเพิ่ม · ยอดคงเหลือ\n"
       + "• คัดตัวเลขให้ตรงตามรูปทุกหลัก ทศนิยม 2 ตำแหน่ง ห้ามปัด ห้ามคำนวณเติมเอง ห้ามเดา\n"
@@ -570,7 +578,10 @@ function aiSchedule(payload){
 
     var v = function(x){ x = +x; return (isFinite(x) && x >= 0) ? Math.round(x * 100) / 100 : null; };   // -1 = ว่าง
     var meta = {}, M = parsed.meta || {};
-    ["terms", "rate", "sh", "shx", "inst"].forEach(function(k){ var x = v(M[k]); if(x !== null) meta[k] = x; });
+    ["terms", "rate", "sh", "shx", "inst", "loan"].forEach(function(k){ var x = v(M[k]); if(x !== null) meta[k] = x; });
+    var no = String(M.no || "").replace(/[^0-9]/g, ""), nm = String(M.name || "").replace(/\s+/g, " ").trim();
+    if(no) meta.no = no;
+    if(nm) meta.name = nm;
     var rows = (parsed.rows || []).filter(function(r){ return r && +r.n >= 1; }).map(function(r){
       var o = {n: Math.round(+r.n)};
       ["m", "pri", "int", "sh", "shx", "bal"].forEach(function(k){ var x = v(r[k]); if(x !== null) o[k] = x; });
