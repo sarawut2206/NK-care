@@ -504,7 +504,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-45</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-46</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
@@ -636,7 +636,20 @@ const txKey = t => `${t.a}|${t.d}|${t.t}|${t.m}`;
 const memOf = t => t.fixNo || t.no || S.acct[t.a] || "";   // ★ fixNo = ระบุเจ้าของเอง (ฝากชำระแทน)
 
 /* ============ บันทึกขึ้น Google Sheets ============ */
-let _saveT = null, _saving = false, _again = false;
+let _saveT = null, _saving = false, _again = false, _lastSaved = 0;
+/* บันทึกทันที ไม่รอ 1.2 วินาที — ใช้หลังนำเข้า / ก่อนปิดหน้า */
+function saveNow(){ clearTimeout(_saveT); return (inGAS || REMOTE) ? doSave() : (lsSave(), true); }
+window.addEventListener("pagehide", () => { if(_saveT && (inGAS || REMOTE)) saveNow(); });
+document.addEventListener("visibilitychange", () => { if(document.hidden && _saveT && (inGAS || REMOTE)) saveNow(); });
+/* บันทึกแล้วอ่านกลับจาก Sheets ว่าทะเบียนใหม่อยู่ครบจริง — กัน Code.gs เวอร์ชันเก่าที่ทิ้งข้อมูลส่วนนี้ */
+async function verifyNW(){
+  if(!(inGAS || REMOTE)) return;
+  try{
+    const r = JSON.parse(await gas("getData")), n = r.state && r.state.nw && r.state.nw.people ? r.state.nw.people.length : 0, want = NW.people().length;
+    if(n >= want){ setStatus(`✓ ยืนยันแล้ว: อ่านกลับจาก Google Sheets ได้ทะเบียนใหม่ ${n} คน · ${(r.state.nw.rows||[]).length} รายการที่บันทึก`, "ok"); toast("บันทึกลง Google Sheets แล้ว ✓"); }
+    else setStatus(`⚠ Sheets เก็บทะเบียนใหม่ไม่ครบ (${n}/${want}) — ต้องวาง Code.gs ล่าสุดใน Apps Script แล้ว Deploy เวอร์ชันใหม่`, "bad");
+  }catch(e){ setStatus("⚠ ตรวจอ่านกลับจาก Sheets ไม่ได้: " + (e.message||e), "bad"); }
+}
 function save(){
   if(!S) return;
   clearTimeout(_saveT);
@@ -682,13 +695,19 @@ function pack(){ return {members:DB.members, anames:DB.anames, wd:DB.wd,
   profile:S.profile, per:S.per, rule:S.rule, cut:S.cut, pdfg:S.pdfg, ledger:S.ledger||[], open:S.open||null, nw:S.nw||null,
   board:{list:BOARD.list, year:BOARD.year, meet:BOARD.meet}}; }
 async function doSave(){
+  if(S && S._loadFailed){ setStatus("⚠ ยังไม่ได้บันทึก — โหลดข้อมูลจาก Sheets ไม่สำเร็จ (กันข้อมูลเดิมถูกทับ) รีเฟรชหน้านี้ก่อน", "bad"); return false; }
   if(_saving){ _again = true; return; }
   _saving = true; setStatus("กำลังบันทึกขึ้น Google Sheets…");
+  let ok = false;
   try{
-    await gas("saveState", JSON.stringify(pack()));
-    setStatus("บันทึกแล้ว " + new Date().toLocaleTimeString("th-TH"));
-  }catch(e){ setStatus("⚠ บันทึกไม่สำเร็จ: " + (e.message||e) + " — กด «ส่งออก JSON» สำรองไว้ก่อน"); }
+    const r = await gas("saveState", JSON.stringify(pack()));
+    const j = typeof r === "string" ? JSON.parse(r) : r;
+    if(j && j.error) throw new Error(j.error);
+    ok = true; _lastSaved = Date.now();
+    setStatus("✓ บันทึกลง Google Sheets แล้ว " + new Date().toLocaleTimeString("th-TH"), "ok");
+  }catch(e){ setStatus("⚠ บันทึกลง Sheets ไม่สำเร็จ: " + (e.message||e) + " — กด «ส่งออก JSON» สำรองไว้ก่อน", "bad"); }
   _saving = false;
+  if(!_again) return ok;
   if(_again){ _again = false; save(); }
 }
 
@@ -2317,6 +2336,7 @@ function nwImport(file, html){
   S.nsel = {}; S.nf = null;
   all();
   toast(`เริ่มทะเบียนจากใบสรุปแล้ว ${list.length} คน`);
+  if(inGAS || REMOTE){ Promise.resolve(saveNow()).then(ok => { if(ok) return verifyNW(); }); }
 }
 
 /* ---------- ฟอร์มบันทึกรายเดือน ---------- */
@@ -2374,6 +2394,8 @@ function nwStartHTML(T){
       ระบบจะอ่าน <b>ทุนเรือนหุ้น</b> และ <b>หนี้คงค้าง</b> ของทุกคน ณ สิ้น ธ.ค.68 เป็นยอดยกมา
       คนที่มีหนี้เข้าทะเบียนผู้กู้ คนที่ไม่มีหนี้เข้าทะเบียนผู้ฝาก แล้วบันทึกต่อทีละคนตั้งแต่ ม.ค.69
       · ไม่เกี่ยวกับข้อมูลในระบบเก่า</p>
+    <p class="hint" style="margin:-4px 0 12px">${(inGAS||REMOTE) ? "✓ ต่อกับ Google Sheets แล้ว — เลือกไฟล์ครั้งเดียว ข้อมูลทั้งหมดและทุกอย่างที่กรอกต่อจากนี้จะบันทึกลง Sheets ให้เอง"
+      : "⚠ หน้านี้ยังไม่ได้ต่อกับ Google Sheets — ข้อมูลจะอยู่แค่ในเบราว์เซอร์เครื่องนี้ ให้เปิดจากลิงก์ Apps Script (/exec) เพื่อให้บันทึกลง Sheets"}</p>
     <button class="cta" id="nw_imp">เลือกไฟล์ใบสรุป (HTML)</button>
     <input type="file" id="nw_file" accept=".html,.htm,text/html" hidden>
   </div>`;
@@ -6706,15 +6728,18 @@ function gas(fn, ...a){
     });
   return Promise.reject(new Error("ยังไม่ได้ต่อกับ Google Sheets"));
 }
-function setStatus(t){ const e=$("saved"); if(e) e.textContent = t; }
+function setStatus(t, kind){ const e=$("saved"); if(!e) return; e.textContent = t;
+  e.style.color = kind==="ok" ? "var(--green)" : kind==="bad" ? "var(--danger)" : ""; e.style.fontWeight = kind ? "600" : ""; }
+/* จำนวนคนที่มีข้อมูลอยู่ — ระบบเก่า หรือ ทะเบียนใหม่ */
+const dataCount = () => Math.max((DB && DB.members ? DB.members.length : 0), (typeof NW !== "undefined" && S && S.nw) ? NW.people().length : 0);
 
 /* แถบใหญ่ใต้เมนู — บอกตรง ๆ ว่าต่อกับอะไร มีข้อมูลไหม ต้องทำอะไรต่อ */
 function banner(){
   const e = $("bnr"); if(!e) return;
-  const n = (DB && DB.members) ? DB.members.length : 0;
+  const n = dataCount();
   const box = (col,bg,html) => { e.style.display="block";
     e.style.borderLeft = "4px solid " + col; e.style.background = bg; e.innerHTML = html; };
-  if((inGAS||REMOTE) && !n){
+  if((inGAS||REMOTE) && !n && !(S && S._loadFailed)){
     box("var(--gold)", "#FFFBEF",
       '<b style="font-size:14px">ต่อกับ Google Sheets แล้ว — แต่ใน Sheets ยังไม่มีข้อมูล</b>'
       + '<p class="hint" style="margin:5px 0 9px">ยัดข้อมูลเข้า Sheets <b>ครั้งเดียว</b> แล้วจะไม่ต้องทำอีกเลย</p>'
@@ -6724,8 +6749,8 @@ function banner(){
   } else if(inGAS){
     box("var(--green)", "#F3F8F4",
       '<b style="color:var(--green)">✓ ต่อกับ Google Sheets อยู่</b><span class="hint"> — '
-      + n + ' สมาชิก · ' + S.contracts.length + ' สัญญา · ' + LG.all().length
-      + ' รายการรับชำระ · แก้อะไรบันทึกลง Sheets ให้เอง ไม่ต้องนำเข้าอีก</span>');
+      + n + ' สมาชิก' + (DB.members.length ? ' · ' + S.contracts.length + ' สัญญา · ' + LG.all().length + ' รายการรับชำระ' : '')
+      + ' · กรอกหรือแก้อะไร บันทึกลง Sheets ให้เองทุกครั้ง ไม่ต้องนำเข้าอีก</span>');
     setTimeout(()=>{ const x=$("bnr"); if(x) x.style.display="none"; }, 7000);
   } else if(REMOTE){
     box("var(--gold)", "#FFFBEF",
@@ -6772,13 +6797,14 @@ async function boot(){
         if(r.board.year) BOARD.year = r.board.year;
         if(r.board.meet) BOARD.meet = r.board.meet;
       }
-      setStatus(DB.members.length
-        ? "โหลดจาก Google Sheets แล้ว · " + DB.members.length + " สมาชิก" + (r.user ? " · " + r.user : "")
-        : "ต่อ Sheets ได้ แต่ยังไม่มีข้อมูล — กด «นำเข้า»");
+      setStatus(dataCount()
+        ? "โหลดจาก Google Sheets แล้ว · " + dataCount() + " สมาชิก" + (r.user ? " · " + r.user : "")
+        : "ต่อ Sheets ได้ แต่ยังไม่มีข้อมูล — เริ่มจากไฟล์ใบสรุปที่แท็บ ทะเบียนผู้กู้", dataCount() ? "ok" : "");
       if($("saveNow")) $("saveNow").style.display = "";
     }catch(e){
       const msg = (e && (e.message || e.details)) || String(e) || "ไม่ทราบสาเหตุ";
-      setStatus("⚠ อ่าน Sheets ไม่ได้");
+      S._loadFailed = true;               // อ่านข้อมูลเดิมไม่ได้ — ห้ามบันทึกทับ ไม่งั้นข้อมูลใน Sheets หาย
+      setStatus("⚠ อ่าน Sheets ไม่ได้ — จะไม่บันทึกทับข้อมูลเดิม", "bad");
       const b = $("bnr");
       if(b){ b.style.display="block"; b.style.borderLeft="4px solid var(--red)"; b.style.background="#FDF3F3";
         b.innerHTML = '<b style="color:var(--red)">ต่อกับ Apps Script ได้ แต่อ่าน Google Sheets ไม่สำเร็จ</b>'
@@ -6823,16 +6849,10 @@ $("clr").onclick = () => {
 };
 
 if($("saveNow")) $("saveNow").onclick = async () => {
-  if(!inGAS){ alert("ยังไม่ได้ต่อกับ Google Sheets — ต้องเปิดจากลิงก์ Apps Script (ลงท้าย /exec)"); return; }
-  const b = $("saveNow"); b.disabled = true; setStatus("กำลังบันทึกขึ้น Google Sheets…");
-  try{
-    await gas("saveState", JSON.stringify(pack()));
-    setStatus("บันทึกขึ้น Google Sheets แล้ว " + new Date().toLocaleTimeString("th-TH"));
-  }catch(e){
-    setStatus("⚠ บันทึกไม่สำเร็จ");
-    alert("บันทึกขึ้น Sheets ไม่สำเร็จ\n\n" + ((e&&(e.message||e.details))||String(e)) +
-          "\n\nข้อมูลยังอยู่ในหน้าจอ — กด «ส่งออก JSON» เก็บไว้ก่อนได้");
-  }
+  if(!inGAS && !REMOTE){ alert("ยังไม่ได้ต่อกับ Google Sheets — ต้องเปิดจากลิงก์ Apps Script (ลงท้าย /exec)"); return; }
+  const b = $("saveNow"); b.disabled = true;
+  const ok = await saveNow();
+  if(ok && NW.on()) await verifyNW();
   b.disabled = false;
 };
 
