@@ -31,10 +31,20 @@ var AI_MODEL     = "claude-opus-5";
 var AI_MODEL_STD = "claude-opus-5-5";   // รุ่นมาตรฐาน — ใช้เมื่อรุ่น/ฟีเจอร์ทดลองข้างบนเรียกไม่ได้
 var AI_DAILY_MAX = 40;                  // เรียก AI ได้วันละกี่ครั้ง กันเผลอกดรัว
 var TZ           = "Asia/Bangkok";
+/* รหัสเชื่อมต่อ — ถ้าใส่ตรงนี้ ใช้ค่านี้ก่อน (ไม่ต้องตั้ง Script properties)
+   ⚠ ห้ามนำไฟล์ที่ใส่รหัสแล้วไปวางบน GitHub (repo เปิดสาธารณะ) — ฉบับใน repo เว้นว่างไว้ */
+var REMOTE_TOKEN_DEFAULT = "";
 
 function prop_(k){ return PropertiesService.getScriptProperties().getProperty(k) || ""; }
 function setProp_(k, v){ PropertiesService.getScriptProperties().setProperty(k, v); }
-function token_(){ return prop_("REMOTE_TOKEN"); }
+function token_(){ return REMOTE_TOKEN_DEFAULT || prop_("REMOTE_TOKEN"); }
+/* ทุกคำสั่งที่แตะข้อมูลหรือเรียก AI ต้องแนบรหัส — ทั้งที่หน้าเว็บบน /exec เรียกตรง (google.script.run) และที่เรียกผ่าน doPost
+   ลิงก์ /exec เปิดหน้าโปรแกรมได้ทุกคน แต่ไม่ได้รหัส = อ่าน/เขียนข้อมูลไม่ได้ */
+function auth_(tok){
+  var want = token_();
+  if(!want)                        throw new Error("ยังไม่ได้ตั้งรหัสเชื่อมต่อ (REMOTE_TOKEN) ใน Apps Script");
+  if(String(tok || "") !== want)   throw new Error("รหัสเชื่อมต่อไม่ถูกต้อง");
+}
 function aiKey_(){ return prop_("AI_KEY"); }
 
 function claude_(key, body){
@@ -115,8 +125,8 @@ function doPost(e){
     switch(req.action){
       case "getData":   out = readAll_();                       break;
       case "saveState": out = {ok:true, saved: writeAll_(req.payload)}; break;
-      case "ai":        out = JSON.parse(ai(req.payload));       break;
-      case "aiSchedule": out = JSON.parse(aiSchedule(req.payload)); break;
+      case "ai":        out = JSON.parse(ai_(req.payload));      break;
+      case "aiSchedule": out = JSON.parse(aiSchedule_(req.payload)); break;
       case "ping":      out = {ok:true, ai: !!aiKey_(), time: now_()}; break;
       default: throw new Error("ไม่รู้จักคำสั่ง: " + req.action);
     }
@@ -128,8 +138,10 @@ function doPost(e){
 }
 
 /* ============ 3) ฟังก์ชันที่หน้าเว็บเรียกตรง (ตอนเปิดจากลิงก์ /exec) ============ */
-function getData(){ return JSON.stringify(readAll_()); }          // ต้องคืนเป็นข้อความ
-function saveState(payload){ return JSON.stringify({ok:true, saved: writeAll_(payload)}); }
+function getData(tok){ auth_(tok); return JSON.stringify(readAll_()); }          // ต้องคืนเป็นข้อความ
+function saveState(payload, tok){ auth_(tok); return JSON.stringify({ok:true, saved: writeAll_(payload)}); }
+function ai(payload, tok){ auth_(tok); return ai_(payload); }
+function aiSchedule(payload, tok){ auth_(tok); return aiSchedule_(payload); }
 
 /* ============ เก็บ/อ่านข้อมูล ============ */
 function ss_(){ return SpreadsheetApp.getActiveSpreadsheet(); }
@@ -449,7 +461,7 @@ function aiPrompt_(members, hint){
  * payload = JSON string {kind:"pdf"|"image", mime, data(base64), hint, members:[{no,name}]}
  * คืน JSON string {rows:[...], used, limit} หรือ {error}
  */
-function ai(payload){
+function ai_(payload){
   try{
     var key = aiKey_();
     if(!key) throw new Error("ยังไม่ได้ตั้ง AI_KEY — เมนู กบข.นข. → ตั้งค่ากุญแจ AI");
@@ -557,7 +569,7 @@ var AI_SCHED_SCHEMA = {
  * payload = JSON string {kind:"pdf"|"image", mime, data(base64), no, name}
  * คืน JSON string {meta, rows:[{n,m,pri,int,sh,shx,bal}], used, limit} หรือ {error}
  */
-function aiSchedule(payload){
+function aiSchedule_(payload){
   try{
     var key = aiKey_();
     if(!key) throw new Error("ยังไม่ได้ตั้ง AI_KEY — เมนู กบข.นข. → ตั้งค่ากุญแจ AI");

@@ -513,7 +513,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-55</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-56</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" title="บันทึกขึ้น Google Sheets เดี๋ยวนี้ (ปกติบันทึกให้เองทุกครั้งที่กรอก)">☁ บันทึกขึ้น Google Sheets</button>
@@ -2726,6 +2726,8 @@ function nwPanel(x, kind){
       <button class="ghost sm" id="nw_p1" style="margin-left:auto">พิมพ์ทะเบียนคนนี้</button>
       <button class="ghost sm" id="nw_p2" title="ตามรูปแบบใบสรุปเดิม ช่วงและอัตราตั้งที่แท็บ ใบสรุป + ปันผล">ใบสรุป + ปันผล</button>
       <button class="ghost sm" id="nw_out" style="color:var(--danger)" title="ลบออกจากทะเบียน — กู้คืนได้">ลาออก / ลบสมาชิก</button></div>
+    <div class="bar" style="margin:0 0 10px"><button class="cta" id="nw_save1" title="บันทึกข้อมูลขึ้น Google Sheets เดี๋ยวนี้ (ปกติบันทึกให้เองทุกครั้งที่กรอก) แล้วอ่านกลับยืนยัน">☁ บันทึกขึ้น Google Sheets</button>
+      <span class="hint" id="nw_savemsg">บันทึกให้เองทุกครั้งที่กรอก · กดปุ่มนี้เพื่อสั่งบันทึกและตรวจว่าขึ้น Sheets แล้ว</span></div>
     <div class="stats" style="margin-bottom:10px">
       <div class="stat"><div class="k">หนี้คงเหลือรวม</div><div class="v">${B(st.debt)}</div>
         <div class="hint">${NW_ACCS.sam} ${B0(by.sam.debt)} · ${NW_ACCS.dk} ${B0(by.dk.debt)}</div></div>
@@ -2870,6 +2872,7 @@ function drawNW(kind){
   if(!cur) return;
   const x = cur.x, view = (S.npv && S.npv[x.no]) || "all", a = view === "all" ? null : nwAcct(x, view);
   $("nw_out").onclick = () => nwResign(x, kind);
+  $("nw_save1").onclick = () => saveClick($("nw_save1"), $("nw_savemsg"));
   $("nw_p1").onclick = () => nwPrint(nwDocHTML(x, kind));
   $("nw_p2").onclick = () => nwPrint(nwSumDoc(x, nwDivCfg()));
   el.querySelectorAll("[data-vt]").forEach(b => b.onclick = () => { S.npv[x.no] = b.dataset.vt; S.nf = null; drawNW(kind); });
@@ -7144,9 +7147,31 @@ const REMOTE_KEY = "kbk_remote_v1";
 function remoteConf(){ try{ const t = localStorage.getItem(REMOTE_KEY); return t ? JSON.parse(t) : null; }catch(e){ return null; } }
 let REMOTE = !inGAS ? remoteConf() : null;
 
+/* รหัสเชื่อมต่อ — ใส่ครั้งเดียวต่อเครื่อง (จำในเบราว์เซอร์) · ผิด = ถามใหม่ */
+const TOK_KEY = "kbk_tok_v1"; let _memTok = "";
+function getTok(force){
+  let t = _memTok;
+  if(!t && !force){ try{ t = localStorage.getItem(TOK_KEY) || ""; }catch(e){} }
+  if(!t || force){
+    t = (prompt((force ? "รหัสเชื่อมต่อไม่ถูกต้อง — ใส่ใหม่อีกครั้ง\n\n" : "") + "วางรหัสเชื่อมต่อ (REMOTE_TOKEN) — ใส่ครั้งเดียวต่อเครื่อง\nรหัสอยู่ในไฟล์ Code.gs บรรทัด REMOTE_TOKEN_DEFAULT", "") || "").trim();
+    if(t){ try{ localStorage.setItem(TOK_KEY, t); }catch(e){} }
+  }
+  _memTok = t; return t;
+}
+const clearTok = () => { _memTok = ""; try{ localStorage.removeItem(TOK_KEY); }catch(e){} };
 function gas(fn, ...a){
-  if(inGAS) return new Promise((ok,no)=>
-    google.script.run.withSuccessHandler(ok).withFailureHandler(no)[fn](...a));
+  if(inGAS){
+    const needTok = fn === "getData" || fn === "saveState" || fn === "ai" || fn === "aiSchedule";
+    const call = tok => new Promise((ok, no) => google.script.run.withSuccessHandler(ok).withFailureHandler(no)[fn](...a, ...(needTok ? [tok] : [])));
+    return (async () => {
+      if(!needTok) return call();
+      const tok = getTok(false); if(!tok) throw new Error("ยังไม่ได้ใส่รหัสเชื่อมต่อ — กดปุ่ม ☁ บันทึกขึ้น Google Sheets แล้วใส่รหัส");
+      try{ return await call(tok); }
+      catch(e){ const m = String((e && (e.message || e.details)) || e);
+        if(/รหัสเชื่อมต่อไม่ถูกต้อง/.test(m)){ clearTok(); const t2 = getTok(true); if(!t2) throw new Error("ยังไม่ได้ใส่รหัสเชื่อมต่อ"); return await call(t2); }
+        throw e; }
+    })();
+  }
   if(REMOTE) return fetch(REMOTE.url, {
       method: "POST", headers: {"Content-Type":"text/plain;charset=utf-8"},
       body: JSON.stringify({token: REMOTE.token, action: fn, payload: a[0]})
@@ -7311,20 +7336,24 @@ $("clr").onclick = () => {
   lsClear(); location.reload();
 };
 
-if($("saveNow")) $("saveNow").onclick = async () => {
+/* ปุ่ม ☁ บันทึกขึ้น Google Sheets — ใช้ทั้งที่หัวเว็บและในหน้าของแต่ละคน (บันทึกข้อมูลทั้งระบบ แล้วอ่านกลับยืนยัน) */
+async function saveClick(btn, msgEl){
   if(!inGAS && !REMOTE){
     // ยังไม่ต่อ Google — ข้อมูลอยู่แค่ในเครื่องนี้ พาไปต่อ
     if(confirm("หน้านี้ยังไม่ได้ต่อกับ Google Sheets — ข้อมูลจำไว้แค่ในเบราว์เซอร์เครื่องนี้\n\n"
       + "ตกลง = ต่อ Google Sheets จากหน้านี้ด้วยรหัสเชื่อมต่อ (REMOTE_TOKEN) ต่อแล้วระบบจะถามว่าจะส่งข้อมูลที่จำไว้ขึ้น Sheets เลยไหม\n"
       + "ยกเลิก = ไปเปิดโปรแกรมจากลิงก์ Apps Script (/exec) แทน")){ connectRemote(); }
     else if(GAS_URL){ window.open(GAS_URL, "_blank", "noopener"); }
-    return;
+    return false;
   }
-  const b = $("saveNow"); b.disabled = true;
+  if(btn) btn.disabled = true; if(msgEl) msgEl.textContent = "กำลังบันทึก…";
   const ok = await saveNow();
   if(ok && NW.on()) await verifyNW();
-  b.disabled = false;
-};
+  if(btn) btn.disabled = false;
+  if(msgEl) msgEl.textContent = ok ? "✓ บันทึกขึ้น Google Sheets แล้ว " + new Date().toLocaleTimeString("th-TH") : "⚠ ยังไม่สำเร็จ — ดูข้อความมุมบนของหน้า";
+  return ok;
+}
+if($("saveNow")) $("saveNow").onclick = () => saveClick($("saveNow"), null);
 
 /* ============ เดินระบบ ============ */
 function all(){ draw(); save(); banner(); }
