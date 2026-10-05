@@ -40,13 +40,23 @@ function aiKey_(){ return prop_("AI_KEY"); }
 var PAGES_URL = "https://sarawut2206.github.io/NK-care/";   // ที่เปิดสำรอง ถ้ายังไม่ได้วางไฟล์ index
 
 function doGet(e){
+  var TITLE = "กบข.นข. — ระบบทะเบียนสัญญาและรับชำระ", why = [];
+  // 1) ดึงโปรแกรมล่าสุดจาก GitHub Pages — push เมื่อไหร่ ลิงก์ /exec ได้ของใหม่ทันที ไม่ต้องวางไฟล์ index เอง
   try{
-    return HtmlService.createHtmlOutputFromFile("index")
-      .setTitle("กบข.นข. — ระบบทะเบียนสัญญาและรับชำระ")
+    var r = UrlFetchApp.fetch(PAGES_URL + "index.html?t=" + Date.now(), {muteHttpExceptions:true, followRedirects:true});
+    var t = r.getResponseCode() === 200 ? r.getContentText("UTF-8") : "";
+    if(t.indexOf("google.script") >= 0)
+      return HtmlService.createHtmlOutput(t).setTitle(TITLE).addMetaTag("viewport", "width=device-width, initial-scale=1");
+    why.push("GitHub Pages ตอบ " + r.getResponseCode());
+  }catch(err){ why.push("ดึงจาก GitHub Pages ไม่ได้: " + (err && err.message || err)); }
+  // 2) สำรอง: ไฟล์ HTML ชื่อ index ในโปรเจกต์ (ถ้ามี)
+  try{
+    return HtmlService.createHtmlOutputFromFile("index").setTitle(TITLE)
       .addMetaTag("viewport", "width=device-width, initial-scale=1");
   }catch(err){
-    // ยังไม่ได้สร้างไฟล์ HTML ชื่อ index — บอกวิธีทำ ดีกว่าโยน error เปล่า ๆ ใส่หน้าผู้ใช้
-    return HtmlService.createHtmlOutput(setupPage_(String(err && err.message || err)))
+    why.push(String(err && err.message || err));
+    // ทั้งสองทางไม่ได้ — บอกวิธีทำ ดีกว่าโยน error เปล่า ๆ ใส่หน้าผู้ใช้
+    return HtmlService.createHtmlOutput(setupPage_(why.join(" · ")))
       .setTitle("กบข.นข. — ยังตั้งค่าไม่ครบ")
       .addMetaTag("viewport", "width=device-width, initial-scale=1");
   }

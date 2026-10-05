@@ -126,11 +126,13 @@
 ### ติดตั้ง
 
 1. เปิด Google Sheet ที่จะใช้เก็บข้อมูล → **ส่วนขยาย → Apps Script**
-2. วาง `apps-script/Code.gs` ทับไฟล์ `Code.gs` แล้วสร้างไฟล์ HTML ชื่อ **index** วางเนื้อ `index.html` ลงไป
+2. วาง `apps-script/Code.gs` ทับไฟล์ `Code.gs` — **ไม่ต้องสร้างไฟล์ HTML** ลิงก์ `/exec` ดึงโปรแกรมล่าสุดจาก GitHub Pages เอง
+   (ถ้าดึงไม่ได้ จะใช้ไฟล์ HTML ชื่อ **index** ในโปรเจกต์แทน ถ้ามี)
 3. รีเฟรชหน้า Sheet จะมีเมนู **กบข.นข.** ขึ้นมา → **1) สร้างชีททั้งหมด**
 4. เมนูเดียวกัน → **ตั้งค่ารหัสเชื่อมต่อ** และ **ตั้งค่ากุญแจ AI**
 5. **Deploy → New deployment → Web app** · Execute as: **Me** · Who has access: **Anyone**
-6. ทุกครั้งที่แก้ `Code.gs` ต้อง **Deploy → Manage deployments → ✏️ → New version → Deploy**
+6. แก้ `index.html` แล้ว push ขึ้น GitHub — ลิงก์ `/exec` ได้ของใหม่เองภายในไม่กี่นาที
+7. ทุกครั้งที่แก้ `Code.gs` ต้อง **Deploy → Manage deployments → ✏️ → New version → Deploy**
 
 ### สองทางที่เปิดโปรแกรมได้
 
