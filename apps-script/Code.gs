@@ -320,7 +320,7 @@ function buildSheets(){
       if(x.acc){
         var A = x.acc[k] || {}, ac = x.acc, used = n_((ac.sam || {}).share0) + n_((ac.dk || {}).share0);
         return {debt0: k === "free" ? 0 : n_(A.debt0), share0: k === "free" ? Math.max(0, r2_(n_(x.share0) - used)) : n_(A.share0),
-                inst: k === "free" ? 0 : n_(A.inst), shM: n_(A.shM)};
+                inst: k === "free" ? 0 : n_(A.inst), shM: n_(A.shM), starts: A.starts || []};
       }
       var loan = n_(x.debt0) > 0;
       if(k === "sam")  return {debt0: loan ? n_(x.debt0) : 0, share0: loan ? n_(x.share0) : 0, inst: n_(x.inst), shM: loan ? n_(x.shM) : 0};
@@ -349,9 +349,9 @@ function buildSheets(){
     // ทะเบียนผู้กู้ — หนึ่งแถวต่อสัญญา (สามัญ / ดูแลกัน)
     var loanRows = [];
     reg.forEach(function(o){ ["sam", "dk"].forEach(function(k){ var b = o.by[k];
-      if(b.debt > 0.005) loanRows.push([o.x.no, o.x.name, PN[k], b.a.debt0, b.a.inst, b.paid, b.it, b.debt, b.a.share0, b.sh, o.last]); }); });
+      if(b.debt > 0.005) loanRows.push([o.x.no, o.x.name, PN[k], b.a.starts && b.a.starts.length ? perLabel_(b.a.starts[0]) : "", b.a.debt0, b.a.inst, b.paid, b.it, b.debt, b.a.share0, b.sh, o.last]); }); });
     sheetOut_("ทะเบียนผู้กู้",
-      ["เลขสมาชิก","ชื่อ","ประเภทสินเชื่อ","หนี้ยกมา ธ.ค.68","งวดละ","ชำระรวมตั้งแต่ ม.ค.69","ดอกเบี้ย","หนี้คงเหลือ","หุ้นยกมา (ประเภทนี้)","หุ้นสะสม (ประเภทนี้)","บันทึกล่าสุด"], loanRows);
+      ["เลขสมาชิก","ชื่อ","ประเภทสินเชื่อ","งวดที่ 1 เริ่มเดือน","หนี้ยกมา ธ.ค.68","งวดละ","ชำระรวมตั้งแต่ ม.ค.69","ดอกเบี้ย","หนี้คงเหลือ","หุ้นยกมา (ประเภทนี้)","หุ้นสะสม (ประเภทนี้)","บันทึกล่าสุด"], loanRows);
     sheetOut_("ทะเบียนผู้ฝาก",
       ["เลขสมาชิก","ชื่อ","หุ้นยกมา ธ.ค.68","หุ้นประจำเดือนละ","ฝากตั้งแต่ ม.ค.69","หุ้นสะสมรวม","บันทึกล่าสุด"],
       reg.filter(function(o){ return o.debt <= 0.005; }).map(function(o){

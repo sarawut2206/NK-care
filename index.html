@@ -513,7 +513,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-51</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-52</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" title="บันทึกขึ้น Google Sheets เดี๋ยวนี้ (ปกติบันทึกให้เองทุกครั้งที่กรอก)">☁ บันทึกขึ้น Google Sheets</button>
@@ -2323,11 +2323,17 @@ function nwAcct(x, k){
   const used = (+(ac.sam && ac.sam.share0) || 0) + (+(ac.dk && ac.dk.share0) || 0);
   return {no:x.no, name:x.name, prod:k, x, debt0: k==="free" ? 0 : (+A.debt0||0),
     share0: k==="free" ? Math.max(0, r2((+x.share0||0) - used)) : (+A.share0||0),
-    inst: k==="free" ? 0 : (+A.inst||0), shM:+A.shM||0, shxM:A.shxM, hz:A.hz};
+    inst: k==="free" ? 0 : (+A.inst||0), shM:+A.shM||0, shxM:A.shxM, hz:A.hz, starts: Array.isArray(A.starts) ? A.starts.slice() : []};
 }
 const nwAccts = x => NW_ACC.map(k => nwAcct(x, k));
 const nwAccRef = (x, k) => { if(!x.acc) x.acc = {}; if(!x.acc[k]) x.acc[k] = {}; return x.acc[k]; };
 const nwDebt0 = x => r2(nwAccts(x).reduce((s, a) => s + a.debt0, 0));
+/* งวดที่ 1 ของสัญญา = เดือนที่ผู้ใช้กำหนดเอง (A.starts) แล้วนับ 2, 3, … ต่อไป · กู้ทับ = เริ่มงวดที่ 1 ใหม่ (เพิ่มเดือนใหม่ใน starts)
+   ยังไม่กำหนด = นับตามงวดโอน (พ.ค.68 = งวดที่ 1) */
+const nwStarts = a => (a.starts && a.starts.length) ? a.starts.slice().sort() : [NW_R1];
+function nwNo(a, p){ const ss = nwStarts(a); let seg = 0; ss.forEach((s0, i) => { if(pNum(s0) <= pNum(p)) seg = i; });
+  return {n: pNum(p) - pNum(ss[seg]) + 1, seg: seg + 1, segs: ss.length}; }
+const nwNoLbl = (a, p) => { const o = nwNo(a, p); return o.n >= 1 ? `งวดที่ ${o.n}${o.segs > 1 ? ` (สัญญา ${o.seg})` : ""}` : "ก่อนเริ่มสัญญา"; };
 /* หนี้ยกมาที่แยกสองสัญญา ต้องรวมได้เท่าใบสรุป · หุ้นที่ผูกสัญญาต้องไม่เกินหุ้นรวม */
 function nwIntegrity(x){
   const w = [], d0 = nwDebt0(x), ac = x.acc || {};
@@ -2386,7 +2392,7 @@ function nwPlan(a){
 }
 function nwTimeline(a, project){
   const rs = NW.rowsA(a), byP = {}; rs.forEach(r => byP[r.p] = r);
-  const pl = nwPlan(a), hzN = pNum(NW_R1) + nwHz(a) - 1;
+  const pl = nwPlan(a), ss = nwStarts(a), hzN = pNum(ss[ss.length - 1]) + nwHz(a) - 1;
   const a0 = pNum(P_ANCHOR), lastN = rs.length ? Math.max(a0 - 1, pNum(rs[rs.length - 1].p)) : a0 - 1;
   const out = []; let debt = a.debt0, shares = a.share0, stop = false, payoff = null, over = null;
   for(let n = a0; n <= Math.max(project ? hzN : 0, lastN); n++){
@@ -2411,9 +2417,9 @@ function nwTimeline(a, project){
   if(project && debt > 0.005 && !stop && lastN < hzN){
     const k = hzN - lastN, rows = out.filter(o => o.r), d0 = rows.length ? rows[rows.length - 1].debt : a.debt0;
     const need = r2(d0 * RATE / (1 - Math.pow(1 + RATE, -k)) + pl.sh + pl.shx);
-    over = {rem:debt, hz:nwRound(pFrom(hzN)), need};
+    over = {rem:debt, hz:nwHz(a), need};
   }
-  return {rows:out, payoff, over, plan:pl, hz:nwRound(pFrom(hzN))};
+  return {rows:out, payoff, over, plan:pl, hz:nwHz(a)};
 }
 const nwNext = a => { const rs = NW.rowsA(a); return rs.length ? pFrom(pNum(rs[rs.length-1].p) + 1) : P_ANCHOR; };
 /* รวมทุกบัญชีย่อยเป็นรายงวด — ใช้ทั้งตารางหน้ารวมและใบสรุปปันผล */
@@ -2474,11 +2480,11 @@ function nfLoad(){
 function nfCheck(a, kind){
   const v = S.nf.vals, b = nwBefore(a, S.nf.p), out = [], w = nwWin(S.nf.p);
   if(v.d){
-    if(v.d >= w.from && v.d <= w.to) out.push(`<span class="pill grn">✓ โอนในช่วงงวดที่ ${nwRound(S.nf.p)}</span>`);
+    if(v.d >= w.from && v.d <= w.to) out.push(`<span class="pill grn">✓ โอนในช่วงของ ${thPer(S.nf.p)}</span>`);
     else if(v.d > w.to) out.push(`<span class="pill amb">โอนช้า ${nwDays(w.to, v.d)} วัน (ครบกำหนด ${thDay(w.to)})</span>`);
     else { const q = nwPOfDate(v.d);
-      out.push(`<span class="pill amb">วันที่นี้อยู่ในช่วงงวดที่ ${nwRound(q)} (${thPer(q)})</span>`
-        + (!NW.row(a.no, q, a.prod) && pNum(q) >= pNum(P_ANCHOR) ? ` <button class="ghost sm" id="nf_mv" data-p="${q}">ย้ายไปงวดที่ ${nwRound(q)}</button>` : "")); }
+      out.push(`<span class="pill amb">วันที่นี้อยู่ในช่วงของ ${thPer(q)}</span>`
+        + (!NW.row(a.no, q, a.prod) && pNum(q) >= pNum(P_ANCHOR) ? ` <button class="ghost sm" id="nf_mv" data-p="${q}">ย้ายไป ${thPer(q)}</button>` : "")); }
   }
   if(kind==="save" && !num(v.loan)){
     const t = nwSh(v);
@@ -2486,6 +2492,10 @@ function nfCheck(a, kind){
     out.push(`<span class="hint">หุ้นสะสม${a.prod==="free"?"":"ของประเภทนี้"}หลังงวดนี้ <b>${B(b.shares + t)}</b></span>`);
     return out.join(" ");
   }
+  const rf = S.nf.refi;
+  if(rf && rf.N > 0){ const d1 = +(b.debt - num(v.pri)).toFixed(2);
+    out.push(rf.N <= d1 + 0.005 ? `<span class="pill red">ยอดกู้ใหม่ ${B(rf.N)} ต้องมากกว่าหนี้คงเหลือ ${B(d1)}</span>`
+      : `<span class="pill grn">🔁 กู้ทับ: หนี้เดิมคงเหลือหลังชำระงวดนี้ ${B(d1)} → ยอดกู้ใหม่ ${B(rf.N)} · ได้รับเงินส่วนต่าง <b>${B(+(rf.N - d1).toFixed(2))}</b></span>`); }
   const parts = +(num(v.int) + num(v.pri) + nwSh(v)).toFixed(2), d = +(num(v.m) - parts).toFixed(2);
   if(has(v.m)) out.push(Math.abs(d) < NW_TOL ? `<span class="pill grn">✓ ดอกเบี้ย + เงินต้น + หุ้นประจำ${num(v.shx)?" + หุ้นเพิ่ม":""} = ${B(parts)} ${Math.abs(d) < 0.005 ? "ตรงกับยอดชำระ" : "ต่างจากยอดชำระ 1 สตางค์ (ปัดเศษ)"}</span>`
     : `<span class="pill red">${d>0?"แยกยังขาด":"แยกเกินมา"} ${B(Math.abs(d))}</span>`);
@@ -2537,18 +2547,18 @@ function nwRegisterTable(a, editable){
   const rowHTML = o => {
     if(o.r){ const r = o.r, ok = !loan || nwOk(r);
       return `<tr${editable?` data-nr="${esc(r.p)}" style="cursor:pointer${S.nf&&S.nf.p===r.p&&S.nf.prod===a.prod?";background:var(--faint)":""}" title="คลิกเพื่อแก้ไข"`:""}>
-      <td class="l"><b>งวด ${nwRound(r.p)}</b> · ${thPer(r.p)}</td>
+      <td class="l"><b>${nwNoLbl(a, r.p)}</b> · ${thPer(r.p)}</td>
       <td class="l">${r.d ? thDay(r.d) + (r.d > nwWin(r.p).to ? ` <span class="pill amb" style="font-size:10px">ช้า ${nwDays(nwWin(r.p).to, r.d)} วัน</span>` : "") : "—"}</td>
       ${loan ? `<td class="${cl}"><b>${B(num(r.m))}</b></td><td class="${cl}">${B(num(r.int))}</td><td class="${cl}">${B(num(r.pri))}</td>` : ""}
       <td class="${cl}">${B(num(r.sh))}</td><td class="${cl}">${num(r.shx)?B(num(r.shx)):"—"}</td>
       ${loan ? `<td class="${cl}">${B(o.debt)}${num(r.loan)?`<div class="hint">กู้เพิ่ม ${B(num(r.loan))}</div>`:""}</td>` : ""}
       <td class="${cl}">${B(o.shares)}</td>
-      <td class="l">${esc(r.note||"")}${r.relief?" (ผ่อนผัน)":""}${r.src==="plan"?(editable?' <span class="pill" style="font-size:10px" title="เติมจากตารางผ่อน — กดแถวเพื่อแก้/ยืนยัน">ตามตารางผ่อน</span>':" (ตามตารางผ่อน)"):""}${ok||editable?"":" (ยอดแยกไม่ตรง)"}</td>
+      <td class="l">${r.refi ? `<span class="pill grn" style="font-size:10px" title="กู้ทับ — ยอดกู้ใหม่ ${B(r.refi.N)} เริ่มงวดที่ 1 ใหม่ ${thPer(r.refi.start)}">กู้ทับ</span> ` : ""}${esc(r.note||"")}${r.relief?" (ผ่อนผัน)":""}${r.src==="plan"?(editable?' <span class="pill" style="font-size:10px" title="เติมจากตารางผ่อน — กดแถวเพื่อแก้/ยืนยัน">ตามตารางผ่อน</span>':" (ตามตารางผ่อน)"):""}${ok||editable?"":" (ยอดแยกไม่ตรง)"}</td>
       ${editable?`<td style="text-align:center">${ok?'<span class="pill grn" title="ดอกเบี้ย + เงินต้น + หุ้น = ยอดชำระ">✓</span>'
         :`<span class="pill red" title="ยอดแยกไม่เท่ายอดชำระ">ต่าง ${B(+(num(r.m) - num(r.int) - num(r.pri) - nwSh(r)).toFixed(2))}</span>`}</td>
         <td><button class="del" data-nd="${esc(r.p)}" title="ลบ">×</button></td>`:""}</tr>`; }
-    const past = pNum(o.p) <= curN, lbl = `<td class="l"><b>งวด ${nwRound(o.p)}</b> · ${thPer(o.p)}</td>`;
-    if(o.warn) return `<tr class="prow"><td class="l"><b>งวด ${nwRound(o.p)}</b> · ${thPer(o.p)}</td><td colspan="${cols-1}" class="l" style="color:var(--danger)">⚠ ${o.warn}</td></tr>`;
+    const past = pNum(o.p) <= curN, lbl = `<td class="l"><b>${nwNoLbl(a, o.p)}</b> · ${thPer(o.p)}</td>`;
+    if(o.warn) return `<tr class="prow"><td class="l"><b>${nwNoLbl(a, o.p)}</b> · ${thPer(o.p)}</td><td colspan="${cols-1}" class="l" style="color:var(--danger)">⚠ ${o.warn}</td></tr>`;
     if(o.gap) return `<tr class="grow" data-np="${esc(o.p)}" style="cursor:pointer" title="คลิกเพื่อบันทึกงวดนี้">${lbl}
       <td class="l"><span class="pill amb" style="font-size:10px">ยังไม่บันทึก</span></td>${loan ? '<td></td><td></td><td></td>' : ""}<td></td><td></td>${loan ? "<td></td>" : ""}<td></td><td></td>${tail}</tr>`;
     const q = o.proj;
@@ -2576,7 +2586,7 @@ function nwAllTable(x, editable){
   for(let i = H.length - 1; i >= 0; i--){ hs[i] = r2(back); back -= +H[i].sh || 0; }
   const P = nwByPeriod(x), cl = editable ? "amt" : "n", cell = v => v ? B(v) : "—";
   const T = {m:0, int:0, sh:0}; P.forEach(o => { T.m += o.m; T.int += o.int; T.sh += o.sh; });
-  return `<table class="${editable?"":"kt"}"><thead><tr><th class="l">งวด</th><th class="l">วันที่รับ</th><th>ชำระรวม</th>
+  return `<table class="${editable?"":"kt"}"><thead><tr><th class="l">งวดโอน</th><th class="l">วันที่รับ</th><th>ชำระรวม</th>
       <th>${NW_ACCS.sam}</th><th>${NW_ACCS.dk}</th><th>${NW_ACCS.free}</th><th>ดอกเบี้ย</th><th>หุ้น (ประจำ+เพิ่ม)</th><th>หนี้คงเหลือรวม</th><th>หุ้นสะสมรวม</th></tr></thead><tbody>
     ${H.map((h, i) => `<tr class="hrow"><td class="l">งวด ${nwRound(ymToP(h.ym))} · ${thPer(ymToP(h.ym))} <span class="pill" style="font-size:10px">ใบสรุป</span></td><td class="l">—</td>
       <td class="${cl}">${B(h.pay)}</td><td></td><td></td><td></td><td class="${cl}">${B(h.int)}</td><td class="${cl}">${B(h.sh)}</td>
@@ -2601,7 +2611,7 @@ function nwBreakHTML(x, editable){
     const status = a.prod === "free" ? "" : st.debt > 0.005 ? (st.missed ? `<span class="pill red">ค้าง ${st.missed} เดือน</span>` : (T && T.payoff ? `คาดว่าหมด ${thPer(T.payoff)}` : (T && T.over ? `<span class="pill red">เกินงวดที่ ${T.over.hz}</span>` : "")))
       : (act ? '<span class="pill grn">ไม่มีหนี้</span>' : "");
     return `<tr${editable ? ` data-vt="${a.prod}"` : ""} style="${editable ? "cursor:pointer;" : ""}${act ? "" : "opacity:.55"}">
-      <td class="l"><b>${NW_ACCN[a.prod]}</b></td><td class="${cl}">${a.prod === "free" ? "—" : B(a.debt0)}</td><td class="${cl}">${a.prod === "free" ? "—" : B(st.debt)}</td>
+      <td class="l"><b>${NW_ACCN[a.prod]}</b>${a.starts.length ? `<div class="hint">งวดที่ 1: ${thPer(a.starts[0])}${a.starts.length > 1 ? ` · กู้ทับ ${a.starts.length - 1} ครั้ง` : ""}</div>` : ""}</td><td class="${cl}">${a.prod === "free" ? "—" : B(a.debt0)}</td><td class="${cl}">${a.prod === "free" ? "—" : B(st.debt)}</td>
       <td class="${cl}">${a.inst ? B(a.inst) : "—"}</td><td class="${cl}">${B(a.share0)}</td><td class="${cl}"><b>${B(st.shares)}</b></td>
       <td class="${cl}">${a.prod === "free" ? "—" : B(st.int)}</td><td class="${cl}">${B(st.paid)}</td><td class="l">${status}</td></tr>`; });
   return `<table class="${editable ? "" : "kt"}"><thead><tr><th class="l">ประเภท</th><th>หนี้ยกมา</th><th>หนี้คงเหลือ</th><th>งวดละ</th><th>หุ้นยกมา</th><th>หุ้นสะสม</th>
@@ -2630,20 +2640,40 @@ function nwAcctView(x, kind, prod){
   const a = nwAcct(x, prod), stA = nwStateA(a), nf = nfFor(a), v = nf.vals, loanF = prod !== "free";
   const inp = (k, lbl, sty) => `<div${sty?` style="${sty}"`:""}><label>${lbl}</label><input type="number" step="0.01" min="0" data-nf="${k}" value="${has(v[k])?v[k]:""}"></div>`;
   const opts = (()=>{ const o = []; for(let n = Math.max(pNum(nwCurP()) + 3, pNum(nf.p)); n >= pNum(P_ANCHOR); n--){ const p = pFrom(n);
-    o.push(`<option value="${p}" ${p===nf.p?"selected":""}>งวด ${nwRound(p)} · ${thPer(p)}${NW.row(x.no,p,prod)?" ✓":""}</option>`); } return o.join(""); })();
+    o.push(`<option value="${p}" ${p===nf.p?"selected":""}>${nwNoLbl(a,p)} · ${thPer(p)}${NW.row(x.no,p,prod)?" ✓":""}</option>`); } return o.join(""); })();
   const warn = nwIntegrity(x), T0 = nwTimeline(a, true), pl = T0.plan;
+  // งวดที่ 1 ของสัญญานี้เริ่มเดือนอะไร — ผู้ใช้กำหนดเอง
+  const stOpts = (() => { const o = [`<option value="">ยังไม่กำหนด (นับตามงวดโอน — พ.ค.68 = งวดที่ 1)</option>`];
+    for(let n = pNum(NW_R1) - 36; n <= pNum(nwCurP()) + 12; n++){ const q = pFrom(n); o.push(`<option value="${q}" ${a.starts[0]===q?"selected":""}>${thPer(q)}</option>`); } return o.join(""); })();
+  const startBar = loanF ? `<div class="bar" style="margin:0 0 10px;flex-wrap:wrap"><label><b>งวดที่ 1 ของ${NW_ACCN[prod]} เริ่มเดือน</b> <select id="ac_start" style="width:auto">${stOpts}</select></label>
+    <span class="hint">กำหนดเอง แล้วงวดที่ 2, 3, … นับต่อให้ · ตอนนี้ ${thPer(nwCurP())} = ${nwNoLbl(a, nwCurP())}${a.starts.length > 1 ? ` · กู้ทับแล้ว ${a.starts.length - 1} ครั้ง` : ""}</span></div>` : "";
+  // กู้ทับ: ยอดกู้ใหม่ทบยอดเดิม ได้รับเงินส่วนต่าง เริ่มงวดที่ 1 ใหม่
+  const rf = nf.refi || null;
+  const rfOpts = (() => { const o = [], cur = (rf && rf.start) || pFrom(pNum(nf.p) + 1); for(let n = pNum(nf.p); n <= pNum(nf.p) + 12; n++){ const q = pFrom(n); o.push(`<option value="${q}" ${cur===q?"selected":""}>${thPer(q)}</option>`); } return o.join(""); })();
+  const rfIn = (k, lbl, val, step) => `<div><label>${lbl}</label><input type="number" step="${step||"0.01"}" min="0" data-rf="${k}" value="${has(val) ? val : ""}"></div>`;
+  const rfHTML = loanF ? `<details class="opn" id="rf_box" ${rf ? "open" : ""} style="margin-top:10px"><summary>🔁 กู้ทับ — ขอกู้ใหม่ระหว่างสัญญา (ยอดกู้ใหม่ทบยอดเดิม ได้เงินส่วนต่าง)</summary>
+    <p class="hint" style="margin:6px 0">ใช้เมื่อผ่อนไปบางงวดแล้วขอกู้ใหม่ทับ: <b>ยอดกู้ใหม่</b> = ยอดรวมที่ต้องผ่อนต่อ (รวมยอดเดิมที่ยังค้าง) · ได้รับเงินเท่ากับส่วนต่าง · เริ่ม <b>งวดที่ 1 ใหม่</b> ในเดือนที่เลือก · งวดเดิมที่ผ่อนไปแล้วเก็บไว้ในตาราง
+      · ใส่ยอดชำระของงวดนี้ด้านบนตามปกติ (ถ้าผ่อนงวดนี้) แล้วกรอกส่วนนี้ ก่อนกดบันทึก</p>
+    <div class="pf">
+      ${rfIn("N", "ยอดกู้ใหม่ (ยอดรวมใหม่)", rf && rf.N)}${rfIn("k", "จำนวนงวดใหม่ (1–72)", rf && rf.k, "1")}
+      <div><label>งวดที่ 1 ใหม่ เริ่มเดือน</label><select data-rf="start">${rfOpts}</select></div>
+      ${rfIn("base", "หุ้นประจำ / เดือน", rf && has(rf.base) ? rf.base : (a.shM || ""))}${rfIn("extra", "หุ้นเพิ่ม / เดือน", rf && rf.extra)}${rfIn("inst", "งวดละใหม่ (ชำระรวม)", rf && rf.inst)}
+    </div>
+    <div class="bar" style="margin-top:6px"><button class="ghost sm" id="rf_calc" title="งวดละ = ต้น+ดอกลดต้นลดดอก 1% ตามจำนวนงวด + หุ้นประจำ + หุ้นเพิ่ม · หุ้นเพิ่ม = อัตราตามจำนวนงวด × ยอดกู้ ÷ จำนวนงวด คงที่ทุกงวด (ตามกติกาเดิม)">คำนวณงวดละให้</button>
+      <span class="hint">แก้ตัวเลขเองได้ทุกช่อง</span></div></details>` : "";
   const n0 = T0.rows.filter(o => o.proj && pNum(o.p) > pNum(stA.last || P_ANCHOR) - (stA.last ? 0 : 1)).length;
   return `${warn.length ? `<div class="keybox" style="border-left:3px solid var(--red);margin:0 0 10px">${warn.map(w => `<p class="hint" style="margin:3px 0;color:var(--danger)">⚠ ${w}</p>`).join("")}</div>` : ""}
     <div class="stats" style="margin-bottom:12px">
       ${loanF ? `<div class="stat"><div class="k">หนี้${NW_ACCS[prod]}คงเหลือ</div><div class="v">${B(stA.debt)}</div><div class="hint">ยกมา ${B(a.debt0)}</div></div>
         <div class="stat"><div class="k">งวดละ</div><div class="v">${a.inst?B(a.inst):"—"}</div></div>
-        ${T0.payoff ? `<div class="stat"><div class="k">คาดว่าหมดหนี้</div><div class="v" style="font-size:18px">${thPer(T0.payoff)}</div><div class="hint">งวด ${nwRound(T0.payoff)} · ผ่อนอีก ${n0} งวด</div></div>`
+        ${T0.payoff ? `<div class="stat"><div class="k">คาดว่าหมดหนี้</div><div class="v" style="font-size:18px">${thPer(T0.payoff)}</div><div class="hint">${nwNoLbl(a, T0.payoff)} · ผ่อนอีก ${n0} งวด</div></div>`
           : T0.over ? `<div class="stat" style="border-top-color:var(--red)"><div class="k">เกินงวดที่ ${T0.over.hz}</div><div class="v" style="font-size:18px;color:var(--red)">เหลือ ${B0(T0.over.rem)}</div><div class="hint">ต้องส่งงวดละ ≈ ${B(T0.over.need)}</div></div>` : ""}
         <div class="stat"><div class="k">ดอกเบี้ยที่ชำระ</div><div class="v">${B(stA.int)}</div><div class="hint">ตั้งแต่ ม.ค.69</div></div>` : ""}
       <div class="stat"><div class="k">หุ้นสะสม (${NW_ACCS[prod]})</div><div class="v">${B(stA.shares)}</div><div class="hint">ยกมา ${B(a.share0)}</div></div>
       ${!loanF ? `<div class="stat"><div class="k">หุ้นประจำเดือนละ</div><div class="v">${a.shM?B(a.shM):"—"}</div></div>` : ""}
       <div class="stat"><div class="k">บันทึกล่าสุด</div><div class="v" style="font-size:18px">${stA.last?thPer(stA.last):"ยังไม่มี"}</div></div>
     </div>
+    ${startBar}
     ${loanF ? `<details class="opn" id="ni_box" ${(S.nimp && S.nimp.no===x.no) || S.nimpOpen ? "open" : ""} style="margin-bottom:12px">
       <summary>📷 นำเข้าตารางผ่อน — เติมงวดที่ยังว่างจนถึงงวดปัจจุบัน</summary>${niHTML(x)}</details>` : ""}
     <div class="tbl" style="max-height:440px">${nwRegisterTable(a, true)}</div>
@@ -2653,22 +2683,23 @@ function nwAcctView(x, kind, prod){
       <span class="hint">${pl.m ? `คำนวณจากงวดละ ${B(pl.m)} · หุ้นประจำ ${B(pl.sh)}${pl.shx ? ` + เพิ่ม ${B(pl.shx)}` : ""} · ดอกเบี้ย 1% ของหนี้ก่อนหน้า` : (loanF ? "ใส่ «งวดละ» ที่ท้ายหน้า (แก้ยอดยกมา) เพื่อให้คำนวณคาดการณ์ได้" : `คำนวณจากหุ้นประจำ ${B(pl.sh)} ต่อเดือน`)}
         — แถวสีจาง = ยังไม่ได้บันทึกจริง (ไม่นับในยอดและใบสรุป) กดแถวเพื่อบันทึกจริงทีละงวด</span></div>
 
-    <div class="eyebrow" style="margin-top:16px">${nf.edit ? `แก้ไขงวดที่ ${nwRound(nf.p)} · ${thPer(nf.p)}` : "บันทึกงวดถัดไป"} — ${NW_ACCN[prod]}</div>
+    <div class="eyebrow" style="margin-top:16px">${nf.edit ? `แก้ไข${nwNoLbl(a, nf.p)} · ${thPer(nf.p)}` : "บันทึกงวดถัดไป"} — ${NW_ACCN[prod]}</div>
     <div class="pf">
       <div><label>งวด</label><select id="nf_p">${opts}</select><div class="hint" style="margin-top:3px">โอน ${nwWinLbl(nf.p)}</div></div>
       <div><label>วันที่รับ</label><input type="date" data-nf="d" value="${esc(v.d||"")}"></div>
       ${loanF ? inp("m","ชำระรวม") + inp("int","ดอกเบี้ย") + inp("pri","เงินต้น") + inp("bal","หนี้คงเหลือ") : ""}
       ${inp("sh","ฝากหุ้นประจำ", loanF ? "grid-column-start:1" : "") + inp("shx","ฝากหุ้นเพิ่ม")}
-      ${loanF ? inp("loan", "กู้เพิ่ม / กู้ใหม่") : ""}
+      ${loanF ? inp("loan", "กู้เพิ่ม (ไม่เริ่มสัญญาใหม่)") : ""}
       <div style="grid-column:span 2"><label>หมายเหตุ</label><input data-nf="note" value="${esc(v.note||"")}" placeholder="เช่น โอนแทน / เงินสด"></div>
       ${loanF ? `<div><label>&nbsp;</label><label class="rlf"><input type="checkbox" data-nf="relief" ${v.relief?"checked":""}> ผ่อนผัน</label></div>` : ""}
     </div>
+    ${rfHTML}
     <div class="pfchk" id="nf_chk">${nfCheck(a, loanF ? "loan" : "save")}</div>
     <div class="bar" style="margin-top:12px">
       ${!nf.edit && T0.rows.some(o => o.p === nf.p && o.proj) ? `<button class="ghost" id="nf_proj" title="ใส่ยอดตามตารางคาดการณ์ของงวดนี้ แก้ได้ก่อนบันทึก">ใส่ตามคาดการณ์</button>` : ""}
       ${loanF ? `<button class="ghost" id="nf_split" title="ดอกเบี้ย 1% ของหนี้ก่อนหน้า → หุ้นประจำ → หุ้นเพิ่ม (ถ้าใส่ไว้) → ที่เหลือเป็นเงินต้น">แยกยอดให้</button>`
                  : (a.shM ? `<button class="ghost" id="nf_norm">ใส่หุ้นประจำ ${B(a.shM)}</button>` : "")}
-      <button id="nf_save">${nf.edit ? "บันทึกการแก้ไข" : `บันทึกงวด ${nwRound(nf.p)} · ${thPer(nf.p)}`}</button>
+      <button id="nf_save">${nf.edit ? "บันทึกการแก้ไข" : `บันทึก${nwNoLbl(a, nf.p)} · ${thPer(nf.p)}`}</button>
       <button class="ghost" id="nf_clear">ล้างฟอร์ม</button>
       <span class="hint" id="nf_msg"></span>
     </div>
@@ -2868,7 +2899,20 @@ function drawNW(kind){
     });
     i.addEventListener("keydown", ev => { if(ev.key==="Enter"){ ev.preventDefault(); $("nf_save").click(); } });
   });
-  $("nf_p").onchange = e => { S.nf.p = e.target.value; nfLoad(); drawNW(kind); };
+  $("nf_p").onchange = e => { S.nf.p = e.target.value; nfLoad(); delete S.nf.refi; drawNW(kind); };
+  if($("ac_start")) $("ac_start").onchange = e => { const A = nwAccRef(x, a.prod), rest = (A.starts || []).slice(1);
+    A.starts = e.target.value ? [e.target.value].concat(rest) : rest; save(); drawNW(kind);
+    toast(e.target.value ? `งวดที่ 1 ของ${NW_ACCN[a.prod]} = ${thPer(e.target.value)}` : "ยกเลิกการกำหนดงวดที่ 1 — นับตามงวดโอน"); };
+  el.querySelectorAll("[data-rf]").forEach(i => i.addEventListener(i.tagName === "SELECT" ? "change" : "input", () => {
+    if(!S.nf.refi) S.nf.refi = {};
+    const k = i.dataset.rf;
+    if(k === "start") S.nf.refi.start = i.value;
+    else { const val = i.value === "" ? "" : +(+i.value).toFixed(2); if(val === "" || val < 0) delete S.nf.refi[k]; else S.nf.refi[k] = val; }
+    refresh(); }));
+  if($("rf_calc")) $("rf_calc").onclick = () => { const rf = S.nf.refi || (S.nf.refi = {}), N = rf.N, k = rf.k;
+    if(!(N > 0 && k >= 1 && k <= 72)){ alert("ใส่ยอดกู้ใหม่ และจำนวนงวด (1–72) ก่อน"); return; }
+    const pmt = r2(N * RATE / (1 - Math.pow(1 + RATE, -k))), base = has(rf.base) ? rf.base : (+a.shM || 0), extra = r2(extraRate(k) * N / k);
+    Object.assign(rf, {base, extra, inst: r2(pmt + base + extra)}); drawNW(kind); };
   if($("nf_split")) $("nf_split").onclick = () => { const w = nfSplit(a); if(w && !/^จ่ายเกิน/.test(w)){ alert(w); return; }
     drawNW(kind); if(w) $("nf_msg").textContent = w; };
   if($("nf_norm")) $("nf_norm").onclick = () => { S.nf.vals.sh = +a.shM; if(+a.shxM) S.nf.vals.shx = +a.shxM; drawNW(kind); };
@@ -2881,12 +2925,23 @@ function drawNW(kind){
       if(Math.abs(d) >= NW_TOL && !confirm(`ยอดแยกยังไม่เท่ายอดชำระ (ต่าง ${B(d)} บาท)\nบันทึกไว้ก่อนหรือไม่? แก้ทีหลังได้`)) return;
     }
     const b = nwBefore(a, S.nf.p);
-    const rec = isLoan ? {...v, bal: has(v.bal) ? v.bal : +(b.debt - num(v.pri) + num(v.loan)).toFixed(2)}
-                       : {d:v.d, sh:v.sh, shx:v.shx, m:nwSh(v), note:v.note};
+    const rf = isLoan && S.nf.refi && S.nf.refi.N > 0 ? S.nf.refi : null; let d1 = 0;
+    if(rf){ d1 = r2(b.debt - num(v.pri));
+      if(rf.N <= d1 + 0.005){ alert(`ยอดกู้ใหม่ต้องมากกว่าหนี้คงเหลือ (${B(d1)})`); return; }
+      if(!(rf.inst > 0)){ alert("ใส่งวดละใหม่ หรือกด «คำนวณงวดละให้» ก่อน"); return; }
+      if(!rf.start) rf.start = pFrom(pNum(S.nf.p) + 1); }
+    const rec = rf ? {...v, loan: r2(rf.N - d1), bal: rf.N, note: (v.note ? v.note + " · " : "") + `กู้ทับ ยอดใหม่ ${B(rf.N)} ได้รับส่วนต่าง ${B(r2(rf.N - d1))}`}
+      : isLoan ? {...v, bal: has(v.bal) ? v.bal : +(b.debt - num(v.pri) + num(v.loan)).toFixed(2)}
+               : {d:v.d, sh:v.sh, shx:v.shx, m:nwSh(v), note:v.note};
     const patch = {}; ["d","m","int","pri","sh","shx","loan","bal","note","relief","src"].forEach(k=>patch[k] = has(rec[k]) ? rec[k] : "");
     const p = S.nf.p;
-    NW.set(x.no, p, a.prod, patch); save();
-    toast(`บันทึก ${NW_ACCS[a.prod]} ${thPer(p)} ของ ${x.name} แล้ว`);
+    NW.set(x.no, p, a.prod, patch);
+    if(rf){                                                    // เริ่มสัญญาใหม่: งวดที่ 1 ใหม่ + งวดละ/หุ้นใหม่ (เก็บค่าเดิมไว้ เผื่อลบรายการนี้)
+      const A = nwAccRef(x, a.prod), prevStarts = nwStarts(a).slice();
+      NW.row(x.no, p, a.prod).refi = {N:rf.N, start:rf.start, prev:{starts:prevStarts, inst:A.inst, shM:A.shM, shxM:A.shxM}};
+      A.starts = prevStarts.concat([rf.start]); A.inst = rf.inst; A.shM = has(rf.base) ? rf.base : a.shM; A.shxM = has(rf.extra) ? rf.extra : 0; }
+    save();
+    toast(rf ? `กู้ทับ ${NW_ACCS[a.prod]} แล้ว — ยอดใหม่ ${B(rf.N)} · งวดที่ 1 ใหม่ ${thPer(rf.start)}` : `บันทึก ${NW_ACCS[a.prod]} ${thPer(p)} ของ ${x.name} แล้ว`);
     S.nf = {no:x.no, prod:a.prod, p:nwNext(a), vals:{}}; nfLoad();
     drawNW(kind);
   };
@@ -2907,7 +2962,11 @@ function drawNW(kind){
     const f = $("nf_p"); if(f) f.scrollIntoView({behavior:"smooth", block:"center"});
   });
   el.querySelectorAll("[data-nd]").forEach(b=>b.onclick = () => {
-    const p = b.dataset.nd; if(!confirm(`ลบ ${NW_ACCS[a.prod]} เดือน ${thPer(p)} ของ ${x.name}?`)) return;
+    const p = b.dataset.nd, old = NW.row(x.no, p, a.prod);
+    if(!confirm(`ลบ ${NW_ACCS[a.prod]} เดือน ${thPer(p)} ของ ${x.name}?` + (old && old.refi ? "\n\nรายการนี้เป็นการกู้ทับ — ลบแล้วคืนงวดที่ 1 / งวดละ / หุ้น เป็นค่าก่อนกู้ทับด้วย" : ""))) return;
+    if(old && old.refi){ const A = nwAccRef(x, a.prod), pv = old.refi.prev || {};
+      A.starts = (pv.starts || []).slice();
+      ["inst", "shM", "shxM"].forEach(k => { if(has(pv[k])) A[k] = pv[k]; else delete A[k]; }); }
     NW.drop(x.no, p, a.prod); save(); if(S.nf && S.nf.p===p && S.nf.prod===a.prod) S.nf = null; drawNW(kind); toast("ลบแล้ว");
   });
 }
@@ -3224,8 +3283,8 @@ function niHTML(x){
       <button class="ghost sm" id="ni_parse">อ่านจากข้อความ</button></details>`;
   if(!I) return body;
   const plan = niPlan(x, I), chk = niCheck(I.rows, (I.meta && I.meta.rate) ? I.meta.rate/100 : RATE, I.meta && has(I.meta.loan) ? I.meta.loan : null);
-  const sel = (()=>{ const o = []; for(let n = pNum(NW_R1) - 24; n <= pNum(nwCurP()); n++){ const p = pFrom(n);
-    o.push(`<option value="${p}" ${p===I.first?"selected":""}>${nwRound(p) >= 1 ? "งวด " + nwRound(p) + " · " : ""}${thPer(p)}</option>`); } return o.join(""); })();
+  const sel = (()=>{ const o = []; for(let n = pNum(NW_R1) - 36; n <= pNum(nwCurP()) + 12; n++){ const p = pFrom(n);
+    o.push(`<option value="${p}" ${p===I.first?"selected":""}>${thPer(p)}</option>`); } return o.join(""); })();
   const add = plan.filter(o=>!o.has || I.over).length;
   const M = I.meta || {};
   body += `<div class="keybox" style="margin-top:8px">
@@ -3234,21 +3293,21 @@ function niHTML(x){
       ${has(M.loan)?`<span class="pill">วงเงิน ${B(M.loan)}</span>`:""}${M.terms?`<span class="pill">${M.terms} งวด</span>`:""}${M.inst?`<span class="pill">ส่งเดือนละ ${B(M.inst)}</span>`:""}
       ${has(M.sh)?`<span class="pill">ฝากหุ้น ${B(M.sh)}</span>`:""}${has(M.shx)?`<span class="pill">ฝากเพิ่ม ${B(M.shx)}</span>`:""}
       <label style="margin-left:auto">นำเข้าเป็น <select id="ni_prod" style="width:auto">${["sam","dk"].map(k => `<option value="${k}" ${I.prod===k?"selected":""}>${NW_ACCN[k]}</option>`).join("")}</select></label>
-      <label>งวดที่ 1 ของตาราง = <select id="ni_first" style="width:auto">${sel}</select></label>
+      <label>งวดที่ 1 ของสัญญานี้ เริ่มเดือน <select id="ni_first" style="width:auto">${sel}</select></label>
     </div>
     ${I.detNo || I.detName ? (() => { const a = niNameKey(I.detName), b = niNameKey(x.name), same = !a || !b || a.includes(b) || b.includes(a);
       return `<p class="hint" style="margin:0 0 6px">${same ? "✓" : "⚠"} ในรูปคือสมาชิก ${esc(I.detNo||"")} ${esc(I.detName||"")}`
         + (same ? "" : ` — ชื่อไม่ตรงกับในทะเบียน (<b>${esc(x.name)}</b>) ตรวจให้แน่ใจว่าเป็นคนเดียวกันก่อนบันทึก`) + "</p>"; })() : ""}
-    <p class="hint" style="margin:0 0 6px">${I.byLabel ? `✓ ใช้ชื่อเดือนที่ระบุในตาราง${I.auto ? ` — ตรงกับยอดคงเหลือที่มีอยู่ ${I.auto} งวด` : ""}`
+    <p class="hint" style="margin:0 0 6px">${I.byStart ? `✓ ใช้งวดที่ 1 ที่คุณกำหนดไว้ (${thPer(I.first)})${I.auto ? ` — ตรงกับยอดคงเหลือที่มีอยู่ ${I.auto} งวด` : ""}` : I.byLabel ? `✓ ใช้ชื่อเดือนที่ระบุในตาราง${I.auto ? ` — ตรงกับยอดคงเหลือที่มีอยู่ ${I.auto} งวด` : ""}`
       : I.auto ? `✓ จับคู่อัตโนมัติจากยอดคงเหลือ — ตรงกับยอดที่มีอยู่ ${I.auto} งวด` : '⚠ จับคู่จากยอดคงเหลือไม่ได้ — เลือกเองว่างวดที่ 1 ของตารางคือเดือนไหน'}
-      · จะเติมงวด ${nwRound(P_ANCHOR)} (${thPer(P_ANCHOR)}) ถึงงวด ${nwRound(nwCurP())} (${thPer(nwCurP())}) · แก้ตัวเลขได้ทุกช่อง</p>
+      · จะเติมเดือน ${thPer(P_ANCHOR)} ถึง ${thPer(nwCurP())} · เลือกเดือนของงวดที่ 1 ได้เอง (ระบบจำไว้เป็นงวดที่ 1 ของสัญญา) · แก้ตัวเลขได้ทุกช่อง</p>
     <div class="tbl" style="max-height:380px"><table><thead><tr><th>ตาราง</th><th class="l">งวดโอน</th>
       ${NI_COLS.map(([,l])=>`<th>${l}</th>`).join("")}<th class="l">ตรวจ</th></tr></thead><tbody>
       ${plan.map(({r,p,has:h})=>`<tr${h && !I.over?' style="opacity:.55"':""}><td>${r.n}</td>
-        <td class="l"><b>งวด ${nwRound(p)}</b> · ${thPer(p)}${h?` <span class="pill" style="font-size:10px">${I.over?"เขียนทับ":"มีแล้ว ข้าม"}</span>`:""}</td>
+        <td class="l"><b>${thPer(p)}</b>${h?` <span class="pill" style="font-size:10px">${I.over?"เขียนทับ":"มีแล้ว ข้าม"}</span>`:""}</td>
         ${NI_COLS.map(([k])=>`<td><input type="number" step="0.01" min="0" data-ni="${r.n}|${k}" value="${r[k]!=null?r[k]:""}" style="width:108px;padding:4px 6px;font-size:12.5px;text-align:right"></td>`).join("")}
         <td class="l">${(chk[r.n]||[]).length ? (chk[r.n]).map(m=>`<span class="pill red" style="font-size:10px">${m}</span>`).join(" ") : '<span class="pill grn">✓</span>'}</td></tr>`).join("")
-        || `<tr><td colspan="9" class="hint" style="text-align:left">ไม่มีงวดในช่วง ${thPer(P_ANCHOR)} – ${thPer(nwCurP())} — ตรวจว่า «งวดที่ 1 ของตาราง» ถูกเดือนไหม</td></tr>`}
+        || `<tr><td colspan="9" class="hint" style="text-align:left">ไม่มีงวดในช่วง ${thPer(P_ANCHOR)} – ${thPer(nwCurP())} — ตรวจว่า «งวดที่ 1 ของสัญญานี้ เริ่มเดือน» ถูกเดือนไหม</td></tr>`}
     </tbody></table></div>
     <div class="bar" style="margin-top:8px;flex-wrap:wrap">
       <label class="rlf"><input type="checkbox" id="ni_over" ${I.over?"checked":""}> เขียนทับงวดที่บันทึกไว้แล้ว</label>
@@ -3263,7 +3322,7 @@ function niHTML(x){
 function niLoad(x, rows, meta, src, prod){
   rows = niClean(rows);
   if(!rows.length){ toast("อ่านไม่พบแถวตารางผ่อน"); return false; }
-  const pr = prod || "sam", a = niAlign(nwAcct(x, pr), rows);
+  const pr = prod || "sam", acc = nwAcct(x, pr), a = niAlign(acc, rows), stl = acc.starts.length ? acc.starts[acc.starts.length - 1] : null;
   meta = Object.assign({}, meta||{});
   const mode = k => { const c = {}; rows.forEach(r=>{ if(r[k] != null) c[r[k]] = (c[r[k]]||0) + 1; });
     const top = Object.entries(c).sort((p,q)=>q[1]-p[1])[0]; return top && top[1] >= 2 ? +top[0] : null; };
@@ -3271,7 +3330,7 @@ function niLoad(x, rows, meta, src, prod){
   let byLabel = null; const cnt = {};
   rows.forEach(r => { if(r.p){ const f = pNum(r.p) - (r.n - 1); cnt[f] = (cnt[f] || 0) + 1; } });
   const top = Object.entries(cnt).sort((u, v) => v[1] - u[1])[0]; if(top) byLabel = pFrom(+top[0]);
-  S.nimp = {no:x.no, prod:pr, rows, meta, src, first: byLabel || (a ? a.first : P_ANCHOR), auto: a ? a.hit : 0, byLabel: !!byLabel, over:false, def:true};
+  S.nimp = {no:x.no, prod:pr, rows, meta, src, first: byLabel || stl || (a ? a.first : P_ANCHOR), auto: a && a.first === (byLabel || stl || a.first) ? a.hit : 0, byLabel: !!byLabel, byStart: !byLabel && !!stl, over:false, def:true};
   return true;
 }
 const niMsg = h => ["ni_msg", "nw_nimsg"].forEach(id => { const e = $(id); if(e) e.innerHTML = h; });
@@ -3341,9 +3400,10 @@ function bindNi(x, kind){
   if($("ni_parse")) $("ni_parse").onclick = () => { const t = $("ni_txt").value, M = niParseHead(t), no = M.no || "", name = M.name || "";
     delete M.no; delete M.name; niRoute([{no, name, rows:niParseText(t), meta:M, src:"text"}], x); };
   const I = S.nimp && S.nimp.no===x.no ? S.nimp : null; if(!I) return;
-  $("ni_first").onchange = e => { I.first = e.target.value; I.auto = 0; I.byLabel = false; redraw(); };
+  $("ni_first").onchange = e => { I.first = e.target.value; I.auto = 0; I.byLabel = false; I.byStart = false; redraw(); };
   if($("ni_prod")) $("ni_prod").onchange = e => { I.prod = e.target.value; const al = niAlign(nwAcct(x, I.prod), I.rows);
-    if(!I.byLabel){ I.first = al ? al.first : P_ANCHOR; I.auto = al ? al.hit : 0; }
+    if(!I.byLabel){ const ac2 = nwAcct(x, I.prod), st2 = ac2.starts.length ? ac2.starts[ac2.starts.length - 1] : null;
+      I.first = st2 || (al ? al.first : P_ANCHOR); I.auto = al && al.first === I.first ? al.hit : 0; I.byStart = !!st2; }
     S.npv[x.no] = I.prod; S.nf = null; redraw(); };
   $("ni_over").onchange = e => { I.over = e.target.checked; redraw(); };
   if($("ni_def")) $("ni_def").onchange = e => { I.def = e.target.checked; };
@@ -3357,7 +3417,7 @@ function bindNi(x, kind){
   $("ni_save").onclick = () => {
     const todo = niPlan(x, I).filter(o=>!o.has || I.over); if(!todo.length) return;
     if(!confirm(`บันทึกตามตารางผ่อน (${NW_ACCN[I.prod]}) ${todo.length} งวด ของ ${x.no} ${x.name}\n`
-      + `งวด ${nwRound(todo[0].p)} (${thPer(todo[0].p)}) ถึงงวด ${nwRound(todo[todo.length-1].p)} (${thPer(todo[todo.length-1].p)})\n`
+      + `เดือน ${thPer(todo[0].p)} ถึง ${thPer(todo[todo.length-1].p)} · งวดที่ 1 ของสัญญา = ${thPer(I.first)}\n`
       + "วันที่รับเว้นว่างไว้ — ใส่เองทีหลังได้ · แก้ทีละงวดได้โดยกดแถวในตาราง")) return;
     todo.forEach(({r, p})=>{
       const patch = {}; ["d","m","int","pri","sh","shx","loan","bal","note","relief","src"].forEach(k=>patch[k] = "");
@@ -3368,6 +3428,7 @@ function bindNi(x, kind){
       NW.set(x.no, p, I.prod, patch);
     });
     const A = nwAccRef(x, I.prod);
+    A.starts = (A.starts || []).slice(0, -1).concat([I.first]);                    // ตารางที่นำเข้าบอกว่างวดที่ 1 ของสัญญาปัจจุบันคือเดือนนี้
     if(I.def && has(I.meta.sh)){ A.shM = +I.meta.sh; A.shxM = has(I.meta.shx) ? +I.meta.shx : 0; }
     if(has(I.meta.inst) && !A.inst) A.inst = +I.meta.inst;
     S.nf = null; save();
