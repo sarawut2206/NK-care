@@ -146,7 +146,8 @@ function readAll_(){
       per:       packed.per       || {},
       rule:      packed.rule      || {},
       cut:       packed.cut       || 20,
-      pdfg:      packed.pdfg      || {}
+      pdfg:      packed.pdfg      || {},
+      ledger:    packed.ledger    || []          // สมุดรับชำระที่กรรมการกรอกเอง
     },
     board: packed.board || {},
     user:  userLabel_(),
@@ -170,6 +171,7 @@ function writeAll_(payload){
     if(!rows.length) rows = [[""]];
     sh.getRange(1, 1, rows.length, 1).setValues(rows);
     stamp_(obj, txt.length);
+    autoBuild_();
     return txt.length;
   } finally { lock.releaseLock(); }
 }
@@ -226,7 +228,7 @@ function buildSheets(){
               c.g1 || "", c.g2 || "", c.legacy ? "ใช่" : "", c.t0 || 0];
     }));
 
-  sheetOut_("รับชำระ",
+  sheetOut_("เงินโอนจากสเตทเมนท์",
     ["วันที่","เวลา","บัญชีท้าย 4 หลัก","ชื่อในสเตทเมนท์","ยอดเงิน","เลขสมาชิก","ชื่อสมาชิก","ที่มา","หมายเหตุ"],
     (st.tx || []).slice().sort(function(a, b){ return (a.d || "") < (b.d || "") ? -1 : 1; }).map(function(t){
       var no = t.fixNo || t.no || (st.acct || {})[t.a] || "";
@@ -234,7 +236,71 @@ function buildSheets(){
               no, mName[no] || "", t.man ? "บันทึกมือ" : "สเตทเมนท์", t.note || t.part || ""];
     }));
 
+  // ---- สมุดรับชำระ (กรอกเอง) ----
+  var cMap = {};
+  (st.contracts || []).forEach(function(c){ cMap[c.id] = c; });
+  var L = (st.ledger || []).slice().sort(function(a, b){
+    return a.p < b.p ? -1 : a.p > b.p ? 1 : (String(a.no) < String(b.no) ? -1 : 1); });
+
+  sheetOut_("สมุดรับชำระ",
+    ["งวด","เลขสมาชิก","ชื่อสมาชิก","สัญญา","วันที่รับ","ยอดรับ","ดอกเบี้ย","เงินต้น","หุ้นประจำ","หุ้นเพิ่ม",
+     "ค่าทวงถาม","หนี้คงเหลือ","ยอดรับ − ยอดแยก","ผ่อนผัน","หมายเหตุ"],
+    L.map(function(e){
+      var c = cMap[e.cid];
+      var parts = n_(e.int) + n_(e.pri) + n_(e.shB) + n_(e.shE) + n_(e.fee);
+      return [perLabel_(e.p), e.no, mName[e.no] || "",
+              (c && c.prod !== "ฝากหุ้น") ? c.prod + (c.code ? " · " + c.code : "") : "ฝากหุ้น",
+              e.d || "", n_(e.m), n_(e.int), n_(e.pri), n_(e.shB), n_(e.shE), n_(e.fee),
+              has_(e.bal) ? +e.bal : "", r2_(n_(e.m) - parts), e.relief ? "ใช่" : "", e.note || ""];
+    }));
+
+  var pm = {}, lastBal = {};
+  L.forEach(function(e){
+    var a = pm[e.no] = pm[e.no] || {n:{}, m:0, int:0, pri:0, sh:0, fee:0};
+    a.n[e.p] = 1; a.m += n_(e.m); a.int += n_(e.int); a.pri += n_(e.pri);
+    a.sh += n_(e.shB) + n_(e.shE); a.fee += n_(e.fee);
+    if(e.cid && has_(e.bal)) lastBal[e.cid] = +e.bal;          // เรียงตามงวดแล้ว ตัวท้ายคือล่าสุด
+  });
+  sheetOut_("สรุปรายคน",
+    ["เลขสมาชิก","ชื่อสมาชิก","งวดที่บันทึก","รับรวม","ดอกเบี้ย","เงินต้น","หุ้นที่ฝาก","ค่าทวงถาม",
+     "ทุนเรือนหุ้นยกมา","ทุนเรือนหุ้นสะสม","หนี้คงเหลือล่าสุด"],
+    (db.members || []).map(function(m){
+      var a = pm[m.no] || {n:{}, m:0, int:0, pri:0, sh:0, fee:0}, debt = 0, any = false;
+      (st.contracts || []).forEach(function(c){
+        if(c.no === m.no && lastBal[c.id] != null){ debt += lastBal[c.id]; any = true; } });
+      return [m.no, m.name || "", Object.keys(a.n).length, r2_(a.m), r2_(a.int), r2_(a.pri), r2_(a.sh), r2_(a.fee),
+              n_(m.share), r2_(n_(m.share) + a.sh), any ? r2_(debt) : ""];
+    }));
+
+  var pp = {};
+  L.forEach(function(e){
+    var a = pp[e.p] = pp[e.p] || {n:0, m:0, int:0, pri:0, shB:0, shE:0, fee:0};
+    a.n++; a.m += n_(e.m); a.int += n_(e.int); a.pri += n_(e.pri);
+    a.shB += n_(e.shB); a.shE += n_(e.shE); a.fee += n_(e.fee);
+  });
+  sheetOut_("สรุปรายงวด",
+    ["งวด","จำนวนรายการ","รับรวม","ดอกเบี้ย","เงินต้น","หุ้นประจำ","หุ้นเพิ่ม","ค่าทวงถาม"],
+    Object.keys(pp).sort().map(function(k){ var a = pp[k];
+      return [perLabel_(k), a.n, r2_(a.m), r2_(a.int), r2_(a.pri), r2_(a.shB), r2_(a.shE), r2_(a.fee)]; }));
+
   return "สร้างชีทอ่านง่ายเรียบร้อย";
+}
+
+function n_(v){ return (v === "" || v == null || isNaN(+v)) ? 0 : +v; }
+function has_(v){ return !(v === "" || v == null); }
+function r2_(v){ return Math.round(v * 100) / 100; }
+var MTH_ = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+function perLabel_(p){ var a = String(p || "").split("-");
+  return a.length === 2 ? MTH_[(+a[1] || 1) - 1] + String(a[0]).slice(2) : String(p || ""); }
+
+/* อัปเดตชีทอ่านง่ายให้เองหลังบันทึก — เว้นอย่างน้อย 3 นาทีต่อครั้ง การบันทึกจะได้ไม่ช้า */
+function autoBuild_(){
+  try{
+    var last = +prop_("SHEETS_BUILT_AT") || 0;
+    if(Date.now() - last < 3 * 60 * 1000) return;
+    buildSheets();
+    setProp_("SHEETS_BUILT_AT", String(Date.now()));
+  }catch(err){ /* ชีทอ่านง่ายเป็นของแถม ห้ามทำให้การบันทึกล้ม */ }
 }
 
 function sheetOut_(name, head, rows){
