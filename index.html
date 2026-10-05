@@ -1,4 +1,21 @@
 <meta charset="utf-8">
+<script>
+/* โปรแกรมพังตรงไหน ให้เห็นบนหน้าจอเลย — ไม่ต้องเปิด Console */
+(function(){
+  function show(msg){
+    try{
+      var d = document.getElementById("errbox");
+      if(!d){ d = document.createElement("div"); d.id = "errbox";
+        d.style.cssText = "position:fixed;left:12px;right:12px;bottom:12px;z-index:9999;background:#FDF3F3;border:1px solid #E5A9A9;"
+          + "border-left:5px solid #C0202E;border-radius:8px;padding:10px 14px;font:13px/1.5 sans-serif;color:#7A1520;max-height:40vh;overflow:auto";
+        (document.body || document.documentElement).appendChild(d); }
+      var p = document.createElement("div"); p.textContent = "⚠ โปรแกรมทำงานผิดพลาด: " + msg; d.appendChild(p);
+    }catch(e){}
+  }
+  window.addEventListener("error", function(e){ if(e && e.message) show(e.message + (e.lineno ? " (บรรทัด " + e.lineno + ")" : "")); });
+  window.addEventListener("unhandledrejection", function(e){ var r = e && e.reason; show((r && (r.message || r)) || "ไม่ทราบสาเหตุ"); });
+})();
+</script>
 <title>กบข.นข. — ระบบทะเบียนสัญญาและรับชำระ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -487,7 +504,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-43</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-44</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" style="display:none">บันทึกขึ้น Sheets เดี๋ยวนี้</button>
@@ -2872,9 +2889,8 @@ function niPlan(x, I){
 
 function niHTML(x){
   const I = S.nimp && S.nimp.no===x.no ? S.nimp : null;
-  const ai = inGAS || REMOTE;
   let body = `<div class="bar" style="margin:8px 0">
-      <button class="ghost sm" id="ni_img" ${ai?"":'disabled title="ต้องเปิดจากลิงก์ Apps Script — AI ทำงานผ่าน Google"'}>📷 เลือกรูปตารางผ่อน (ให้ AI อ่าน)</button>
+      <button class="ghost sm" id="ni_img">📷 เลือกรูปตารางผ่อน (ให้ AI อ่าน)</button>
       <input type="file" id="ni_file" accept="image/*,application/pdf" multiple hidden>
       <span class="hint">เลือกได้หลายรูปพร้อมกัน ถ้าตารางยาวหลายหน้า</span><span class="hint" id="ni_msg"></span></div>
     <details><summary class="hint" style="cursor:pointer">หรือวางตารางที่คัดลอกมา (Excel / เว็บ)</summary>
@@ -2927,7 +2943,15 @@ function niLoad(x, rows, meta, src){
 }
 function bindNi(x, kind){
   const redraw = () => { S.nimpOpen = true; drawNW(kind); };
-  if($("ni_img")) $("ni_img").onclick = () => $("ni_file").click();
+  if($("ni_img")) $("ni_img").onclick = () => {
+    if(inGAS || REMOTE) return $("ni_file").click();
+    // ยังไม่ได้ต่อกับ Google — AI อ่านรูปทำงานผ่าน Apps Script เท่านั้น
+    $("ni_msg").innerHTML = '<b style="color:var(--danger)">อ่านรูปด้วย AI ต้องเปิดโปรแกรมจากลิงก์ Apps Script (ลงท้าย /exec)</b>'
+      + ' — หน้านี้ยังไม่ได้ต่อกับ Google Sheets'
+      + (GAS_URL ? ' <button class="ghost sm" id="ni_go">เปิดลิงก์ /exec</button>' : "")
+      + ' · หรือใช้ «วางตารางที่คัดลอกมา» ด้านล่างแทน';
+    const g = $("ni_go"); if(g) g.onclick = () => window.open(GAS_URL, "_blank", "noopener");
+  };
   if($("ni_file")) $("ni_file").onchange = async e => {
     const files = [...e.target.files]; e.target.value = ""; if(!files.length) return;
     const b64 = f => new Promise((ok,no)=>{ const r = new FileReader();
