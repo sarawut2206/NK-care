@@ -482,30 +482,35 @@ tr.grow td{color:var(--soft);background:#FAFBFD}
 tr.prow:hover td,tr.grow:hover td{background:var(--faint)}
 tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-bottom:1.5px solid var(--brand2)}
 .nwdoc{display:none}
-.nwrc{font-family:"TH Sarabun New","Sarabun",sans-serif;font-size:13pt;line-height:1.2;color:#000}
-.nwrc .rc-top{display:flex;align-items:center;gap:14px;border-bottom:1.5px solid #000;padding-bottom:6px;margin-bottom:6px}
-.nwrc .rc-top img{height:17mm;width:auto;display:block}
-.nwrc .rc-hd{flex:1}.nwrc .org{font-size:12.5pt;font-weight:600}.nwrc .title{font-size:18pt;font-weight:700;line-height:1.15}
-.nwrc .rc-info{display:grid;grid-template-columns:1.1fr 1.3fr .9fr;gap:1px 14px;margin-bottom:5px}
-.nwrc .rc-info b{font-weight:600;margin-right:4px}
-.nwrc table{width:100%;border-collapse:collapse;margin-top:4px;border:1px solid #000}
-.nwrc th,.nwrc td{border:1px solid #000;padding:1px 6px;font-family:inherit;font-size:12pt;font-weight:400;line-height:1.15;letter-spacing:0;text-transform:none}
-.nwrc th{text-align:center;font-weight:700;position:static;background:#eef0f4}
-.nwrc td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.nwrc,.nwrg{font-family:"TH Sarabun New","Sarabun",sans-serif;font-size:16pt;line-height:1.25;color:#000}
+.nwrc .rc-top,.nwrg .rc-top{display:flex;align-items:center;gap:16px;border-bottom:1.5px solid #000;padding-bottom:8px;margin-bottom:10px}
+.nwrc .rc-top img,.nwrg .rc-top img{height:24mm;width:auto;display:block}
+.nwrc .rc-hd,.nwrg .rc-hd{flex:1}.nwrc .org,.nwrg .org{font-size:15pt;font-weight:600}.nwrc .title,.nwrg .title{font-size:22pt;font-weight:700;line-height:1.15}
+.nwrc .rc-info{display:grid;grid-template-columns:1fr 1fr;gap:3px 18px;margin-bottom:10px}
+.nwrc .rc-info b,.nwrg .rc-info b{font-weight:600;margin-right:4px}
+.nwrc table,.nwrg table{width:100%;border-collapse:collapse;margin-top:8px;border:1px solid #000}
+.nwrc th,.nwrc td,.nwrg th,.nwrg td{border:1px solid #000;padding:3px 7px;font-family:inherit;font-size:15pt;font-weight:400;line-height:1.2;letter-spacing:0;text-transform:none}
+.nwrc th,.nwrg th{text-align:center;font-weight:700;position:static;background:#eef0f4}
+.nwrc td.n,.nwrg td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .nwrc td:first-child{text-align:left}
-.nwrc tr.tt td{font-weight:700;background:#f4f5f8}
-.nwrc tr.sub td{font-size:11pt}.nwrc tr.sub td:first-child{padding-left:16px}
-.nwrc .sm{font-size:10.5pt;font-weight:400}
-.nwrc .rc-none{margin:6px 0;padding:8px;border:1px dashed #000;text-align:center}
-.nwrc .rc-bal{margin-top:6px}
-.nwrc .rc-sig{display:flex;gap:30px;margin-top:2px;font-size:12pt;text-align:center}
-.nwrc .rc-sig>div{flex:1}.nwrc .rc-sig .ln{border-bottom:1px dotted #000;margin:20px 10px 2px}
-.nwrc .rc-note{font-size:11pt;margin-top:3px}
+.nwrc tr.tt td,.nwrg tr.tt td{font-weight:700;background:#f4f5f8}
+.nwrc tr.sub td{font-size:14pt}.nwrc tr.sub td:first-child{padding-left:18px}
+.nwrc .sm{font-size:12.5pt;font-weight:400}
+.nwrc .rc-none{margin:10px 0;padding:14px;border:1px dashed #000;text-align:center}
+.nwrc .rc-bal{margin-top:14px}
+.nwrc .rc-sig,.nwrg .rc-sig{display:flex;gap:30px;margin-top:10px;font-size:15pt;text-align:center}
+.nwrc .rc-sig>div,.nwrg .rc-sig>div{flex:1}.nwrc .rc-sig .ln,.nwrg .rc-sig .ln{border-bottom:1px dotted #000;margin:44px 10px 4px}
+.nwrc .rc-note,.nwrg .rc-note{font-size:13pt;margin-top:8px}
+.nwrg{font-size:13pt}.nwrg .title{font-size:20pt}.nwrg .rc-top img{height:20mm}
+.nwrg .rg-meta{display:grid;grid-template-columns:1fr 1fr;gap:2px 18px;margin-bottom:6px;font-size:13pt}.nwrg .rg-meta b{font-weight:600}
+.nwrg th,.nwrg td{font-size:12.5pt;padding:2px 5px}
+.nwrg td.l{text-align:left}.nwrg td.c{text-align:center}
+.nwrg tr{page-break-inside:avoid}.nwrg thead{display:table-header-group}
+.nwrg td.sg{height:9mm}
+.nwrg .rg-sum{margin-top:12px;page-break-inside:avoid}
 @media print{
-  body.nwprint .nwdoc .receipt.nwrc{padding-left:16mm!important;padding-right:6mm!important}                /* ขอบซ้าย 3 ซม. ขวา 2 ซม. (รวมกับขอบหน้ากระดาษ) */
-  body.nwprint .nwdoc.up2 .receipt{box-sizing:border-box;page-break-inside:avoid;page-break-after:auto;border-bottom:1px dashed #888!important;padding:0 0 2mm}
-  body.nwprint .nwdoc.up2 .receipt:nth-child(2n){page-break-after:always;border-bottom:0!important}
-  body.nwprint .nwdoc.up2 .receipt:last-child{page-break-after:auto}
+  body.nwprint .nwdoc .receipt.nwrc,body.nwprint .nwdoc .receipt.nwrg{padding-left:16mm!important;padding-right:6mm!important}      /* ขอบซ้าย 3 ซม. ขวา 2 ซม. (รวมกับขอบหน้ากระดาษ) */
+  body.nwprint .nwdoc .receipt.nwrc{page-break-inside:avoid}
   body.nwprint section:not(.on){display:none!important}
   body.nwprint .nwscreen{display:none!important}
   body.nwprint .nwdoc{display:block!important}
@@ -572,7 +577,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-63</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-64</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" title="บันทึกขึ้น Google Sheets เดี๋ยวนี้ (ปกติบันทึกให้เองทุกครั้งที่กรอก)">☁ บันทึกขึ้น Google Sheets</button>
@@ -3466,7 +3471,7 @@ const NW_LOGO = "data:image/jpeg;base64,\/9j\/4AAQSkZJRgABAQAAAQABAAD\/2wBDAAQDA
 function nwRcDoc(x, p){
   const c = nwRc(x, p), z = v => num(v) ? B(v) : "–", today = nwToday(), mi = +p.split("-")[1], pm = pNum(p) - 1, pmL = pFrom(pm);
   const cols = [["int", "ดอกเบี้ย"], ["pri", "เงินต้น"], ["sh", "หุ้นประจำ"], ["shx", "ฝากเพิ่ม"], ["sv", "สะสมเพิ่ม (สมัครใจ)"]].filter(([k]) => c.t[k] > 0);
-  const ds = c.items.map(it => it.r.d).filter(Boolean).sort(), dTxt = !ds.length ? "—" : ds[0] === ds[ds.length - 1] ? thDay(ds[0]) : `${thDay(ds[0])} – ${thDay(ds[ds.length - 1])}`;
+  const dTxt = `ภายในวันที่ 5 ${NW_MF[mi - 1]} ${p.split("-")[0]}`;                           // กำหนดชำระ = วันที่ 5 ของเดือนที่ออกใบเสร็จ
   const notes = c.items.filter(it => it.r.note).map(it => `${NW_ACCS[it.a.prod]}: ${esc(it.r.note)}`);
   const sg = v => { const d = r2(v); return d > 0 ? "+" + B(d) : d < 0 ? "−" + B(-d) : "–"; };
   const body = c.has ? `<table><thead><tr><th style="text-align:left">รายการ</th>${cols.map(([, l]) => `<th>${l}</th>`).join("")}<th>รวมรับ</th></tr></thead><tbody>
@@ -3483,8 +3488,9 @@ function nwRcDoc(x, p){
     <div class="rc-top"><img src="${NW_LOGO}" alt="กบข.นข.">
       <div class="rc-hd"><div class="org">${ORGF} (กบข.นข.)</div><div class="title">ใบเสร็จรับเงินประจำเดือน${nwPFull(p)}</div></div></div>
     <div class="rc-info">
-      <div><b>เลขที่ใบเสร็จ</b> RC-${esc(x.no)}-${nwAdYm(p)}</div><div><b>วันที่รับเงิน</b> ${dTxt}</div><div><b>วันที่ออก</b> ${thDay(today)}</div>
-      <div><b>สมาชิกเลขที่</b> ${esc(x.no)}</div><div><b>ชื่อ</b> ${esc(x.name)}</div><div><b>สถานะ</b> ${c.loan ? "ผู้กู้" : "ผู้ฝาก"}</div></div>
+      <div><b>เลขที่ใบเสร็จ</b> RC-${esc(x.no)}-${nwAdYm(p)}</div><div><b>วันที่ออก</b> ${thDay(today)}</div>
+      <div style="grid-column:1/-1"><b>สมาชิกเลขที่</b> ${esc(x.no)} &nbsp; <b>ชื่อ</b> ${esc(x.name)} &nbsp; <b>สถานะ</b> ${c.loan ? "ผู้กู้" : "ผู้ฝาก"}</div>
+      <div style="grid-column:1/-1"><b>วันที่รับเงิน</b> ${dTxt}</div></div>
     ${body}
     ${c.t.loan > 0 ? `<div class="rc-note" style="color:#000">เงินกู้ทับ/กู้เพิ่มที่ได้รับเดือนนี้ ${B(c.t.loan)} บาท</div>` : ""}
     <table class="rc-bal"><thead><tr><th style="text-align:left">สรุปยอดสะสม</th><th>ยอดยกมา ณ สิ้น${NW_MF[(mi + 10) % 12]}${mi === 1 ? " " + (+p.split("-")[0] - 1) : ""}<div class="sm">(ก่อนรับชำระเดือนนี้)</div></th><th>เดือนนี้ (+/−)</th><th>คงเหลือ ณ สิ้น${NW_MF[mi - 1]}</th></tr></thead><tbody>
@@ -3497,6 +3503,36 @@ function nwRcDoc(x, p){
   </div>`;
 }
 
+/* ทะเบียนคุมใบเสร็จรับเงินประจำเดือน — ทุกใบที่ออกในเดือนนั้น เรียงตามเลขสมาชิก พร้อมช่องลงชื่อผู้รับใบเสร็จ */
+function nwRgDoc(p){
+  const mi = +p.split("-")[1], yr = p.split("-")[0], today = nwToday();
+  const L = NW.people().map(x => ({x, c:nwRc(x, p)})).filter(a => a.c.has).sort((a, b) => String(a.x.no).localeCompare(String(b.x.no), "th", {numeric:true}));
+  const tot = k => r2(L.reduce((u, a) => u + a.c.t[k], 0)), shT = r2(tot("sh") + tot("shx") + tot("sv"));
+  const nL = L.filter(a => a.c.loan).length, rc = a => `RC-${a.x.no}-${nwAdYm(p)}`;
+  const sumShares = r2(L.reduce((u, a) => u + a.c.shares, 0)), sumDebt = r2(L.reduce((u, a) => u + a.c.debt, 0));
+  return `<div class="receipt nwr nwrg">
+    <div class="rc-top"><img src="${NW_LOGO}" alt="กบข.นข.">
+      <div class="rc-hd"><div class="org">${ORGF} (กบข.นข.)</div><div class="title">ทะเบียนคุมใบเสร็จรับเงินประจำเดือน${nwPFull(p)}</div></div></div>
+    <div class="rg-meta">
+      <div><b>เลขที่ทะเบียน</b> RG-${nwAdYm(p)}</div><div><b>วันที่จัดทำ</b> ${thDay(today)}</div>
+      <div><b>จำนวนใบเสร็จ</b> ${L.length} ฉบับ (ผู้กู้ ${nL} · ผู้ฝาก ${L.length - nL})</div><div><b>กำหนดรับเงิน</b> ภายในวันที่ 5 ${NW_MF[mi - 1]} ${yr}</div>
+      <div style="grid-column:1/-1"><b>ใบเสร็จเลขที่</b> ${L.length ? `${rc(L[0])} ถึง ${rc(L[L.length - 1])}` : "—"}</div></div>
+    <table><thead><tr><th style="width:7mm">ที่</th><th>เลขที่ใบเสร็จ</th><th>ชื่อ – สกุล</th><th>ดอกเบี้ย</th><th>เงินต้น</th><th>ฝากหุ้น</th><th>รวมรับ</th><th style="width:26mm">ผู้รับใบเสร็จ<br>ลงชื่อ / วันที่</th></tr></thead><tbody>
+      ${L.map((a, i) => `<tr><td class="c">${i + 1}</td><td class="l" style="white-space:nowrap">${rc(a)}</td><td class="l">${esc(a.x.name)} <span style="font-size:11pt">(${a.c.loan ? "กู้" : "ฝาก"})</span></td>
+        <td class="n">${num(a.c.t.int) ? B(a.c.t.int) : "–"}</td><td class="n">${num(a.c.t.pri) ? B(a.c.t.pri) : "–"}</td><td class="n">${B(r2(a.c.t.sh + a.c.t.shx + a.c.t.sv))}</td><td class="n"><b>${B(a.c.t.m)}</b></td><td class="sg"></td></tr>`).join("")
+        || '<tr><td colspan="8" class="c">ไม่มีรายการรับชำระในเดือนนี้</td></tr>'}
+      <tr class="tt"><td colspan="3" class="l">รวม ${L.length} ฉบับ</td><td class="n">${B(tot("int"))}</td><td class="n">${B(tot("pri"))}</td><td class="n">${B(shT)}</td><td class="n">${B(tot("m"))}</td><td></td></tr></tbody></table>
+    <table class="rg-sum"><tbody>
+      <tr><td class="l">ยอดรับรวมประจำเดือน (ดอกเบี้ย ${B(tot("int"))} + เงินต้น ${B(tot("pri"))} + ฝากหุ้น ${B(shT)})</td><td class="n"><b>${B(tot("m"))} บาท</b></td></tr>
+      <tr><td class="l">ทุนเรือนหุ้นสะสมรวม ณ สิ้น${NW_MF[mi - 1]} (ผู้ที่มีใบเสร็จเดือนนี้)</td><td class="n">${B(sumShares)} บาท</td></tr>
+      <tr><td class="l">หนี้เงินกู้คงเหลือรวม ณ สิ้น${NW_MF[mi - 1]} (ผู้ที่มีใบเสร็จเดือนนี้)</td><td class="n">${B(sumDebt)} บาท</td></tr></tbody></table>
+    <div class="rc-sig" style="page-break-inside:avoid"><div><div class="ln"></div><div>( ${esc(FIN())} )</div><div>กรรมการฝ่ายการเงิน ผู้จัดทำ</div></div>
+      <div><div class="ln"></div><div>( .................................................. )</div><div>ผู้ตรวจสอบ</div></div>
+      <div><div class="ln"></div><div>( ${esc(CHAIR())} )</div><div>ประธานกลุ่มบุคคล</div></div></div>
+    <div class="rc-note">ทะเบียนนี้จัดทำจากข้อมูลที่บันทึกในระบบทะเบียน กบข.นข. ใช้ควบคุมการออกและการส่งมอบใบเสร็จรับเงินประจำเดือน</div>
+  </div>`;
+}
+
 function drawNWRc(){
   const el = $("tab24"); if(!el) return;
   if(tab !== 24){ el.innerHTML = ""; return; }
@@ -3504,14 +3540,14 @@ function drawNWRc(){
   if(!NW.on()){ el.innerHTML = nwStartHTML("ใบเสร็จรายเดือน"); bindNwImport(); return; }
   const rowsP = NW.all().map(r => r.p).sort(), lastP = rowsP.length ? rowsP[rowsP.length - 1] : nwCurP(), hiN = Math.max(pNum(nwCurP()), pNum(lastP));
   const p = (S.rcm && pNum(S.rcm) >= pNum(P_ANCHOR) && pNum(S.rcm) <= hiN) ? S.rcm : lastP;
-  const f = S.rcf || "all", q = (S.rcq || "").trim().toLowerCase(), up = S.rcup === 1 ? 1 : 2;
+  const f = S.rcf || "all", q = (S.rcq || "").trim().toLowerCase();
   if(!S.rcun) S.rcun = {};
   const all = NW.people().map(x => ({x, c:nwRc(x, p)}));
   const list = all.filter(a => (f === "all" || (f === "loan") === a.c.loan) && (!q || `${a.x.no} ${a.x.name}`.toLowerCase().includes(q)));
   const withR = list.filter(a => a.c.has), chosen = withR.filter(a => !S.rcun[a.x.no]);
   const T = k => r2(withR.reduce((u, a) => u + a.c.t[k], 0));
   if(!S.rcv || !list.some(a => a.x.no === S.rcv)) S.rcv = (withR[0] || list[0] || {x:{}}).x.no;
-  const cur = NW.person(S.rcv), pages = Math.ceil(chosen.length / up);
+  const cur = NW.person(S.rcv), pages = chosen.length;
   const mo = []; for(let n = pNum(P_ANCHOR); n <= hiN; n++){ const q2 = pFrom(n); mo.push(`<option value="${q2}" ${q2 === p ? "selected" : ""}>${nwPFull(q2)} · งวด ${nwRound(q2)}</option>`); }
   el.innerHTML = `<div class="nwscreen">
   <div class="card">
@@ -3519,9 +3555,9 @@ function drawNWRc(){
     <div class="pf">
       <div><label>เดือนที่ต้องการพิมพ์</label><div style="display:flex;gap:6px"><button class="ghost sm" id="rc_prev" title="เดือนก่อนหน้า">◀</button>
         <select id="rc_m">${mo.join("")}</select><button class="ghost sm" id="rc_next" title="เดือนถัดไป">▶</button></div></div>
-      <div><label>จำนวนใบต่อหน้า A4</label><select id="rc_up"><option value="2" ${up === 2 ? "selected" : ""}>2 ใบ / หน้า (ประหยัดกระดาษ)</option><option value="1" ${up === 1 ? "selected" : ""}>1 ใบ / หน้า</option></select></div>
+      <div style="align-self:end"><button class="ghost" id="rg_print" ${withR.length ? "" : "disabled"}>🗂 พิมพ์ทะเบียนคุมใบเสร็จ ${nwPFull(p)}</button></div>
     </div>
-    <p class="hint" style="margin:8px 0 0">ดึงจากรายการที่กรอกไว้ในทะเบียนเดือน ${nwPFull(p)} · ยอดหุ้นสะสม/หนี้คงเหลือคือยอด ณ สิ้นเดือนนั้น · คนที่ไม่มีรายการในเดือนนี้จะไม่ถูกพิมพ์</p>
+    <p class="hint" style="margin:8px 0 0">ดึงจากรายการที่กรอกไว้ในทะเบียนเดือน ${nwPFull(p)} · ใบเสร็จ 1 คนต่อ 1 หน้า A4 · ยอดยกมา/คงเหลือคือยอด ณ สิ้นเดือน · คนที่ไม่มีรายการในเดือนนี้จะไม่ถูกพิมพ์ · ทะเบียนคุมรวมทุกใบที่ออกในเดือนนี้ พร้อมช่องลงชื่อผู้รับใบเสร็จ</p>
   </div>
   <div class="stats">
     <div class="stat"><div class="k">ใบเสร็จเดือนนี้</div><div class="v">${withR.length} <small>ใบ</small></div><div class="hint">จาก ${list.length} คน</div></div>
@@ -3549,22 +3585,23 @@ function drawNWRc(){
   </div>
   ${cur ? `<div class="card"><div class="bar" style="margin:0 0 8px"><span class="eyebrow" style="margin:0">ตัวอย่างใบเสร็จ · ${esc(cur.no)} ${esc(cur.name)}</span>
       <button class="ghost sm" id="rc_p1" style="margin-left:auto">พิมพ์ใบนี้</button></div>${nwRcDoc(cur, p)}</div>` : ""}
+  ${withR.length ? `<details class="card" style="overflow-x:auto"><summary class="eyebrow" style="cursor:pointer;margin:0">ตัวอย่างทะเบียนคุมใบเสร็จ ${nwPFull(p)}</summary>${nwRgDoc(p)}</details>` : ""}
   </div>
-  <div class="nwdoc up${up}" id="nwdoc"></div>`;
+  <div class="nwdoc" id="nwdoc"></div>`;
   const redo = () => drawNWRc(), shift = d => { const n = pNum(p) + d; if(n >= pNum(P_ANCHOR) && n <= hiN){ S.rcm = pFrom(n); redo(); } };
   $("rc_m").onchange = e => { S.rcm = e.target.value; redo(); };
   $("rc_prev").onclick = () => shift(-1); $("rc_next").onclick = () => shift(1);
-  $("rc_up").onchange = e => { S.rcup = +e.target.value; redo(); };
+  $("rg_print").onclick = () => { if(!withR.length) return; if(!confirm(`พิมพ์ทะเบียนคุมใบเสร็จ ${nwPFull(p)} (${all.filter(a => a.c.has).length} ฉบับ)?`)) return; nwPrint(nwRgDoc(p)); };
   $("rc_f").onchange = e => { S.rcf = e.target.value; redo(); };
   $("rc_q").oninput = e => { S.rcq = e.target.value; redo(); const i = $("rc_q"); i.focus(); i.setSelectionRange(i.value.length, i.value.length); };
   $("rc_all").onclick = () => { withR.forEach(a => delete S.rcun[a.x.no]); redo(); };
   $("rc_none").onclick = () => { withR.forEach(a => S.rcun[a.x.no] = true); redo(); };
   el.querySelectorAll("[data-rcs]").forEach(i => i.onclick = ev => { ev.stopPropagation(); if(i.checked) delete S.rcun[i.dataset.rcs]; else S.rcun[i.dataset.rcs] = true; redo(); });
   el.querySelectorAll("[data-rc]").forEach(tr => tr.onclick = () => { S.rcv = tr.dataset.rc; redo(); const c = $("rc_p1"); if(c) c.scrollIntoView({behavior:"smooth", block:"start"}); });
-  const go = arr => { const d = $("nwdoc"); d.className = "nwdoc up" + up; nwPrint(arr.map(x => nwRcDoc(x, p)).join("")); };
+  const go = arr => nwPrint(arr.map(x => nwRcDoc(x, p)).join(""));
   if($("rc_p1")) $("rc_p1").onclick = () => go([cur]);
   $("rc_print").onclick = () => { if(!chosen.length) return;
-    if(!confirm(`พิมพ์ใบเสร็จเดือน ${nwPFull(p)} จำนวน ${chosen.length} ใบ (${pages} หน้า A4 · ${up} ใบ/หน้า)?`)) return; go(chosen.map(a => a.x)); };
+    if(!confirm(`พิมพ์ใบเสร็จเดือน ${nwPFull(p)} จำนวน ${chosen.length} ใบ (${pages} หน้า A4 · 1 คนต่อ 1 หน้า)?`)) return; go(chosen.map(a => a.x)); };
 }
 
 /* ============ เว็บใหม่: นำเข้าตารางผ่อน (รูป / วางข้อความ) ============
