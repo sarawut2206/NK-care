@@ -549,7 +549,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-60</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-61</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" title="บันทึกขึ้น Google Sheets เดี๋ยวนี้ (ปกติบันทึกให้เองทุกครั้งที่กรอก)">☁ บันทึกขึ้น Google Sheets</button>
@@ -3464,8 +3464,11 @@ function niParseText(txt){
   let order = null;
   const hl = lines.find(l => /งวด/.test(l) && /ดอก/.test(l) && /(คงเหลือ|ต้น)/.test(l));
   if(hl){ const ks = (hl.match(NI_RE_HEAD) || []).map(niKey); if(ks[0] === "n" && ks.includes("bal")) order = ks.slice(1); }
-  const rows = []; let prevRow = null;
+  const rows = []; let prevRow = null, pend = null;
+  const toP = (mo, y) => `${2500 + (+String(y).slice(-2))}-${String(MTH_TH.indexOf(mo) + 1).padStart(2, "0")}`;
+  const RE_HDR = new RegExp("^\\s*(" + NI_MTHS + ")\\s?(\\d{2,4})\\s*$"), RE_END = new RegExp("สิ้นสุด\\s*(" + NI_MTHS + ")\\s?(\\d{2,4})");
   lines.forEach(l => {
+    const hm = l.match(RE_HDR); if(hm){ pend = toP(hm[1], hm[2]); return; }                  // «ก.ค. 69» บรรทัดเดียว = ตารางถัดไปเริ่มเดือนนี้
     const m = l.match(NI_RE_ROW); if(!m || !(+m[1] >= 1)) return;
     const n = +m[1], rest = l.slice(m[0].length).replace(NI_RE_DATE, " — "), vals = [];
     for(const w of rest.trim().split(/\s+/)){
@@ -3478,11 +3481,24 @@ function niParseText(txt){
       : cnt >= 6 ? ["m","pri","int","sh","shx","bal"] : cnt === 5 ? ["m","pri","int","sh","bal"] : ["m","pri","int","bal"];
     const prev = prevRow && prevRow.n === n - 1 && prevRow.bal != null ? prevRow.bal : null;
     const r = Object.assign({n}, niFit(o, vals, prev));
+    const em = l.match(RE_END);
     if(m[2]) r.p = `${2500 + (+m[3])}-${String(MTH_TH.indexOf(m[2]) + 1).padStart(2, "0")}`;     // ชื่อเดือนในแถว → งวดโอน
+    else if(em) r.pe = toP(em[1], em[2]);                                                            // «สิ้นสุด มิ.ย.69» ท้ายแถว = คำใบ้ว่าแถวนี้คืองวดโอนเดือนนั้น (ใช้เมื่อไม่มีอย่างอื่นบอก)
+    else if(pend) r.p = pFrom(pNum(pend) + n - 1);
+    pend = null;
     rows.push(r); prevRow = r;
   });
-  return niClean(rows);
+  return rows;                                           // ยังไม่รวมงวดซ้ำ — niRoute แยกเป็นสัญญาแล้ว niLoad ค่อยรวมต่อสัญญา
 }
+/* ตารางเดียวที่มีหลายสัญญา (กู้ทบ/กู้ทับ): งวดที่ 1 โผล่อีกครั้งหลังจากเลยงวดที่ 1 ไปแล้ว = ตารางสัญญาใหม่ */
+function niSegs(rows){
+  const out = []; let cur = null, last = 0;
+  (rows || []).forEach(r => { const n = +r.n;
+    if(!cur || (n === 1 && last > 1)){ cur = []; out.push(cur); }
+    cur.push(r); last = n; });
+  return out;
+}
+const niFirstOf = rows => { const r = (rows || []).find(q => q.p); return r ? pFrom(pNum(r.p) - (+r.n - 1)) : null; };
 /* ส่วนหัวของ «เครื่องคำนวณวงเงินกู้สูงสุด»: เลขสมาชิก ชื่อ จำนวนงวด อัตรา หุ้น ยอดส่ง วงเงิน */
 function niParseHead(txt){
   const t = String(txt||""), m = {}, g = re => { const r = t.match(re); return r ? r[1] : null; };
@@ -3509,6 +3525,7 @@ function niClean(rows){
   (rows||[]).forEach(r=>{ const n = +r.n; if(!(n >= 1 && n <= 600)) return;
     const o = by[n] || (by[n] = {n});
     if(r.p && !o.p) o.p = r.p;
+    if(r.pe && !o.pe) o.pe = r.pe;
     NI_COLS.forEach(([k])=>{ const v = niNum(r[k]); if(v != null && o[k] == null) o[k] = v; }); });
   return Object.values(by).sort((a,b)=>a.n - b.n);
 }
@@ -3553,8 +3570,20 @@ function niCheck(rows, rate, loan0){
 /* แถวที่จะลงทะเบียน: งวด 9 (ม.ค.69) ถึงงวดปัจจุบัน */
 function niPlan(x, I){
   const firstN = pNum(I.first), lo = pNum(P_ANCHOR), hi = pNum(nwCurP());
-  return I.rows.map(r=>({r, p: pFrom(firstN + r.n - 1)})).filter(o=>pNum(o.p) >= lo && pNum(o.p) <= hi)
+  return I.rows.map(r=>({r, p: pFrom(firstN + r.n - 1)})).filter(o=>pNum(o.p) >= lo && pNum(o.p) <= hi && (!I.until || pNum(o.p) < pNum(I.until)))
     .map(o=>({...o, has: !!NW.row(x.no, o.p, I.prod)}));
+}
+
+/* ตารางนี้คือสัญญาใหม่ที่กู้ทับหนี้เดิมหรือไม่ — เริ่มหลังงวดที่ 1 ของสัญญาปัจจุบัน และยอดกู้ใหม่ (คงเหลือ + เงินต้นงวดที่ 1) ไม่เท่าหนี้เดิม */
+function niRefi(x, I){
+  const acc = nwAcct(x, I.prod), r1 = I.rows.find(r => r.n === 1);
+  if(!r1 || !has(r1.bal) || !has(r1.pri)) return null;
+  const ls = nwStarts(acc).slice(-1)[0];
+  if(pNum(I.first) <= pNum(ls) || pNum(I.first) < pNum(P_ANCHOR)) return null;      // เริ่มก่อนทะเบียน = หนี้ยกมารวมไว้แล้ว ตัดสินไม่ได้
+  if((I.sg || 1) <= 1 && !acc.starts.length) return null;                           // ยังไม่เคยตั้งงวดที่ 1 ของสัญญาแรก = นำเข้าเป็นสัญญาแรก
+  const before = nwBefore(acc, I.first).debt, N = r2(r1.bal + r1.pri);
+  if((I.sg || 1) <= 1 && (!(before > 0.005) || Math.abs(N - before) <= 1)) return null;
+  return {N, before, loan: r2(N - before)};
 }
 
 function niHTML(x){
@@ -3575,7 +3604,7 @@ function niHTML(x){
   const M = I.meta || {};
   body += `<div class="keybox" style="margin-top:8px">
     <div class="bar" style="margin:0 0 6px;flex-wrap:wrap">
-      <b>อ่านได้ ${I.rows.length} งวด</b>${I.qn > 1 ? ` <span class="pill grn">คนที่ ${I.qi} / ${I.qn}</span>` : ""}
+      <b>อ่านได้ ${I.rows.length} งวด</b>${I.sn > 1 ? ` <span class="pill grn">สัญญาที่ ${I.sg} / ${I.sn}</span>` : I.qn > 1 ? ` <span class="pill grn">คนที่ ${I.qi} / ${I.qn}</span>` : ""}
       ${has(M.loan)?`<span class="pill">วงเงิน ${B(M.loan)}</span>`:""}${M.terms?`<span class="pill">${M.terms} งวด</span>`:""}${M.inst?`<span class="pill">ส่งเดือนละ ${B(M.inst)}</span>`:""}
       ${has(M.sh)?`<span class="pill">ฝากหุ้น ${B(M.sh)}</span>`:""}${has(M.shx)?`<span class="pill">ฝากเพิ่ม ${B(M.shx)}</span>`:""}
       <label style="margin-left:auto">นำเข้าเป็น <select id="ni_prod" style="width:auto">${["sam","dk"].map(k => `<option value="${k}" ${I.prod===k?"selected":""}>${NW_ACCN[k]}</option>`).join("")}</select></label>
@@ -3584,7 +3613,8 @@ function niHTML(x){
     ${I.detNo || I.detName ? (() => { const a = niNameKey(I.detName), b = niNameKey(x.name), same = !a || !b || a.includes(b) || b.includes(a);
       return `<p class="hint" style="margin:0 0 6px">${same ? "✓" : "⚠"} ในรูปคือสมาชิก ${esc(I.detNo||"")} ${esc(I.detName||"")}`
         + (same ? "" : ` — ชื่อไม่ตรงกับในทะเบียน (<b>${esc(x.name)}</b>) ตรวจให้แน่ใจว่าเป็นคนเดียวกันก่อนบันทึก`) + "</p>"; })() : ""}
-    <p class="hint" style="margin:0 0 6px">${I.byStart ? `✓ ใช้งวดที่ 1 ที่คุณกำหนดไว้ (${thPer(I.first)})${I.auto ? ` — ตรงกับยอดคงเหลือที่มีอยู่ ${I.auto} งวด` : ""}` : I.byLabel ? `✓ ใช้ชื่อเดือนที่ระบุในตาราง${I.auto ? ` — ตรงกับยอดคงเหลือที่มีอยู่ ${I.auto} งวด` : ""}`
+    ${(() => { const rf = niRefi(x, I); return rf ? `<p class="hint" style="margin:0 0 6px"><span class="pill">🔁 กู้ทับ — สัญญาใหม่</span> เริ่ม <b>${thPer(I.first)}</b> ยอดกู้ใหม่ <b>${B(rf.N)}</b> ปิดหนี้เดิม ${B(rf.before)} → ได้รับส่วนต่าง <b>${B(rf.loan)}</b> · งวดที่ 1 ของสัญญาใหม่ = ${thPer(I.first)} (สัญญาเดิมยังนับตามเดิม)</p>` : ""; })()}
+    <p class="hint" style="margin:0 0 6px">${I.byPrev ? `✓ สัญญาใหม่เริ่มต่อจากสัญญาก่อนหน้า (${thPer(I.first)})` : I.byStart ? `✓ ใช้งวดที่ 1 ที่คุณกำหนดไว้ (${thPer(I.first)})${I.auto ? ` — ตรงกับยอดคงเหลือที่มีอยู่ ${I.auto} งวด` : ""}` : I.byLabel ? `✓ ใช้ชื่อเดือนที่ระบุในตาราง${I.auto ? ` — ตรงกับยอดคงเหลือที่มีอยู่ ${I.auto} งวด` : ""}`
       : I.auto ? `✓ จับคู่อัตโนมัติจากยอดคงเหลือ — ตรงกับยอดที่มีอยู่ ${I.auto} งวด` : '⚠ จับคู่จากยอดคงเหลือไม่ได้ — เลือกเองว่างวดที่ 1 ของตารางคือเดือนไหน'}
       · จะเติมเดือน ${thPer(P_ANCHOR)} ถึง ${thPer(nwCurP())} · เลือกเดือนของงวดที่ 1 ได้เอง (ระบบจำไว้เป็นงวดที่ 1 ของสัญญา) · แก้ตัวเลขได้ทุกช่อง</p>
     <div class="tbl" style="max-height:380px"><table><thead><tr><th>ตาราง</th><th class="l">งวดโอน</th>
@@ -3599,16 +3629,17 @@ function niHTML(x){
       <label class="rlf"><input type="checkbox" id="ni_over" ${I.over?"checked":""}> เขียนทับงวดที่บันทึกไว้แล้ว</label>
       ${has(M.sh) ? `<label class="rlf"><input type="checkbox" id="ni_def" ${I.def!==false?"checked":""}> ตั้งฝากหุ้น ${B(M.sh)}${has(M.shx)?` + ฝากเพิ่ม ${B(M.shx)}`:""} เป็นยอดประจำของคนนี้</label>` : ""}
       <button id="ni_save" ${add?"":"disabled"} style="margin-left:auto">บันทึกลงทะเบียน ${add} งวด</button>
-      <button class="ghost" id="ni_cancel">${S.niq && S.niq.length ? "ข้ามคนนี้" : "ยกเลิก"}</button>
+      <button class="ghost" id="ni_cancel">${S.niq && S.niq.length ? (I.sn > 1 ? "ข้ามสัญญานี้" : "ข้ามคนนี้") : "ยกเลิก"}</button>
     </div></div>`;
   return body;
 }
 
 /* อ่านตารางแล้วเตรียมให้ตรวจ */
-function niLoad(x, rows, meta, src, prod){
-  rows = niClean(rows);
+function niLoad(x, rows, meta, src, prod, ex){
+  ex = ex || {}; rows = niClean(rows);
   if(!rows.length){ toast("อ่านไม่พบแถวตารางผ่อน"); return false; }
-  const pr = prod || "sam", acc = nwAcct(x, pr), a = niAlign(acc, rows), stl = acc.starts.length ? acc.starts[acc.starts.length - 1] : null;
+  const later = (ex.sg || 1) > 1, aft = later && S.niAfter && S.niAfter.no === x.no ? S.niAfter.p : null;     // สัญญาที่ 2 ขึ้นไปในตารางเดียวกัน
+  const pr = prod || "sam", acc = nwAcct(x, pr), a = niAlign(acc, rows), stl = !later && acc.starts.length ? acc.starts[acc.starts.length - 1] : null;
   meta = Object.assign({}, meta||{});
   const mode = k => { const c = {}; rows.forEach(r=>{ if(r[k] != null) c[r[k]] = (c[r[k]]||0) + 1; });
     const top = Object.entries(c).sort((p,q)=>q[1]-p[1])[0]; return top && top[1] >= 2 ? +top[0] : null; };
@@ -3616,7 +3647,13 @@ function niLoad(x, rows, meta, src, prod){
   let byLabel = null; const cnt = {};
   rows.forEach(r => { if(r.p){ const f = pNum(r.p) - (r.n - 1); cnt[f] = (cnt[f] || 0) + 1; } });
   const top = Object.entries(cnt).sort((u, v) => v[1] - u[1])[0]; if(top) byLabel = pFrom(+top[0]);
-  S.nimp = {no:x.no, prod:pr, rows, meta, src, first: byLabel || stl || (a ? a.first : P_ANCHOR), auto: a && a.first === (byLabel || stl || a.first) ? a.hit : 0, byLabel: !!byLabel, byStart: !byLabel && !!stl, over:false, def:true};
+  const eh = rows.find(r => r.pe), endHint = eh ? pFrom(pNum(eh.pe) - (eh.n - 1)) : null;
+  const first0 = byLabel || stl || aft || (a ? a.first : (endHint || P_ANCHOR));
+  S.nimp = {no:x.no, prod:pr, rows, meta, src, first: first0, auto: a && a.first === first0 ? a.hit : 0, byLabel: !!byLabel, byStart: !byLabel && !!stl, byPrev: !byLabel && !stl && !!aft, over:false, def:true,
+    sg: ex.sg || 1, sn: ex.sn || 1, until: ex.until || null};
+  if(S.nimp.sn > 1){                       // หลายสัญญา: ยอดหุ้นประจำ/ฝากเพิ่มของสัญญา = ตามงวดล่าสุดที่จะลงทะเบียน (ฝากเพิ่มขึ้นทุกปี)
+    const lr = niPlan(x, S.nimp).filter(o => !o.has).pop();
+    if(lr){ if(lr.r.sh != null) S.nimp.meta.sh = lr.r.sh; if(lr.r.shx != null) S.nimp.meta.shx = lr.r.shx; } }
   return true;
 }
 const niMsg = h => ["ni_msg", "nw_nimsg"].forEach(id => { const e = $(id); if(e) e.innerHTML = h; });
@@ -3635,6 +3672,12 @@ function niRoute(groups, fb){
     if(ex){ ex.rows = ex.rows.concat(g.rows); Object.keys(g.meta).forEach(k => { if(ex.meta[k] == null) ex.meta[k] = g.meta[k]; }); }
     else q.push({no:x.no, detNo:g.no||"", name:g.name||"", rows:g.rows.slice(), meta:Object.assign({}, g.meta), src:g.src});
   });
+  const sp = [];                                                                       // ตารางที่มีหลายสัญญา → เข้าคิวทีละสัญญา เรียงตามลำดับ
+  q.forEach(e => { const ss = niSegs(e.rows);
+    ss.forEach((rows, i) => { const meta = Object.assign({}, e.meta);
+      if(ss.length > 1) ["sh", "shx", "inst", "loan", "terms"].forEach(k => delete meta[k]);
+      sp.push(Object.assign({}, e, {rows, meta, sg:i + 1, sn:ss.length, until: ss[i + 1] ? niFirstOf(ss[i + 1]) : null})); }); });
+  q.length = 0; sp.forEach(e => q.push(e));
   S.niq = q; S.niqN = q.length; S.niqI = 0;
   niMsg(miss.length ? `<b style="color:var(--danger)">ไม่พบสมาชิกในทะเบียน: ${esc(miss.join(", "))}</b>` : "");
   if(!q.length){ toast("ไม่มีรูปที่จับคู่กับสมาชิกได้"); return false; }
@@ -3644,7 +3687,7 @@ function niNext(){
   while(S.niq && S.niq.length){
     const g = S.niq.shift(), x = NW.person(g.no); if(!x) continue;
     S.niqI = (S.niqI || 0) + 1;
-    if(!niLoad(x, g.rows, g.meta, g.src, niProdFor(x))) continue;
+    if(!niLoad(x, g.rows, g.meta, g.src, niProdFor(x), {sg:g.sg, sn:g.sn, until:g.until})) continue;
     Object.assign(S.nimp, {detNo:g.detNo, detName:g.name, qi:S.niqI, qn:S.niqN});
     if(!S.npv) S.npv = {}; S.npv[x.no] = S.nimp.prod;
     const kind = nwState(x).kind, T = kind === "loan" ? 20 : 21;
@@ -3688,7 +3731,7 @@ function bindNi(x, kind){
   const I = S.nimp && S.nimp.no===x.no ? S.nimp : null; if(!I) return;
   $("ni_first").onchange = e => { I.first = e.target.value; I.auto = 0; I.byLabel = false; I.byStart = false; redraw(); };
   if($("ni_prod")) $("ni_prod").onchange = e => { I.prod = e.target.value; const al = niAlign(nwAcct(x, I.prod), I.rows);
-    if(!I.byLabel){ const ac2 = nwAcct(x, I.prod), st2 = ac2.starts.length ? ac2.starts[ac2.starts.length - 1] : null;
+    if(!I.byLabel){ const ac2 = nwAcct(x, I.prod), st2 = I.sg > 1 ? null : ac2.starts.length ? ac2.starts[ac2.starts.length - 1] : null;
       I.first = st2 || (al ? al.first : P_ANCHOR); I.auto = al && al.first === I.first ? al.hit : 0; I.byStart = !!st2; }
     S.npv[x.no] = I.prod; S.nf = null; redraw(); };
   $("ni_over").onchange = e => { I.over = e.target.checked; redraw(); };
@@ -3705,20 +3748,25 @@ function bindNi(x, kind){
     if(!confirm(`บันทึกตามตารางผ่อน (${NW_ACCN[I.prod]}) ${todo.length} งวด ของ ${x.no} ${x.name}\n`
       + `เดือน ${thPer(todo[0].p)} ถึง ${thPer(todo[todo.length-1].p)} · งวดที่ 1 ของสัญญา = ${thPer(I.first)}\n`
       + "วันที่รับเว้นว่างไว้ — ใส่เองทีหลังได้ · แก้ทีละงวดได้โดยกดแถวในตาราง")) return;
+    const rf = niRefi(x, I), acc0 = nwAcct(x, I.prod), prevStarts = nwStarts(acc0).slice(), prevA = {inst:acc0.inst, shM:acc0.shM, shxM:acc0.shxM};
     todo.forEach(({r, p})=>{
       const patch = {}; ["d","m","int","pri","sh","shx","sv","loan","bal","note","relief","src"].forEach(k=>patch[k] = "");
       ["m","int","pri","sh","shx","bal"].forEach(k=>{ if(r[k] != null) patch[k] = r[k]; });
       if(patch.shx === 0) patch.shx = "";
       patch.src = "plan";
       if(I.over){ const old = NW.row(x.no, p, I.prod); if(old){ if(old.d) patch.d = old.d; if(old.note) patch.note = old.note; } }
-      NW.set(x.no, p, I.prod, patch);
+      if(rf && p === I.first){ patch.loan = rf.loan; patch.note = (patch.note ? patch.note + " · " : "") + `กู้ทับ ยอดใหม่ ${B(rf.N)} ได้รับส่วนต่าง ${B(rf.loan)}`; }
+      const rw = NW.set(x.no, p, I.prod, patch);
+      if(rf && p === I.first) rw.refi = {N:rf.N, start:I.first, prev:{starts:prevStarts, inst:prevA.inst, shM:prevA.shM, shxM:prevA.shxM}};      // ลบรายการนี้ = คืนค่าก่อนกู้ทับ
     });
     const A = nwAccRef(x, I.prod);
-    A.starts = (A.starts || []).slice(0, -1).concat([I.first]);                    // ตารางที่นำเข้าบอกว่างวดที่ 1 ของสัญญาปัจจุบันคือเดือนนี้
+    if(rf){ A.starts = prevStarts.concat([I.first]); if(has(I.meta.inst)) A.inst = +I.meta.inst; }                  // กู้ทับ: เพิ่มสัญญาใหม่ต่อท้าย งวดที่ 1 ใหม่ + งวดละใหม่
+    else A.starts = (A.starts || []).slice(0, -1).concat([I.first]);                // ตารางที่นำเข้าบอกว่างวดที่ 1 ของสัญญาปัจจุบันคือเดือนนี้
     if(I.def && has(I.meta.sh)){ A.shM = +I.meta.sh; A.shxM = has(I.meta.shx) ? +I.meta.shx : 0; }
-    if(has(I.meta.inst) && !A.inst) A.inst = +I.meta.inst;
+    if(!rf && has(I.meta.inst) && !A.inst) A.inst = +I.meta.inst;
+    S.niAfter = {no:x.no, p:pFrom(pNum(I.first) + Math.max(...I.rows.map(r => r.n)))};          // สัญญาถัดไปในชุดเดียวกัน (ถ้าไม่ระบุเดือน) เริ่มต่อจากนี้
     S.nf = null; save();
-    toast(`บันทึกตามตารางผ่อน ${todo.length} งวดของ ${x.no} แล้ว`);
+    toast(rf ? `กู้ทับ: บันทึกสัญญาใหม่ ${todo.length} งวดของ ${x.no} แล้ว — ยอดกู้ ${B(rf.N)} งวดที่ 1 = ${thPer(I.first)}` : `บันทึกตามตารางผ่อน ${todo.length} งวดของ ${x.no} แล้ว`);
     niDone(kind);
   };
 }
