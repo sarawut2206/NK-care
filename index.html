@@ -482,7 +482,21 @@ tr.grow td{color:var(--soft);background:#FAFBFD}
 tr.prow:hover td,tr.grow:hover td{background:var(--faint)}
 tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-bottom:1.5px solid var(--brand2)}
 .nwdoc{display:none}
+.nwrc table{width:100%;border-collapse:collapse;margin-top:8px}
+.nwrc th,.nwrc td{border:1px solid #cbd5e1;padding:3px 6px;font-size:12px}
+.nwrc th{background:#f1f5f9;text-align:center;font-weight:700;position:static}
+.nwrc td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.nwrc tr.tt td{font-weight:700;background:#f8fafc}
+.nwrc td:first-child{text-align:left}
+.nwrc .rc-sum{display:grid;grid-template-columns:1fr 1fr;gap:3px 22px;margin-top:8px;font-size:12px;border:1px solid #e5e7eb;border-radius:8px;padding:6px 10px}
+.nwrc .rc-sum div{display:flex;justify-content:space-between;gap:8px}
+.nwrc .rc-sig{display:flex;gap:24px;margin-top:6px;font-size:11.5px;text-align:center}
+.nwrc .rc-sig>div{flex:1}.nwrc .rc-sig .ln{border-bottom:1px solid #9ca3af;margin:24px 8px 4px}
+.nwrc .rc-note{font-size:10.5px;color:#6b7280;margin-top:6px}
 @media print{
+  body.nwprint .nwdoc.up2 .receipt{box-sizing:border-box;page-break-inside:avoid;page-break-after:auto;border-bottom:1px dashed #888!important;padding:0 0 2mm}
+  body.nwprint .nwdoc.up2 .receipt:nth-child(2n){page-break-after:always;border-bottom:0!important}
+  body.nwprint .nwdoc.up2 .receipt:last-child{page-break-after:auto}
   body.nwprint section:not(.on){display:none!important}
   body.nwprint .nwscreen{display:none!important}
   body.nwprint .nwdoc{display:block!important}
@@ -549,7 +563,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-61</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-62</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" title="บันทึกขึ้น Google Sheets เดี๋ยวนี้ (ปกติบันทึกให้เองทุกครั้งที่กรอก)">☁ บันทึกขึ้น Google Sheets</button>
@@ -568,6 +582,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <b data-t="20"><span class="grp-ic">📗</span>ทะเบียนผู้กู้</b>
   <b data-t="21"><span class="grp-ic">📘</span>ทะเบียนผู้ฝาก</b>
   <b data-t="22"><span class="grp-ic">🧾</span>ใบสรุป + ปันผล</b>
+  <b data-t="24"><span class="grp-ic">🖨</span>ใบเสร็จรายเดือน</b>
   <b id="oldbtn" class="oldbtn" title="เมนูทั้งหมดของระบบเดิม"><span class="grp-ic">🗂️</span>ระบบเก่า <span id="oldar">▾</span></b>
   <div class="oldnav" id="oldnav" hidden>
     <span class="ngrp">ระบบเก่า</span>
@@ -591,6 +606,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
 <section id="tab20"></section>
 <section id="tab21"></section>
 <section id="tab22"></section>
+<section id="tab24"></section>
 <section id="tab10"></section>
 <section id="tab11"></section>
 <section id="tab12"></section>
@@ -2910,7 +2926,7 @@ function drawNW(kind){
   const T = kind==="loan" ? "ทะเบียนผู้กู้" : "ทะเบียนผู้ฝาก";
   // วาดเฉพาะแท็บที่เปิดอยู่ — ฟอร์ม (S.nf) และ id ในหน้าใช้ร่วมกันระหว่างผู้กู้/ผู้ฝาก
   if(tab !== (kind==="loan" ? 20 : 21)){ el.innerHTML = ""; return; }
-  [kind==="loan" ? "tab21" : "tab20", "tab22", "tab23"].forEach(id=>{ const e = $(id); if(e) e.innerHTML = ""; });
+  [kind==="loan" ? "tab21" : "tab20", "tab22", "tab23", "tab24"].forEach(id=>{ const e = $(id); if(e) e.innerHTML = ""; });
   if(!NW.on()){ el.innerHTML = nwStartHTML(T); bindNwImport(); return; }
   if(!S.nsel) S.nsel = {};
   if(!S.npv) S.npv = {};
@@ -3203,7 +3219,7 @@ function dashTop(list, k, color){
 function drawNWDash(){
   const el = $("tab23"); if(!el) return;
   if(tab !== 23){ el.innerHTML = ""; return; }
-  ["tab20", "tab21", "tab22"].forEach(id => { const e = $(id); if(e) e.innerHTML = ""; });
+  ["tab20", "tab21", "tab22", "tab24"].forEach(id => { const e = $(id); if(e) e.innerHTML = ""; });
   if(!NW.on()){ el.innerHTML = nwStartHTML("แดชบอร์ด"); bindNwImport(); return; }
   const D = nwDashData(), C = D.C, chg = (a, b) => { const d = r2(a - b); return `<span class="ds-chg ${d > 0 ? "up" : d < 0 ? "dn" : ""}">${d > 0 ? "▲ +" : d < 0 ? "▼ −" : "• "}${B0(Math.abs(d))}</span>`; };
   const opts = sel => D.months.map(p => `<option value="${p}" ${p === sel ? "selected" : ""}>${thPer(p)}</option>`).join("");
@@ -3342,7 +3358,7 @@ function nwSumDoc(x, D){
 function drawNWDiv(){
   const el = $("tab22"); if(!el) return;
   if(tab !== 22){ el.innerHTML = ""; return; }
-  ["tab20","tab21","tab23"].forEach(id=>{ const e = $(id); if(e) e.innerHTML = ""; });
+  ["tab20","tab21","tab23","tab24"].forEach(id=>{ const e = $(id); if(e) e.innerHTML = ""; });
   if(!NW.on()){ el.innerHTML = nwStartHTML("ใบสรุป + ปันผล"); bindNwImport(); return; }
   const D = nwDivCfg(), f = S.dvf || "all", q = (S.dvq||"").trim().toLowerCase();
   const all = NW.people().map(x=>({x, s:nwSum(x, D)}));
@@ -3419,6 +3435,123 @@ function drawNWDiv(){
   $("dv_csv").onclick = () => csvOut(`kbk-ใบสรุปปันผล-${nwAdYm(D.from)}-${nwAdYm(D.to)}.csv`, [[`ใบสรุป + ปันผล ${nwRangeLbl(D)} (${Math.max(0, pNum(D.to)-pNum(D.from)+1)} เดือน · หุ้น ${pct(D.rs)} · ดอกเบี้ย ${pct(D.ri)})`,
     ["เลขสมาชิก","ชื่อ","สถานะ","หุ้นสะสมล่าสุด","หนี้คงค้างล่าสุด","ดอกเบี้ยที่ชำระ","ฝากหุ้น","ชำระรวม","ปันผลหุ้น","เฉลี่ยคืนดอกเบี้ย","รวมรับ"],
     list.map(({x,s})=>[x.no, x.name, s.loan?"ผู้กู้":"ผู้ฝาก", f2(s.shares), f2(s.debt), f2(s.int), f2(s.sh), f2(s.pay), f2(s.divS), f2(s.divI), f2(s.tot)])]]);
+}
+
+/* ============ เว็บใหม่: ใบเสร็จรายเดือน (ผู้กู้ + ผู้ฝาก) ============
+   ดึงจากรายการที่กรอกไว้ในทะเบียนเดือนที่เลือก · ยอดสะสมคือยอด ณ สิ้นเดือนนั้น · พิมพ์ทีละใบหรือทั้งหมด (1 หรือ 2 ใบต่อหน้า A4) */
+const NW_MF = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+const nwPFull = p => { const a = String(p).split("-"); return `${NW_MF[+a[1] - 1]} ${a[0]}`; };
+function nwRc(x, p){
+  const P = nwByPeriod(x), at = P.filter(o => pNum(o.p) <= pNum(p)).pop(), accs = nwAccts(x), items = [];
+  accs.forEach(a => { const r = NW.row(x.no, p, a.prod); if(r) items.push({a, r}); });
+  const sum = k => r2(items.reduce((t, it) => t + num(it.r[k]), 0)), t = {int:sum("int"), pri:sum("pri"), sh:sum("sh"), shx:sum("shx"), sv:sum("sv"), loan:sum("loan")};
+  t.m = r2(items.reduce((u, it) => u + (has(it.r.m) ? num(it.r.m) : num(it.r.int) + num(it.r.pri) + nwSh(it.r)), 0));
+  const by = {}; accs.forEach(a => by[a.prod] = at ? at.st[a.prod] : {debt:a.debt0, shares:a.share0});
+  const debt = at ? at.debt : nwDebt0(x), shares = at ? at.shares : r2(accs.reduce((u, a) => u + a.share0, 0));
+  const ytd = r2(P.filter(o => o.p.slice(0, 4) === p.slice(0, 4) && pNum(o.p) <= pNum(p)).reduce((u, o) => u + o.int, 0));
+  return {items, t, by, debt, shares, ytd, has:items.length > 0, loan:debt > 0.005};
+}
+function nwRcDoc(x, p){
+  const c = nwRc(x, p), z = v => num(v) ? B(v) : "–", today = nwToday();
+  const cols = [["int", "ดอกเบี้ย"], ["pri", "เงินต้น"], ["sh", "หุ้นประจำ"], ["shx", "ฝากเพิ่ม"], ["sv", "สะสมเพิ่ม (สมัครใจ)"]].filter(([k]) => c.t[k] > 0);
+  const ds = c.items.map(it => it.r.d).filter(Boolean).sort(), dTxt = !ds.length ? "—" : ds[0] === ds[ds.length - 1] ? thDay(ds[0]) : `${thDay(ds[0])} – ${thDay(ds[ds.length - 1])}`;
+  const notes = c.items.filter(it => it.r.note).map(it => `${NW_ACCS[it.a.prod]}: ${esc(it.r.note)}`);
+  const body = c.has ? `<table><thead><tr><th class="l" style="text-align:left">รายการ</th>${cols.map(([, l]) => `<th>${l}</th>`).join("")}<th>รวมรับ</th></tr></thead><tbody>
+      ${c.items.map(it => { const r = it.r, a = it.a;
+        return `<tr><td>${NW_ACCN[a.prod]}${a.prod !== "free" ? `<div style="font-size:10.5px;color:#6b7280">${nwNoLbl(a, p)}</div>` : ""}</td>${cols.map(([k]) => `<td class="n">${z(r[k])}</td>`).join("")}
+          <td class="n"><b>${B(has(r.m) ? num(r.m) : num(r.int) + num(r.pri) + nwSh(r))}</b></td></tr>`; }).join("")}
+      <tr class="tt"><td>รวมรับเดือนนี้</td>${cols.map(([k]) => `<td class="n">${z(c.t[k])}</td>`).join("")}<td class="n"><b>${B(c.t.m)}</b></td></tr></tbody></table>
+    ${c.t.loan > 0 ? `<div class="rc-note" style="color:#111">เงินกู้ทับ/กู้เพิ่มที่ได้รับเดือนนี้ ${B(c.t.loan)} บาท</div>` : ""}`
+    : `<div style="margin:12px 0;padding:14px;border:1px dashed #cbd5e1;border-radius:8px;text-align:center;color:#6b7280">ไม่มีรายการรับชำระในเดือนนี้${c.loan ? " (ยังมีหนี้คงเหลือ)" : ""}</div>`;
+  const debtBy = NW_ACC.filter(k => k !== "free" && c.by[k] && c.by[k].debt > 0.005);
+  return `<div class="receipt nwr nwrc">
+    <div class="r-head"><div>
+        <div class="org">${ORGF} (กบข.นข.)</div>
+        <div class="title">ใบเสร็จรับเงินประจำเดือน ${nwPFull(p)}</div>
+        <div class="badges"><span class="badge ${c.loan ? "b-borrow" : "b-save"}">${c.loan ? "ผู้กู้" : "ผู้ฝาก"}</span></div></div>
+      <div class="meta"><div><b>เลขที่:</b> RC-${esc(x.no)}-${nwAdYm(p)}</div><div><b>วันที่รับเงิน:</b> ${dTxt}</div><div><b>วันที่ออก:</b> ${thDay(today)}</div></div></div>
+    <div class="info"><div><b>สมาชิกเลขที่:</b> ${esc(x.no)}</div><div><b>ชื่อ:</b> ${esc(x.name)}</div></div>
+    ${body}
+    ${notes.length ? `<div class="rc-note">หมายเหตุ — ${notes.join(" · ")}</div>` : ""}
+    <div class="rc-sum">
+      <div><span>ทุนเรือนหุ้นสะสม ณ สิ้น${NW_MF[+p.split("-")[1] - 1]}</span><b>${B(c.shares)} บาท</b></div>
+      <div><span>หนี้คงเหลือ${debtBy.length ? "" : " (ไม่มี)"}</span><b>${B(c.debt)} บาท</b></div>
+      ${debtBy.length > 1 ? debtBy.map(k => `<div style="font-size:11px;color:#374151"><span>· ${NW_ACCN[k]}</span><b>${B(c.by[k].debt)}</b></div>`).join("") : ""}
+      ${c.ytd > 0 ? `<div><span>ดอกเบี้ยที่ชำระสะสม ม.ค.–${MTH_TH[+p.split("-")[1] - 1]} ${p.split("-")[0]}</span><b>${B(c.ytd)} บาท</b></div>` : ""}</div>
+    <div class="rc-sig"><div><div class="ln"></div><div>( ${esc(FIN())} )</div><div>กรรมการฝ่ายการเงิน — ผู้รับเงิน</div></div>
+      <div><div class="ln"></div><div>( ${esc(CHAIR())} )</div><div>ประธานกลุ่มบุคคล</div></div></div>
+    <div class="rc-note">เอกสารนี้ออกจากข้อมูลที่บันทึกในระบบทะเบียน กบข.นข. · หากพบข้อผิดพลาดโปรดแจ้งกรรมการฝ่ายการเงินพร้อมหลักฐาน</div>
+  </div>`;
+}
+
+function drawNWRc(){
+  const el = $("tab24"); if(!el) return;
+  if(tab !== 24){ el.innerHTML = ""; return; }
+  ["tab20", "tab21", "tab22", "tab23"].forEach(id => { const e = $(id); if(e) e.innerHTML = ""; });
+  if(!NW.on()){ el.innerHTML = nwStartHTML("ใบเสร็จรายเดือน"); bindNwImport(); return; }
+  const rowsP = NW.all().map(r => r.p).sort(), lastP = rowsP.length ? rowsP[rowsP.length - 1] : nwCurP(), hiN = Math.max(pNum(nwCurP()), pNum(lastP));
+  const p = (S.rcm && pNum(S.rcm) >= pNum(P_ANCHOR) && pNum(S.rcm) <= hiN) ? S.rcm : lastP;
+  const f = S.rcf || "all", q = (S.rcq || "").trim().toLowerCase(), up = S.rcup === 1 ? 1 : 2;
+  if(!S.rcun) S.rcun = {};
+  const all = NW.people().map(x => ({x, c:nwRc(x, p)}));
+  const list = all.filter(a => (f === "all" || (f === "loan") === a.c.loan) && (!q || `${a.x.no} ${a.x.name}`.toLowerCase().includes(q)));
+  const withR = list.filter(a => a.c.has), chosen = withR.filter(a => !S.rcun[a.x.no]);
+  const T = k => r2(withR.reduce((u, a) => u + a.c.t[k], 0));
+  if(!S.rcv || !list.some(a => a.x.no === S.rcv)) S.rcv = (withR[0] || list[0] || {x:{}}).x.no;
+  const cur = NW.person(S.rcv), pages = Math.ceil(chosen.length / up);
+  const mo = []; for(let n = pNum(P_ANCHOR); n <= hiN; n++){ const q2 = pFrom(n); mo.push(`<option value="${q2}" ${q2 === p ? "selected" : ""}>${nwPFull(q2)} · งวด ${nwRound(q2)}</option>`); }
+  el.innerHTML = `<div class="nwscreen">
+  <div class="card">
+    <div class="eyebrow">ใบเสร็จรายเดือน — ผู้กู้และผู้ฝาก</div>
+    <div class="pf">
+      <div><label>เดือนที่ต้องการพิมพ์</label><div style="display:flex;gap:6px"><button class="ghost sm" id="rc_prev" title="เดือนก่อนหน้า">◀</button>
+        <select id="rc_m">${mo.join("")}</select><button class="ghost sm" id="rc_next" title="เดือนถัดไป">▶</button></div></div>
+      <div><label>จำนวนใบต่อหน้า A4</label><select id="rc_up"><option value="2" ${up === 2 ? "selected" : ""}>2 ใบ / หน้า (ประหยัดกระดาษ)</option><option value="1" ${up === 1 ? "selected" : ""}>1 ใบ / หน้า</option></select></div>
+    </div>
+    <p class="hint" style="margin:8px 0 0">ดึงจากรายการที่กรอกไว้ในทะเบียนเดือน ${nwPFull(p)} · ยอดหุ้นสะสม/หนี้คงเหลือคือยอด ณ สิ้นเดือนนั้น · คนที่ไม่มีรายการในเดือนนี้จะไม่ถูกพิมพ์</p>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="k">ใบเสร็จเดือนนี้</div><div class="v">${withR.length} <small>ใบ</small></div><div class="hint">จาก ${list.length} คน</div></div>
+    <div class="stat"><div class="k">รวมรับเดือนนี้</div><div class="v">${B0(T("m"))}</div></div>
+    <div class="stat"><div class="k">ดอกเบี้ย</div><div class="v">${B0(T("int"))}</div></div>
+    <div class="stat"><div class="k">เงินต้น</div><div class="v">${B0(T("pri"))}</div></div>
+    <div class="stat"><div class="k">ฝากหุ้น</div><div class="v">${B0(r2(T("sh") + T("shx") + T("sv")))}</div></div>
+  </div>
+  <div class="card">
+    <div class="bar" style="margin:0 0 8px">
+      <select id="rc_f" style="width:auto"><option value="all">ทุกคน</option><option value="loan" ${f === "loan" ? "selected" : ""}>ผู้กู้</option><option value="save" ${f === "save" ? "selected" : ""}>ผู้ฝาก</option></select>
+      <input id="rc_q" placeholder="ค้นชื่อ / เลขสมาชิก" value="${esc(S.rcq || "")}" style="max-width:260px">
+      <button class="ghost sm" id="rc_all">เลือกทั้งหมด</button><button class="ghost sm" id="rc_none">ไม่เลือก</button>
+      <button class="cta" id="rc_print" style="margin-left:auto" ${chosen.length ? "" : "disabled"}>🖨 พิมพ์ที่เลือก ${chosen.length} ใบ (${pages} หน้า)</button>
+    </div>
+    <div class="tbl" style="max-height:440px"><table><thead><tr><th></th><th class="l">เลขที่</th><th class="l">ชื่อ</th><th class="l">สถานะ</th>
+      <th>ดอกเบี้ย</th><th>เงินต้น</th><th>ฝากหุ้น</th><th>รวมรับ</th><th>หุ้นสะสม</th><th>หนี้คงเหลือ</th></tr></thead><tbody>
+      ${list.map(({x, c}) => `<tr data-rc="${esc(x.no)}" style="cursor:pointer${x.no === S.rcv ? ";background:var(--faint)" : ""}${c.has ? "" : ";opacity:.5"}">
+        <td><input type="checkbox" data-rcs="${esc(x.no)}" ${c.has ? "" : "disabled"} ${c.has && !S.rcun[x.no] ? "checked" : ""}></td>
+        <td class="l">${esc(x.no)}</td><td class="l"><b>${esc(x.name)}</b></td><td class="l"><span class="pill ${c.loan ? "" : "grn"}">${c.loan ? "ผู้กู้" : "ผู้ฝาก"}</span></td>
+        ${c.has ? `<td class="amt">${B(c.t.int)}</td><td class="amt">${B(c.t.pri)}</td><td class="amt">${B(r2(c.t.sh + c.t.shx + c.t.sv))}</td><td class="amt"><b>${B(c.t.m)}</b></td>`
+          : `<td class="hint" colspan="4" style="text-align:left">ไม่มีรายการเดือนนี้</td>`}
+        <td class="amt">${B(c.shares)}</td><td class="amt">${B(c.debt)}</td></tr>`).join("") || '<tr><td colspan="10" class="hint" style="text-align:left">ไม่พบ</td></tr>'}
+      </tbody></table></div>
+  </div>
+  ${cur ? `<div class="card"><div class="bar" style="margin:0 0 8px"><span class="eyebrow" style="margin:0">ตัวอย่างใบเสร็จ · ${esc(cur.no)} ${esc(cur.name)}</span>
+      <button class="ghost sm" id="rc_p1" style="margin-left:auto">พิมพ์ใบนี้</button></div>${nwRcDoc(cur, p)}</div>` : ""}
+  </div>
+  <div class="nwdoc up${up}" id="nwdoc"></div>`;
+  const redo = () => drawNWRc(), shift = d => { const n = pNum(p) + d; if(n >= pNum(P_ANCHOR) && n <= hiN){ S.rcm = pFrom(n); redo(); } };
+  $("rc_m").onchange = e => { S.rcm = e.target.value; redo(); };
+  $("rc_prev").onclick = () => shift(-1); $("rc_next").onclick = () => shift(1);
+  $("rc_up").onchange = e => { S.rcup = +e.target.value; redo(); };
+  $("rc_f").onchange = e => { S.rcf = e.target.value; redo(); };
+  $("rc_q").oninput = e => { S.rcq = e.target.value; redo(); const i = $("rc_q"); i.focus(); i.setSelectionRange(i.value.length, i.value.length); };
+  $("rc_all").onclick = () => { withR.forEach(a => delete S.rcun[a.x.no]); redo(); };
+  $("rc_none").onclick = () => { withR.forEach(a => S.rcun[a.x.no] = true); redo(); };
+  el.querySelectorAll("[data-rcs]").forEach(i => i.onclick = ev => { ev.stopPropagation(); if(i.checked) delete S.rcun[i.dataset.rcs]; else S.rcun[i.dataset.rcs] = true; redo(); });
+  el.querySelectorAll("[data-rc]").forEach(tr => tr.onclick = () => { S.rcv = tr.dataset.rc; redo(); const c = $("rc_p1"); if(c) c.scrollIntoView({behavior:"smooth", block:"start"}); });
+  const go = arr => { const d = $("nwdoc"); d.className = "nwdoc up" + up; nwPrint(arr.map(x => nwRcDoc(x, p)).join("")); };
+  if($("rc_p1")) $("rc_p1").onclick = () => go([cur]);
+  $("rc_print").onclick = () => { if(!chosen.length) return;
+    if(!confirm(`พิมพ์ใบเสร็จเดือน ${nwPFull(p)} จำนวน ${chosen.length} ใบ (${pages} หน้า A4 · ${up} ใบ/หน้า)?`)) return; go(chosen.map(a => a.x)); };
 }
 
 /* ============ เว็บใหม่: นำเข้าตารางผ่อน (รูป / วางข้อความ) ============
@@ -7650,7 +7783,7 @@ async function boot(){
 function draw(){
   rebuildPeriods();                     // ★ ช่วงงวดเดินตามข้อมูลจริง — ย้อนดูได้ทุกปี
   // แท็บไหนพัง ให้พังแค่แท็บนั้น อย่าลากทั้งหน้าจอลงไปด้วย
-  [["tab23",drawNWDash],["tab20",drawNWLoan],["tab21",drawNWSave],["tab22",drawNWDiv],["tab10",drawEntry],["tab11",drawOverview],["tab12",drawPeriods],["tab1",drawT1],["tab3",drawT3],
+  [["tab23",drawNWDash],["tab20",drawNWLoan],["tab21",drawNWSave],["tab22",drawNWDiv],["tab24",drawNWRc],["tab10",drawEntry],["tab11",drawOverview],["tab12",drawPeriods],["tab1",drawT1],["tab3",drawT3],
    ["tab4",drawT4],["tab5",drawT5],["tab6",drawT6],["tab7",drawT7],["tab8",drawT8],["tab9",drawT9]].forEach(([id,fn])=>{
     try{ fn(); }
     catch(err){ const el=$(id); if(el) el.innerHTML =
@@ -7687,7 +7820,7 @@ if($("saveNow")) $("saveNow").onclick = () => saveClick($("saveNow"), null);
 
 /* ============ เดินระบบ ============ */
 function all(){ draw(); save(); banner(); }
-const TABFN = {23:"drawNWDash",20:"drawNWLoan",21:"drawNWSave",22:"drawNWDiv",1:"drawT1",3:"drawT3",4:"drawT4",5:"drawT5",6:"drawT6",7:"drawT7",8:"drawT8",9:"drawT9",
+const TABFN = {23:"drawNWDash",20:"drawNWLoan",21:"drawNWSave",22:"drawNWDiv",24:"drawNWRc",1:"drawT1",3:"drawT3",4:"drawT4",5:"drawT5",6:"drawT6",7:"drawT7",8:"drawT8",9:"drawT9",
                10:"drawEntry",11:"drawOverview",12:"drawPeriods"};
 const OLD_TABS = [10,11,9,12,7,1,8,3,5,6,4];
 $("oldbtn").onclick = () => {
