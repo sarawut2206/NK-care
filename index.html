@@ -482,6 +482,30 @@ tr.grow td{color:var(--soft);background:#FAFBFD}
 tr.prow:hover td,tr.grow:hover td{background:var(--faint)}
 tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-bottom:1.5px solid var(--brand2)}
 .nwdoc{display:none}
+.ov-paper{width:210mm;box-sizing:border-box;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.18);padding:15mm 20mm 18mm 30mm;margin:10px auto}
+.ovp{font-family:"TH Sarabun New","Sarabun",sans-serif;font-size:16pt;line-height:1.15;color:#000;text-align:left}
+.ovp .ov-top{display:flex;align-items:center;gap:14px;border-bottom:1.5px solid #000;padding-bottom:5px;margin-bottom:7px}
+.ovp .ov-top img{height:19mm;width:auto;display:block}.ovp .ov-hd{flex:1}
+.ovp .ov-org{font-size:14pt;font-weight:600}.ovp .ov-title{font-size:21pt;font-weight:700;line-height:1.1}.ovp .ov-sub{font-size:13.5pt}
+.ovp .ov-kpis{display:grid;grid-template-columns:1fr 1fr;gap:6px 8px;margin-bottom:7px}
+.ovp .ov-kpi{border:1px solid #000;padding:2px 8px 3px}
+.ovp .ov-kl{font-size:14pt;font-weight:600}.ovp .ov-kv{font-size:26pt;font-weight:700;line-height:1.02}.ovp .ov-kc{font-size:12.5pt;line-height:1.1}
+.ovp .ov-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:7px}
+.ovp .ov-box{border:1px solid #000;padding:2px 8px 4px;min-width:0}.ovp .ov-box.wide{margin-bottom:6px}
+.ovp .ov-h{font-size:15pt;font-weight:700;margin-bottom:1px}
+.ovp .ov-lg{font-size:12.5pt;font-weight:400;margin:0 0 1px}.ovp .ov-lg i,.ovp .ov-lab i{display:inline-block;width:9px;height:9px;margin:0 3px 0 6px;vertical-align:0}.ovp .ov-lg i:first-child{margin-left:0}
+.ovp .ov-stack{display:flex;height:9mm;border:1px solid #000;margin:3px 0}
+.ovp .ov-stack span{font-weight:700;text-align:center;line-height:9mm;font-size:14pt;overflow:hidden}
+.ovp .ov-lab{display:flex;justify-content:space-between;font-size:13pt;margin-bottom:3px}
+.ovp .ov-line{display:flex;justify-content:space-between;gap:6px;font-size:14pt;border-top:1px dotted #777;padding:1px 0}
+.ovp .ov-big{font-size:24pt;font-weight:700;line-height:1.1}.ovp .ov-cap{font-size:13pt;line-height:1.1}
+.ovp .ov-prog{height:5mm;border:1px solid #000;margin:3px 0 4px}.ovp .ov-prog span{display:block;height:100%;background:#1B7F5A}
+.ovp .ov-ben{display:grid;grid-template-columns:64mm 1fr 26mm;gap:6px;align-items:center;font-size:14pt;padding:1px 0}
+.ovp .ov-ben b{text-align:right;font-size:16pt}.ovp .ov-bar{height:5mm;border:1px solid #bbb}.ovp .ov-bar i{display:block;height:100%}
+.ovp .ov-ben.tot{border-top:1.5px solid #000;font-weight:700}
+.ovp .ov-foot{font-size:12pt;line-height:1.1;margin:3px 0 2px}
+.ovp .ov-sig{display:grid;grid-template-columns:1fr 1fr;gap:20px;text-align:center;font-size:14pt}
+.ovp .ov-sig .ln{border-bottom:1px dotted #000;margin:16px 10px 2px}.ovp .ov-dt{grid-column:1/-1;text-align:left;font-size:12pt}
 .nwrc,.nwrg{font-family:"TH Sarabun New","Sarabun",sans-serif;font-size:16pt;line-height:1.25;color:#000}
 .nwrc .rc-top,.nwrg .rc-top{display:flex;align-items:center;gap:16px;border-bottom:1.5px solid #000;padding-bottom:8px;margin-bottom:10px}
 .nwrc .rc-top img,.nwrg .rc-top img{height:24mm;width:auto;display:block}
@@ -516,6 +540,8 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   body.nwprint .nwdoc{display:block!important}
   body.nwprint .nwdoc .receipt{border:0!important;border-radius:0;padding:0;margin:0;box-shadow:none;page-break-after:always}
   body.nwprint .nwdoc .receipt:last-child{page-break-after:auto}
+  body.nwprint .nwdoc .ovp{padding-left:16mm;padding-right:6mm;page-break-inside:avoid}
+  body.nwprint .nwdoc .ovp .ov-stack span{color:#fff!important}
   body.nwprint .nwdoc .kpage{page-break-after:always}
   body.nwprint .nwdoc .kpage:last-child{page-break-after:auto}
 }
@@ -579,7 +605,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-69</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-70</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" title="บันทึกขึ้น Google Sheets เดี๋ยวนี้ (ปกติบันทึกให้เองทุกครั้งที่กรอก)">☁ บันทึกขึ้น Google Sheets</button>
@@ -600,6 +626,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <b data-t="22"><span class="grp-ic">🧾</span>ใบสรุป + ปันผล</b>
   <b data-t="24"><span class="grp-ic">🖨</span>ใบเสร็จรายเดือน</b>
   <b data-t="25"><span class="grp-ic">🏦</span>กู้ยืม + ติดตามหนี้</b>
+  <b data-t="26"><span class="grp-ic">📄</span>สรุปภาพรวม ๑ หน้า</b>
   <b id="oldbtn" class="oldbtn" title="เมนูทั้งหมดของระบบเดิม"><span class="grp-ic">🗂️</span>ระบบเก่า <span id="oldar">▾</span></b>
   <div class="oldnav" id="oldnav" hidden>
     <span class="ngrp">ระบบเก่า</span>
@@ -625,6 +652,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
 <section id="tab22"></section>
 <section id="tab24"></section>
 <section id="tab25"></section>
+<section id="tab26"></section>
 <section id="tab10"></section>
 <section id="tab11"></section>
 <section id="tab12"></section>
@@ -2985,7 +3013,7 @@ function drawNW(kind){
   const T = kind==="loan" ? "ทะเบียนผู้กู้" : "ทะเบียนผู้ฝาก";
   // วาดเฉพาะแท็บที่เปิดอยู่ — ฟอร์ม (S.nf) และ id ในหน้าใช้ร่วมกันระหว่างผู้กู้/ผู้ฝาก
   if(tab !== (kind==="loan" ? 20 : 21)){ el.innerHTML = ""; return; }
-  [kind==="loan" ? "tab21" : "tab20", "tab22", "tab23", "tab24", "tab25"].forEach(id=>{ const e = $(id); if(e) e.innerHTML = ""; });
+  [kind==="loan" ? "tab21" : "tab20", "tab22", "tab23", "tab24", "tab25", "tab26"].forEach(id=>{ const e = $(id); if(e) e.innerHTML = ""; });
   if(!NW.on()){ el.innerHTML = nwStartHTML(T); bindNwImport(); return; }
   if(!S.nsel) S.nsel = {};
   if(!S.npv) S.npv = {};
@@ -3299,7 +3327,7 @@ function dashTop(list, k, color){
 function drawNWDash(){
   const el = $("tab23"); if(!el) return;
   if(tab !== 23){ el.innerHTML = ""; return; }
-  ["tab20", "tab21", "tab22", "tab24", "tab25"].forEach(id => { const e = $(id); if(e) e.innerHTML = ""; });
+  ["tab20", "tab21", "tab22", "tab24", "tab25", "tab26"].forEach(id => { const e = $(id); if(e) e.innerHTML = ""; });
   if(!NW.on()){ el.innerHTML = nwStartHTML("แดชบอร์ด"); bindNwImport(); return; }
   const D = nwDashData(), C = D.C, chg = (a, b) => { const d = r2(a - b); return `<span class="ds-chg ${d > 0 ? "up" : d < 0 ? "dn" : ""}">${d > 0 ? "▲ +" : d < 0 ? "▼ −" : "• "}${B0(Math.abs(d))}</span>`; };
   const opts = sel => D.months.map(p => `<option value="${p}" ${p === sel ? "selected" : ""}>${thPer(p)}</option>`).join("");
@@ -3438,7 +3466,7 @@ function nwSumDoc(x, D){
 function drawNWDiv(){
   const el = $("tab22"); if(!el) return;
   if(tab !== 22){ el.innerHTML = ""; return; }
-  ["tab20","tab21","tab23","tab24","tab25"].forEach(id=>{ const e = $(id); if(e) e.innerHTML = ""; });
+  ["tab20","tab21","tab23","tab24","tab25","tab26"].forEach(id=>{ const e = $(id); if(e) e.innerHTML = ""; });
   if(!NW.on()){ el.innerHTML = nwStartHTML("ใบสรุป + ปันผล"); bindNwImport(); return; }
   const D = nwDivCfg(), f = S.dvf || "all", q = (S.dvq||"").trim().toLowerCase();
   const all = NW.people().map(x=>({x, s:nwSum(x, D)}));
@@ -3819,7 +3847,7 @@ function nwRetroHTML(){
 function drawNWLoanDash(){
   const el = $("tab25"); if(!el) return;
   if(tab !== 25){ el.innerHTML = ""; return; }
-  ["tab20", "tab21", "tab22", "tab23", "tab24"].forEach(id => { const e = $(id); if(e) e.innerHTML = ""; });
+  ["tab20", "tab21", "tab22", "tab23", "tab24", "tab26"].forEach(id => { const e = $(id); if(e) e.innerHTML = ""; });
   if(!NW.on()){ el.innerHTML = nwStartHTML("กู้ยืม + ติดตามหนี้"); bindNwImport(); return; }
   const people = NW.people(), R = nwArrears();
   const acc = k => people.map(x => nwStateA(nwAcct(x, k))), sam = acc("sam"), dk = acc("dk");
@@ -3890,6 +3918,102 @@ function drawNWLoanDash(){
   if($("nc_f")) $("nc_f").onchange = e => { S.ncf = e.target.value; redraw(); };
   if($("nc_q")) $("nc_q").oninput = e => { S.ncq = e.target.value; const y = window.scrollY; drawNWLoanDash(); window.scrollTo(0, y); const i = $("nc_q"); i.focus(); i.setSelectionRange(i.value.length, i.value.length); };
   el.querySelectorAll("[data-ncp]").forEach(b => b.onclick = () => { S.pick = b.dataset.ncp; goTab(5); });
+}
+
+/* ============ เว็บใหม่: สรุปภาพรวม กบข.นข. สำหรับสมาชิก — ๑ หน้า A4 ============
+   เน้นตัวเลข + กราฟ · ตัวอักษร TH Sarabun New ๑๖ pt เลขไทย ชิดซ้าย ขอบซ้าย ๓ ซม. ขวา ๒ ซม. ตามรูปแบบหนังสือราชการ
+   ตัวเลขทั้งหมดมาจากทะเบียนใหม่ (รวมทุกคนที่ยังไม่ลาออก) · ไม่มีชื่อรายบุคคล */
+const THD = "๐๑๒๓๔๕๖๗๘๙";
+const tn = v => String(v).replace(/[0-9]/g, d => THD[d]);
+const tM = v => tn(B0(v));
+const tPct = (a, b) => b > 0 ? tn((a / b * 100).toFixed(1)) : tn("0.0");
+const thMS = p => { const a = String(p).split("-"); return tn(MTH_TH[+a[1] - 1] + String(a[0]).slice(2)); };
+const ovMil = v => v === 0 ? tn("0") : v >= 1e6 ? tn(+(v / 1e6).toFixed(2)) + " ล้าน" : tn(+(v / 1e3).toFixed(0)) + " พัน";
+
+function ovData(){
+  const D = nwDashData(), people = NW.people(), R = nwArrears();
+  const loanP = people.filter(x => nwState(x).debt > 0.005), arrNo = new Set(R.map(o => o.x.no)), arrP = loanP.filter(x => arrNo.has(x.no)).length;
+  const acc = k => people.map(x => nwStateA(nwAcct(x, k))).filter(v => v.debt > 0.005);
+  const sam = acc("sam"), dk = acc("dk"), sum = a => r2(a.reduce((u, v) => u + v.debt, 0));
+  const chgS = r2(D.shNow - D.open.sh), pctS = D.open.sh > 0 ? chgS / D.open.sh * 100 : 0;
+  return {D, n:people.length, nLoan:loanP.length, nSave:people.length - loanP.length, arrP, okP:loanP.length - arrP, nSam:sam.length, debtSam:sum(sam), nDk:dk.length, debtDk:sum(dk), chgS, pctS,
+    totDiv:r2(D.divS + D.divI), avgInt:D.m > 0 ? r2(D.intY / D.m) : 0};
+}
+function ovLine(tot){
+  const W = 300, H = 192, L = 46, Rr = 10, T = 10, Bt = 26, n = tot.length; if(n < 2) return "";
+  const raw = Math.max(...tot.map(t => Math.max(t.sh, t.dbt))), step = Math.pow(10, Math.floor(Math.log10(raw || 1))) / 2, mx = Math.ceil(raw / step) * step || 1;
+  const X = i => L + (W - L - Rr) * i / (n - 1), Y = v => T + (H - T - Bt) * (1 - v / mx);
+  const path = k => tot.map((t, i) => `${i ? "L" : "M"}${X(i).toFixed(1)} ${Y(t[k]).toFixed(1)}`).join(" ");
+  const ticks = [0, mx / 2, mx], xi = [0, Math.round((n - 1) / 3), Math.round((n - 1) * 2 / 3), n - 1];
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="กราฟทุนเรือนหุ้นสะสมเทียบเงินกู้คงเหลือรายเดือน">
+    ${ticks.map(v => `<line x1="${L}" x2="${W - Rr}" y1="${Y(v)}" y2="${Y(v)}" stroke="#9aa3b2" stroke-width="0.6"/><text x="${L - 4}" y="${Y(v) + 5}" text-anchor="end" font-size="15" fill="#000">${ovMil(v)}</text>`).join("")}
+    <path d="${path("sh")} L${X(n - 1)} ${Y(0)} L${X(0)} ${Y(0)} Z" fill="#1F3A68" opacity="0.08"/>
+    <path d="${path("dbt")}" fill="none" stroke="#C4570F" stroke-width="2.6" stroke-linejoin="round"/>
+    <path d="${path("sh")}" fill="none" stroke="#1F3A68" stroke-width="2.6" stroke-linejoin="round"/>
+    <circle cx="${X(n - 1)}" cy="${Y(tot[n - 1].sh)}" r="4" fill="#1F3A68"/><circle cx="${X(n - 1)}" cy="${Y(tot[n - 1].dbt)}" r="4" fill="#C4570F"/>
+    ${xi.map((i, k) => `<text x="${X(i)}" y="${H - 6}" text-anchor="${k === 0 ? "start" : k === xi.length - 1 ? "end" : "middle"}" font-size="15" fill="#000">${thMS(tot[i].p)}</text>`).join("")}</svg>`;
+}
+function ovBars(list){
+  const W = 300, H = 192, L = 6, Rr = 6, T = 22, Bt = 24, n = list.length; if(!n) return "";
+  const mx = Math.max(...list.map(t => t.int), 1), bw = (W - L - Rr) / n, hi = list.findIndex(t => t.int === Math.max(...list.map(q => q.int)));
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="กราฟดอกเบี้ยรับรายเดือน">
+    <line x1="${L}" x2="${W - Rr}" y1="${H - Bt}" y2="${H - Bt}" stroke="#000" stroke-width="0.8"/>
+    ${list.map((t, i) => { const h = (H - T - Bt) * t.int / mx, x = L + bw * i + bw * 0.15, y = H - Bt - h;
+      return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${(bw * 0.7).toFixed(1)}" height="${h.toFixed(1)}" fill="#1B7F5A"/>
+        ${i === hi || i === n - 1 ? `<text x="${(x + bw * 0.35).toFixed(1)}" y="${(y - 4).toFixed(1)}" text-anchor="middle" font-size="15" font-weight="700" fill="#000">${tn(+(t.int / 1000).toFixed(1))}</text>` : ""}
+        <text x="${(x + bw * 0.35).toFixed(1)}" y="${H - 7}" text-anchor="middle" font-size="${n > 9 ? 12 : 14}" fill="#000">${thMS(t.p).slice(0, -2)}</text>`; }).join("")}</svg>`;
+}
+function nwOverviewDoc(){
+  const O = ovData(), D = O.D, today = nwToday(), yr = tn(D.end.split("-")[0]), pl = nwPFull(D.end).split(" ")[0];
+  const up = O.chgS >= 0, rngBars = D.tot.filter(t => pNum(t.p) >= pNum(D.from) && pNum(t.p) <= pNum(D.to)).slice(-12);
+  const okPct = O.nLoan ? O.okP / O.nLoan * 100 : 100, mxB = Math.max(D.divS, D.divI, 1);
+  const box = (ttl, body, cls) => `<div class="ov-box ${cls || ""}"><div class="ov-h">${ttl}</div>${body}</div>`;
+  const kpi = (lbl, val, cap, clr) => `<div class="ov-kpi" style="border-top:3px solid ${clr}"><div class="ov-kl">${lbl}</div><div class="ov-kv">${val}</div><div class="ov-kc">${cap}</div></div>`;
+  return `<div class="ovp">
+    <div class="ov-top"><img src="${NW_LOGO}" alt="กบข.นข."><div class="ov-hd"><div class="ov-org">${ORGF} (กบข.นข.)</div>
+      <div class="ov-title">สรุปภาพรวมกองทุน ประจำเดือน${pl} ${yr}</div><div class="ov-sub">ข้อมูลจากทะเบียน ณ สิ้นเดือน${pl} ${yr} · สมาชิก ${tn(O.n)} คน</div></div></div>
+    <div class="ov-kpis">
+      ${kpi("ทุนเรือนหุ้นสะสมรวม", tM(D.shNow), `บาท · ${up ? "เพิ่มขึ้น" : "ลดลง"} ${tM(Math.abs(O.chgS))} บาท (ร้อยละ ${tn(Math.abs(O.pctS).toFixed(1))}) จากสิ้นปี ${tn(2568)}`, "#1F3A68")}
+      ${kpi("เงินกู้คงเหลือรวม", tM(D.dbNow), `บาท · ผู้กู้ ${tn(O.nLoan)} คน กำลังชำระคืน`, "#C4570F")}
+      ${kpi("ดอกเบี้ยรับสะสม", tM(D.intY), `บาท · ${thMS(D.from)} ถึง ${thMS(D.to)} · เฉลี่ยเดือนละ ${tM(O.avgInt)} บาท`, "#1B7F5A")}
+      ${kpi("เงินคืนสมาชิก (ประมาณการ)", tM(O.totDiv), `บาท · เฉลี่ยคนละ ${tM(O.n ? O.totDiv / O.n : 0)} บาท`, "#6B4FA0")}</div>
+    <div class="ov-row">
+      ${box("หุ้นสะสม เทียบ เงินกู้คงเหลือ", `<div class="ov-lg"><i style="background:#1F3A68"></i>ทุนเรือนหุ้น <i style="background:#C4570F"></i>เงินกู้คงเหลือ</div>${ovLine(D.tot)}`)}
+      ${box("ดอกเบี้ยรับรายเดือน", `<div class="ov-lg"><i style="background:#1B7F5A"></i>พันบาทต่อเดือน</div>${ovBars(rngBars)}`)}</div>
+    <div class="ov-row">
+      ${box("สถานะสมาชิก", `<div class="ov-stack"><span style="width:${O.n ? O.nSave / O.n * 100 : 0}%;background:#1B7F5A">${tn(O.nSave)}</span><span style="width:${O.n ? O.nLoan / O.n * 100 : 0}%;background:#1F3A68">${tn(O.nLoan)}</span></div>
+        <div class="ov-lab"><span><i style="background:#1B7F5A"></i>ผู้ฝาก ${tn(O.nSave)} คน</span><span><i style="background:#1F3A68"></i>ผู้กู้ ${tn(O.nLoan)} คน</span></div>
+        <div class="ov-line"><span>สินเชื่อสามัญ ${tn(O.nSam)} สัญญา</span><b>${tM(O.debtSam)} บาท</b></div>
+        <div class="ov-line"><span>สินเชื่อดูแลกัน ${tn(O.nDk)} สัญญา</span><b>${tM(O.debtDk)} บาท</b></div>
+        <div class="ov-line"><span>ทุนเรือนหุ้นเฉลี่ยต่อคน</span><b>${tM(O.n ? D.shNow / O.n : 0)} บาท</b></div>`)}
+      ${box("การชำระหนี้ของผู้กู้", `<div class="ov-big">ร้อยละ ${tn(okPct.toFixed(1))}</div><div class="ov-cap">ของผู้กู้ชำระเป็นปกติ (${tn(O.okP)} จาก ${tn(O.nLoan)} คน)</div>
+        <div class="ov-prog"><span style="width:${okPct}%"></span></div>
+        <div class="ov-line"><span>ชำระปกติ</span><b>${tn(O.okP)} คน</b></div><div class="ov-line"><span>มีงวดค้างชำระ</span><b>${tn(O.arrP)} คน</b></div>`)}</div>
+    ${box("ผลประโยชน์ที่สมาชิกจะได้รับ (ประมาณการ " + tn(D.m) + " เดือน)", `
+      <div class="ov-ben"><span>ปันผลหุ้น ร้อยละ ${tn(D.C.rs)} ต่อปี</span><div class="ov-bar"><i style="width:${D.divS / mxB * 100}%;background:#1F3A68"></i></div><b>${tM(D.divS)}</b></div>
+      <div class="ov-ben"><span>เฉลี่ยคืนดอกเบี้ย ร้อยละ ${tn(D.C.ri)} ต่อปี</span><div class="ov-bar"><i style="width:${D.divI / mxB * 100}%;background:#1B7F5A"></i></div><b>${tM(D.divI)}</b></div>
+      <div class="ov-ben tot"><span>รวมเงินคืนสมาชิก (บาท)</span><div class="ov-bar"></div><b>${tM(O.totDiv)}</b></div>`, "wide")}
+    <div class="ov-foot">ตัวเลขเงินคืนเป็นประมาณการ ยังไม่ใช่มติที่ประชุมใหญ่ · ปันผลหุ้น = ทุนเรือนหุ้นสะสม × อัตรา × จำนวนเดือน ÷ ๑๒ · เฉลี่ยคืน = ดอกเบี้ยรับ × อัตรา × จำนวนเดือน ÷ ๑๒</div>
+    <div class="ov-sig"><div><div class="ln"></div><div>( ${esc(FIN())} )</div><div>กรรมการฝ่ายการเงิน</div></div><div><div class="ln"></div><div>( ${esc(CHAIR())} )</div><div>ประธานกลุ่มบุคคล</div></div>
+      <div class="ov-dt">จัดทำเมื่อ ${tn(thDay(today))}</div></div></div>`;
+}
+function drawNWOverview(){
+  const el = $("tab26"); if(!el) return;
+  if(tab !== 26){ el.innerHTML = ""; return; }
+  ["tab20", "tab21", "tab22", "tab23", "tab24", "tab25"].forEach(id => { const e = $(id); if(e) e.innerHTML = ""; });
+  if(!NW.on()){ el.innerHTML = nwStartHTML("สรุปภาพรวม"); bindNwImport(); return; }
+  const C = nwDashCfg();
+  el.innerHTML = `<div class="nwscreen"><div class="card"><div class="eyebrow">สรุปภาพรวม กบข.นข. — ๑ หน้า A4 สำหรับสมาชิก</div>
+      <div class="pf"><div><label>ปันผลหุ้น (% ต่อปี)</label><input type="number" step="0.01" min="0" id="ov_rs" value="${C.rs}"></div>
+        <div><label>เฉลี่ยคืนดอกเบี้ย (% ต่อปี)</label><input type="number" step="0.01" min="0" id="ov_ri" value="${C.ri}"></div>
+        <div style="align-self:end"><button id="ov_print">🖨 พิมพ์ ๑ หน้า A4</button></div></div>
+      <p class="hint" style="margin:8px 0 0">ตัวเลขทั้งหมดมาจากทะเบียน (รวมสมาชิกที่ยังไม่ลาออก ไม่มีชื่อรายบุคคล) · อัตราและช่วงเดือนใช้ค่าเดียวกับแท็บ แดชบอร์ด · ตัวอักษร TH Sarabun New เลขไทย ขอบซ้าย ๓ ซม. ขวา ๒ ซม. · ในหน้าต่างพิมพ์ให้ปิด «หัวกระดาษและท้ายกระดาษ»</p></div>
+    <div style="overflow-x:auto"><div class="ov-paper">${nwOverviewDoc()}</div></div></div>
+    <div class="nwdoc" id="nwdoc"></div>`;
+  const set = patch => { S.nw.dash = Object.assign({}, S.nw.dash || {}, patch); save(); drawNWOverview(); };
+  $("ov_rs").onchange = e => set({rs:Math.max(0, +e.target.value || 0)});
+  $("ov_ri").onchange = e => set({ri:Math.max(0, +e.target.value || 0)});
+  $("ov_print").onclick = () => nwPrint(nwOverviewDoc());
 }
 
 /* ============ เว็บใหม่: ใบเสร็จรายเดือน (ผู้กู้ + ผู้ฝาก) ============
@@ -3987,7 +4111,7 @@ function nwRgDoc(p){
 function drawNWRc(){
   const el = $("tab24"); if(!el) return;
   if(tab !== 24){ el.innerHTML = ""; return; }
-  ["tab20", "tab21", "tab22", "tab23", "tab25"].forEach(id => { const e = $(id); if(e) e.innerHTML = ""; });
+  ["tab20", "tab21", "tab22", "tab23", "tab25", "tab26"].forEach(id => { const e = $(id); if(e) e.innerHTML = ""; });
   if(!NW.on()){ el.innerHTML = nwStartHTML("ใบเสร็จรายเดือน"); bindNwImport(); return; }
   const rowsP = NW.all().map(r => r.p).sort(), lastP = rowsP.length ? rowsP[rowsP.length - 1] : nwCurP(), hiN = Math.max(pNum(nwCurP()), pNum(lastP));
   const p = (S.rcm && pNum(S.rcm) >= pNum(P_ANCHOR) && pNum(S.rcm) <= hiN) ? S.rcm : lastP;
@@ -8284,7 +8408,7 @@ async function boot(){
 function draw(){
   rebuildPeriods();                     // ★ ช่วงงวดเดินตามข้อมูลจริง — ย้อนดูได้ทุกปี
   // แท็บไหนพัง ให้พังแค่แท็บนั้น อย่าลากทั้งหน้าจอลงไปด้วย
-  [["tab23",drawNWDash],["tab20",drawNWLoan],["tab21",drawNWSave],["tab22",drawNWDiv],["tab24",drawNWRc],["tab25",drawNWLoanDash],["tab10",drawEntry],["tab11",drawOverview],["tab12",drawPeriods],["tab1",drawT1],["tab3",drawT3],
+  [["tab23",drawNWDash],["tab20",drawNWLoan],["tab21",drawNWSave],["tab22",drawNWDiv],["tab24",drawNWRc],["tab25",drawNWLoanDash],["tab26",drawNWOverview],["tab10",drawEntry],["tab11",drawOverview],["tab12",drawPeriods],["tab1",drawT1],["tab3",drawT3],
    ["tab4",drawT4],["tab5",drawT5],["tab6",drawT6],["tab7",drawT7],["tab8",drawT8],["tab9",drawT9]].forEach(([id,fn])=>{
     try{ fn(); }
     catch(err){ const el=$(id); if(el) el.innerHTML =
@@ -8321,7 +8445,7 @@ if($("saveNow")) $("saveNow").onclick = () => saveClick($("saveNow"), null);
 
 /* ============ เดินระบบ ============ */
 function all(){ draw(); save(); banner(); }
-const TABFN = {23:"drawNWDash",20:"drawNWLoan",21:"drawNWSave",22:"drawNWDiv",24:"drawNWRc",25:"drawNWLoanDash",1:"drawT1",3:"drawT3",4:"drawT4",5:"drawT5",6:"drawT6",7:"drawT7",8:"drawT8",9:"drawT9",
+const TABFN = {23:"drawNWDash",20:"drawNWLoan",21:"drawNWSave",22:"drawNWDiv",24:"drawNWRc",25:"drawNWLoanDash",26:"drawNWOverview",1:"drawT1",3:"drawT3",4:"drawT4",5:"drawT5",6:"drawT6",7:"drawT7",8:"drawT8",9:"drawT9",
                10:"drawEntry",11:"drawOverview",12:"drawPeriods"};
 const OLD_TABS = [10,11,9,12,7,1,8,3,5,6,4];
 $("oldbtn").onclick = () => {
