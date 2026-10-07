@@ -492,10 +492,12 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
 .ovp .ov-kpi{border:1px solid #000;padding:3px 8px 5px;min-width:0}
 .ovp .ov-kl{font-size:14pt;font-weight:600}.ovp .ov-kv{font-size:24pt;font-weight:700;line-height:1.05}.ovp .ov-kc{font-size:12.5pt;line-height:1.15}
 .ovp .ov-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.ovp .ov-row3{display:grid;grid-template-columns:5fr 7fr;gap:8px;margin-bottom:10px}.ovp .ov-row3 .ov-box{margin-bottom:0}
+.ovp .ov-dl{font-size:13pt;line-height:1.15;margin-top:2px}
 .ovp .ov-box{border:1px solid #000;padding:4px 8px 6px;min-width:0;margin-bottom:0}
 .ovp .ov-row .ov-box{margin-bottom:0}.ovp>.ov-box{margin-bottom:12px}
 .ovp .ov-h{font-size:15pt;font-weight:700;margin-bottom:3px}
-.ovp .ov-pie{width:30mm;margin:2px auto 3px}
+.ovp .ov-pie{width:26mm;margin:2px auto 3px}
 .ovp .ov-leg>div{display:grid;grid-template-columns:12px 1fr auto 52px;gap:6px;align-items:center;font-size:13pt;padding:0;border-top:1px dotted #888}
 .ovp .ov-leg i{display:block;width:10px;height:10px}.ovp .ov-leg b{text-align:right;font-weight:600}.ovp .ov-leg em{font-style:normal;text-align:right}
 .ovp .ov-foot{font-size:12.5pt;margin:4px 0 4px}
@@ -600,7 +602,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-72</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-73</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" title="บันทึกขึ้น Google Sheets เดี๋ยวนี้ (ปกติบันทึกให้เองทุกครั้งที่กรอก)">☁ บันทึกขึ้น Google Sheets</button>
@@ -4040,13 +4042,23 @@ const tn = v => String(v);
 const tM = v => B0(v);
 const thMS = p => { const a = String(p).split("-"); return MTH_TH[+a[1] - 1] + String(a[0]).slice(2); };
 
+/* ยอดกู้รวม = วงเงินตามสัญญาของสัญญาที่ยังมีหนี้ (สัญญาที่ทำไว้ → ไม่มีใช้ค่าที่ถอดจากทะเบียน) */
+function ovLoanTotal(){
+  let amt = 0, est = 0, n = 0, bal = 0;
+  NW.people().forEach(x => ["sam", "dk"].forEach(k => { const st = nwStateA(nwAcct(x, k)); if(!(st.debt > 0.005)) return; n++; bal += st.debt;
+    const c = nwCon(x.no, NLP[k]); let v = c && +c.amt > 0 ? +c.amt : 0; if(!v){ const g = nwConGuess(x, k); v = g.amt || st.debt; est++; }
+    amt += Math.max(v, st.debt); }));
+  return {amt:r2(amt), n, est, bal:r2(bal), paid:r2(Math.max(0, amt - bal))};
+}
 function ovData(){
-  const D = nwDashData(), people = NW.people(), R = nwArrears();
+  const D = nwDashData(), people = NW.people(), R = nwArrears(), yr = D.end.split("-")[0];
   const loanP = people.filter(x => nwState(x).debt > 0.005), arrNo = new Set(R.map(o => o.x.no)), arrP = loanP.filter(x => arrNo.has(x.no)).length;
-  const acc = k => people.map(x => nwStateA(nwAcct(x, k))).filter(v => v.debt > 0.005), sh = people.map(x => nwState(x).shares);
-  const chgS = r2(D.shNow - D.open.sh), pctS = D.open.sh > 0 ? chgS / D.open.sh * 100 : 0;
-  return {D, n:people.length, nLoan:loanP.length, nSave:people.length - loanP.length, arrP, okP:loanP.length - arrP, nSam:acc("sam").length, nDk:acc("dk").length, chgS, pctS,
-    totDiv:r2(D.divS + D.divI), avgInt:D.m > 0 ? r2(D.intY / D.m) : 0, avgSh:people.length ? r2(D.shNow / people.length) : 0, maxSh:sh.length ? Math.max(...sh) : 0};
+  const sh = people.map(x => nwState(x).shares), chgS = r2(D.shNow - D.open.sh), pctS = D.open.sh > 0 ? chgS / D.open.sh * 100 : 0;
+  const mo = y => D.tot.filter(t => t.p.startsWith(y)), m68 = mo("2568"), m69 = mo(yr), int68 = r2(m68.reduce((u, t) => u + t.int, 0)), int69 = r2(m69.reduce((u, t) => u + t.int, 0));
+  return {D, yr, n:people.length, nLoan:loanP.length, nSave:people.length - loanP.length, arrP, okP:loanP.length - arrP, chgS, pctS, loan:ovLoanTotal(),
+    totDiv:r2(D.divS + D.divI), avgSh:people.length ? r2(D.shNow / people.length) : 0, maxSh:sh.length ? Math.max(...sh) : 0,
+    int68, int69, n68:m68.length, n69:m69.length, f68:m68[0] && m68[0].p, l68:m68.length && m68[m68.length - 1].p, f69:m69[0] && m69[0].p, l69:m69.length && m69[m69.length - 1].p,
+    chgI:r2(int69 - int68), pctI:int68 > 0 ? (int69 - int68) / int68 * 100 : 0};
 }
 /* กราฟวงกลม (โดนัท) — ส่วนที่เป็น 0 ไม่วาด */
 function ovDonut(parts, big, small){
@@ -4063,36 +4075,51 @@ const ovLeg = (parts, fmt) => { const tot = parts.reduce((u, q) => u + q.v, 0);
   return `<div class="ov-leg">${parts.map(q => `<div><i style="background:${q.c}"></i><span>${q.l}</span><b>${fmt(q.v)}</b><em>${tot > 0 ? (q.v / tot * 100).toFixed(1) : "0.0"}%</em></div>`).join("")}</div>`; };
 /* กราฟแท่งดอกเบี้ยรับรายเดือน — ตัวเลขบนทุกแท่ง (หน่วยพันบาท) */
 function ovBars(list){
-  const W = 600, H = 150, L = 8, Rr = 8, T = 24, Bt = 26, n = list.length; if(!n) return "";
+  const W = 600, H = 168, L = 8, Rr = 8, T = 26, Bt = 26, n = list.length; if(!n) return "";
   const mx = Math.max(...list.map(t => t.int), 1), bw = (W - L - Rr) / n;
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="กราฟดอกเบี้ยรับรายเดือน">
     <line x1="${L}" x2="${W - Rr}" y1="${H - Bt}" y2="${H - Bt}" stroke="#000" stroke-width="1"/>
     ${list.map((t, i) => { const h = (H - T - Bt) * t.int / mx, x = L + bw * i + bw * 0.14, y = H - Bt - h, cxm = x + bw * 0.36;
       return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${(bw * 0.72).toFixed(1)}" height="${h.toFixed(1)}" fill="#1B7F5A"/>
-        <text x="${cxm.toFixed(1)}" y="${(y - 5).toFixed(1)}" text-anchor="middle" font-size="16" font-weight="700" fill="#000">${(t.int / 1000).toFixed(1)}</text>
-        <text x="${cxm.toFixed(1)}" y="${H - 8}" text-anchor="middle" font-size="16" fill="#000">${thMS(t.p)}</text>`; }).join("")}</svg>`;
+        <text x="${cxm.toFixed(1)}" y="${(y - 5).toFixed(1)}" text-anchor="middle" font-size="15" font-weight="700" fill="#000">${(t.int / 1000).toFixed(1)}</text>
+        <text x="${cxm.toFixed(1)}" y="${H - 8}" text-anchor="middle" font-size="14" fill="#000">${thMS(t.p).slice(0, -2)}</text>`; }).join("")}</svg>`;
 }
+/* กราฟแท่ง 2 แท่ง เปรียบเทียบ 2568 กับ 2569 — ตัวเลขบนแท่ง */
+function ovCmp(v1, v2, l1, l2, c1, c2){
+  const W = 300, H = 150, T = 26, Bt = 46, bw = 92, mx = Math.max(v1, v2, 1), hh = H - T - Bt;
+  const bar = (v, x, c, l) => { const h = hh * v / mx, y = H - Bt - h;
+    return `<rect x="${x}" y="${y.toFixed(1)}" width="${bw}" height="${h.toFixed(1)}" fill="${c}"/>
+      <text x="${x + bw / 2}" y="${(y - 6).toFixed(1)}" text-anchor="middle" font-size="18" font-weight="700" fill="#000">${B0(v)}</text>
+      <text x="${x + bw / 2}" y="${H - 26}" text-anchor="middle" font-size="16" font-weight="700" fill="#000">${l[0]}</text><text x="${x + bw / 2}" y="${H - 8}" text-anchor="middle" font-size="14" fill="#000">${l[1]}</text>`; };
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img"><line x1="14" x2="${W - 14}" y1="${H - Bt}" y2="${H - Bt}" stroke="#000" stroke-width="1"/>${bar(v1, 36, c1, l1)}${bar(v2, 172, c2, l2)}</svg>`;
+}
+const ovDelta = (d, p) => `${d >= 0 ? "เพิ่มขึ้น" : "ลดลง"} ${B0(Math.abs(d))} บาท (ร้อยละ ${Math.abs(p).toFixed(1)})`;
 function nwOverviewDoc(){
-  const O = ovData(), D = O.D, today = nwToday(), yr = D.end.split("-")[0], pl = nwPFull(D.end).split(" ")[0], up = O.chgS >= 0;
-  const bars = D.tot.filter(t => pNum(t.p) >= pNum(D.from) && pNum(t.p) <= pNum(D.to)).slice(-12);
-  const kpi = (lbl, val, cap, clr) => `<div class="ov-kpi" style="border-top:3px solid ${clr}"><div class="ov-kl">${lbl}</div><div class="ov-kv">${val}</div><div class="ov-kc">${cap}</div></div>`;
-  const shP = [{l:"บัญชีสินเชื่อสามัญ", v:D.shBy.sam, c:"#1F3A68"}, {l:"บัญชีสินเชื่อดูแลกัน", v:D.shBy.dk, c:"#C4570F"}, {l:"ฝากหุ้นอย่างเดียว", v:D.shBy.free, c:"#1B7F5A"}];
+  const O = ovData(), D = O.D, today = nwToday(), yr = O.yr, pl = nwPFull(D.end).split(" ")[0], up = O.chgS >= 0, LN = O.loan;
+  const bars = D.tot.filter(t => t.p.startsWith(yr)).slice(-12), lbl = p => thMS(p);
+  const kpi = (l, val, cap, clr) => `<div class="ov-kpi" style="border-top:3px solid ${clr}"><div class="ov-kl">${l}</div><div class="ov-kv">${val}</div><div class="ov-kc">${cap}</div></div>`;
   const stP = [{l:"ผู้ฝาก", v:O.nSave, c:"#1B7F5A"}, {l:"ผู้กู้ ชำระปกติ", v:O.okP, c:"#1F3A68"}, {l:"ผู้กู้ มีงวดค้าง", v:O.arrP, c:"#C4570F"}];
+  const per68 = O.n68 ? `${lbl(O.f68)}–${lbl(O.l68)} (${O.n68} เดือน)` : "—", per69 = O.n69 ? `${lbl(O.f69)}–${lbl(O.l69)} (${O.n69} เดือน)` : "—";
   return `<div class="ovp">
     <div class="ov-top"><img src="${NW_LOGO}" alt="กบข.นข."><div class="ov-hd"><div class="ov-org">${ORGF} (กบข.นข.)</div>
       <div class="ov-title">สรุปภาพรวมกองทุน ประจำเดือน${pl} ${yr}</div><div class="ov-sub">ข้อมูลจากทะเบียน ณ สิ้นเดือน${pl} ${yr} · สมาชิก ${O.n} คน</div></div></div>
     <div class="ov-kpis">
       ${kpi("ทุนเรือนหุ้นสะสมรวม", tM(D.shNow), `บาท · ${up ? "เพิ่มขึ้น" : "ลดลง"} ${tM(Math.abs(O.chgS))} บาท (ร้อยละ ${Math.abs(O.pctS).toFixed(1)}) จากสิ้นปี 2568`, "#1F3A68")}
-      ${kpi("เงินกู้คงเหลือรวม", tM(D.dbNow), `บาท · ผู้กู้ ${O.nLoan} คน กำลังชำระคืน`, "#C4570F")}
-      ${kpi("ดอกเบี้ยรับสะสม", tM(D.intY), `บาท · ${thMS(D.from)} ถึง ${thMS(D.to)} · เฉลี่ยเดือนละ ${tM(O.avgInt)} บาท`, "#1B7F5A")}
+      ${kpi("ยอดเงินกู้รวม", tM(LN.amt), `บาท · ผู้กู้ ${O.nLoan} คน · ชำระคืนแล้ว ${tM(LN.paid)} · คงเหลือ ${tM(LN.bal)}`, "#C4570F")}
+      ${kpi("ดอกเบี้ยรับสะสม ปี " + yr, tM(O.int69), `บาท · เทียบปี 2568 (${tM(O.int68)} บาท) ${O.int68 > 0 ? (O.chgI >= 0 ? "เพิ่มขึ้น" : "ลดลง") + " ร้อยละ " + Math.abs(O.pctI).toFixed(1) : ""}`, "#1B7F5A")}
       ${kpi("ทุนเรือนหุ้นเฉลี่ยต่อคน", tM(O.avgSh), `บาท ต่อสมาชิก ${O.n} คน`, "#1F3A68")}
       ${kpi("ทุนเรือนหุ้นสะสมสูงสุด", tM(O.maxSh), "บาท ต่อคน (สูงสุดในกลุ่ม)", "#6B4FA0")}
-      ${kpi("เงินคืนสมาชิก (ประมาณการ)", tM(O.totDiv), `บาท · ปันผลหุ้น ร้อยละ ${D.C.rs} + เฉลี่ยคืนดอกเบี้ย ร้อยละ ${D.C.ri} · เฉลี่ยคนละ ${tM(O.n ? O.totDiv / O.n : 0)} บาท`, "#6B4FA0")}</div>
+      ${kpi("เงินคืนสมาชิก (ประมาณการ)", tM(O.totDiv), `บาท · เฉลี่ยคนละ ${tM(O.n ? O.totDiv / O.n : 0)} บาท`, "#6B4FA0")}</div>
     <div class="ov-row">
-      <div class="ov-box"><div class="ov-h">ทุนเรือนหุ้นสะสม แยกตามประเภท</div><div class="ov-pie">${ovDonut(shP, (D.shNow / 1e6).toFixed(2), "ล้านบาท")}</div>${ovLeg(shP, tM)}</div>
-      <div class="ov-box"><div class="ov-h">สถานะสมาชิก</div><div class="ov-pie">${ovDonut(stP, O.n, "สมาชิก")}</div>${ovLeg(stP, v => v + " คน")}</div></div>
-    <div class="ov-box"><div class="ov-h">ดอกเบี้ยรับรายเดือน (หน่วย: พันบาท)</div>${ovBars(bars)}</div>
-    <div class="ov-foot">ตัวเลขเงินคืนสมาชิกเป็นประมาณการ ยังไม่ใช่มติที่ประชุมใหญ่</div>
+      <div class="ov-box"><div class="ov-h">ทุนเรือนหุ้นสะสมรวม เทียบปี</div>${ovCmp(D.open.sh, D.shNow, ["ปี 2568", "ณ 31 ธ.ค."], ["ปี " + yr, "ณ " + pl], "#8FA3C7", "#1F3A68")}
+        <div class="ov-dl">${ovDelta(O.chgS, O.pctS)}</div></div>
+      <div class="ov-box"><div class="ov-h">ดอกเบี้ยรับสะสม เทียบปี</div>${ovCmp(O.int68, O.int69, ["ปี 2568", per68.split(" (")[0]], ["ปี " + yr, per69.split(" (")[0]], "#8CC9AE", "#1B7F5A")}
+        <div class="ov-dl">${ovDelta(O.chgI, O.pctI)}</div></div></div>
+    <div class="ov-row3">
+      <div class="ov-box"><div class="ov-h">สถานะสมาชิก</div><div class="ov-pie">${ovDonut(stP, O.n, "สมาชิก")}</div>${ovLeg(stP, v => v + " คน")}</div>
+      <div class="ov-box"><div class="ov-h">ดอกเบี้ยรับรายเดือน ปี ${yr} (พันบาท)</div>${ovBars(bars)}
+        <div class="ov-dl">เทียบดอกเบี้ย: ปี 2568 ${O.n68} เดือน · ปี ${yr} ${O.n69} เดือน</div></div></div>
+    <div class="ov-foot">เงินคืนสมาชิกเป็นประมาณการ (ปันผลหุ้นร้อยละ ${D.C.rs} + เฉลี่ยคืนดอกเบี้ยร้อยละ ${D.C.ri}) ยังไม่ใช่มติที่ประชุมใหญ่ · ยอดเงินกู้รวม = วงเงินตามสัญญาที่ยังมีหนี้${LN.est ? ` (ประมาณการจากทะเบียน ${LN.est} สัญญา)` : ""}</div>
     <div class="ov-sig"><div><div class="ln"></div><div>( ${esc(FIN())} )</div><div>กรรมการฝ่ายการเงิน</div></div><div><div class="ln"></div><div>( ${esc(CHAIR())} )</div><div>ประธานกลุ่มบุคคล</div></div>
       <div class="ov-dt">จัดทำเมื่อ ${thDay(today)}</div></div></div>`;
 }
