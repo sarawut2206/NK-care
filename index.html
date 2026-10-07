@@ -579,7 +579,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-67</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-68</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" title="บันทึกขึ้น Google Sheets เดี๋ยวนี้ (ปกติบันทึกให้เองทุกครั้งที่กรอก)">☁ บันทึกขึ้น Google Sheets</button>
@@ -3778,11 +3778,13 @@ function drawNWLoanDash(){
    ดึงจากรายการที่กรอกไว้ในทะเบียนเดือนที่เลือก · ยอดสะสมคือยอด ณ สิ้นเดือนนั้น · พิมพ์ทีละใบหรือทั้งหมด (1 หรือ 2 ใบต่อหน้า A4) */
 const NW_MF = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
 const nwPFull = p => { const a = String(p).split("-"); return `${NW_MF[+a[1] - 1]} ${a[0]}`; };
+/* ยอดรวมของแถวในใบเสร็จ = ดอกเบี้ย + เงินต้น + หุ้นทุกช่อง (รวมสะสมเพิ่มสมัครใจ) — ถ้าไม่มีรายละเอียดเลยใช้ยอดชำระที่กรอก */
+const nwRowTot = r => { const t = r2(num(r.int) + num(r.pri) + nwSh(r)); return t > 0.005 ? t : num(r.m); };
 function nwRc(x, p){
   const P = nwByPeriod(x), at = P.filter(o => pNum(o.p) <= pNum(p)).pop(), accs = nwAccts(x), items = [];
   accs.forEach(a => { const r = NW.row(x.no, p, a.prod); if(r) items.push({a, r}); });
   const sum = k => r2(items.reduce((t, it) => t + num(it.r[k]), 0)), t = {int:sum("int"), pri:sum("pri"), sh:sum("sh"), shx:sum("shx"), sv:sum("sv"), loan:sum("loan"), cv:sum("cv")};
-  t.m = r2(items.reduce((u, it) => u + (has(it.r.m) ? num(it.r.m) : num(it.r.int) + num(it.r.pri) + nwSh(it.r)), 0));
+  t.m = r2(items.reduce((u, it) => u + nwRowTot(it.r), 0));
   const by = {}; accs.forEach(a => by[a.prod] = at ? at.st[a.prod] : {debt:a.debt0, shares:a.share0});
   const pre = P.filter(o => pNum(o.p) < pNum(p)).pop(), by0 = {}; accs.forEach(a => by0[a.prod] = pre ? pre.st[a.prod] : {debt:a.debt0, shares:a.share0});      // ยอด ณ สิ้นเดือนก่อนหน้า (ก่อนรับชำระเดือนนี้)
   const debt0 = pre ? pre.debt : nwDebt0(x), shares0 = pre ? pre.shares : r2(accs.reduce((u, a) => u + a.share0, 0));
@@ -3801,7 +3803,7 @@ function nwRcDoc(x, p){
   const body = c.has ? `<table><thead><tr><th style="text-align:left">รายการ</th>${cols.map(([, l]) => `<th>${l}</th>`).join("")}<th>${c.t.cv > 0 ? "ยอดตามงวด" : "รวมรับ"}</th></tr></thead><tbody>
       ${c.items.map(it => { const r = it.r, a = it.a;
         return `<tr><td>${NW_ACCN[a.prod]}${a.prod !== "free" ? ` <span class="sm">(${nwNoLbl(a, p)})</span>` : ""}</td>${cols.map(([k]) => `<td class="n">${z(r[k])}</td>`).join("")}
-          <td class="n"><b>${B(has(r.m) ? num(r.m) : num(r.int) + num(r.pri) + nwSh(r))}</b></td></tr>`; }).join("")}
+          <td class="n"><b>${B(nwRowTot(r))}</b></td></tr>`; }).join("")}
       <tr class="tt"><td>${c.t.cv > 0 ? "ยอดตามงวดเดือนนี้" : "รวมรับเดือนนี้"}</td>${cols.map(([k]) => `<td class="n">${z(c.t[k])}</td>`).join("")}<td class="n"><b>${B(c.t.m)}</b></td></tr>
       ${c.t.cv > 0 ? `<tr><td colspan="${cols.length + 1}">รับเงินสดจริง</td><td class="n"><b>${B(r2(c.t.m - c.t.cv))}</b></td></tr>
         <tr><td colspan="${cols.length + 1}">หักจากทุนเรือนหุ้น (ชำระส่วนที่ขาด)${cvRef}</td><td class="n"><b>${B(c.t.cv)}</b></td></tr>` : ""}</tbody></table>`
