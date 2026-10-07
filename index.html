@@ -579,7 +579,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-66</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-67</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" title="บันทึกขึ้น Google Sheets เดี๋ยวนี้ (ปกติบันทึกให้เองทุกครั้งที่กรอก)">☁ บันทึกขึ้น Google Sheets</button>
@@ -3525,7 +3525,8 @@ const nwNmOf = no => (NW.person(no) || {}).name || memName(no) || "";
 function nwOldCon(no, pk){ return S.contracts.filter(c => c.no === no && c.prod === pk).sort((a, b) => String(b.d || "").localeCompare(String(a.d || "")))[0] || null; }
 const nwLv = n => n >= 6 ? 3 : n >= 3 ? 2 : n >= 1 ? 1 : 0;
 
-/* ผู้ค้างชำระ: เดือนที่เลยกำหนดแล้วตั้งแต่ ม.ค.69 ที่ยังมีหนี้ แต่ไม่มีรายการ หรือรับน้อยกว่างวดละ (เดือนที่ผ่อนผัน/หักหุ้นชดเชยแล้วไม่นับ) */
+/* ผู้ค้างชำระ = นิยามเดียวกับสถานะ «ค้าง n งวด» ในทะเบียน: เดือนที่เลยกำหนดแล้วตั้งแต่ ม.ค.69 ที่ยังมีหนี้แต่ไม่มีรายการชำระ นับติดต่อกันถึงงวดล่าสุด
+   (จ่ายแล้วเริ่มนับใหม่ · เดือนที่ผ่อนผัน/หักหุ้นชดเชยแล้วไม่นับ · ไม่เทียบยอดกับงวดละ เพราะงวดละเปลี่ยนได้เมื่อกู้ทับ) */
 function nwArrears(){
   const cur = pNum(nwCurP()), lastDue = nwDue(pFrom(cur)) ? cur : cur - 1, out = [];
   NW.people().forEach(x => nwAccts(x).filter(a => a.prod !== "free").forEach(a => {
@@ -3535,11 +3536,12 @@ function nwArrears(){
     let d = a.debt0; const rows = [];
     for(let n = pNum(P_ANCHOR); n <= lastDue; n++){
       const p = pFrom(n), r = byP[p], before = d; if(r) d = nwStep(d, r);
-      if(before <= 0.005 || (r && r.relief)) continue;
-      const exp = Math.min(inst, r2(before * (1 + RATE) + pl.sh + pl.shx)), got = r ? num(r.m) : 0, short = r2(Math.max(0, exp - got));
-      if(short > 0.5) rows.push({p, exp, got, short, kind: got > 0.005 ? "ชำระบางส่วน" : "ไม่มีรายการชำระ"});
+      if(before <= 0.005) continue;
+      if(r && (num(r.m) > 0.005 || r.relief)){ rows.length = 0; continue; }                 // จ่ายแล้ว / ผ่อนผัน = เริ่มนับใหม่ (เหมือนสถานะในทะเบียน)
+      const exp = Math.min(inst, r2(before * (1 + RATE) + pl.sh + pl.shx));
+      rows.push({p, exp, got:0, short:exp, kind:"ไม่มีรายการชำระ"});
     }
-    if(rows.length) out.push({x, a, st, inst, rows, short: r2(rows.reduce((u, w) => u + w.short, 0)), missed: st.missed, debt: st.debt, pk: NLP[a.prod]});
+    if(rows.length && st.missed > 0) out.push({x, a, st, inst, rows, short: r2(rows.reduce((u, w) => u + w.short, 0)), missed: st.missed, debt: st.debt, pk: NLP[a.prod]});
   }));
   return out.sort((u, v) => v.missed - u.missed || v.short - u.short);
 }
@@ -3635,7 +3637,7 @@ function nwTrackHTML(R){
       <div class="stat"><div class="k">ค้าง 3–5 งวด</div><div class="v" style="color:${cnt(2) ? "var(--red)" : "var(--ink)"}">${cnt(2)}</div><div class="hint">แจ้งผู้ค้ำ ร่วมรับผิด 20%</div></div>
       <div class="stat"><div class="k">ค้าง 6 งวดขึ้นไป</div><div class="v" style="color:${cnt(3) ? "var(--red)" : "var(--ink)"}">${cnt(3)}</div><div class="hint">ผู้ค้ำร่วมรับผิด 50% ขึ้นไป</div></div>
       <div class="stat"><div class="k">ยอดค้างรวม</div><div class="v" style="color:${tot ? "var(--red)" : "var(--ink)"}">${B0(tot)} <small>บาท</small></div></div></div>
-    <div class="bar" style="margin:0 0 6px"><span class="hint">เรียงจากค้างนานที่สุด · นับตั้งแต่ ม.ค.69 เฉพาะงวดที่เลยกำหนดแล้ว ไม่มีรายการ หรือรับน้อยกว่างวดละ · งวดที่ติ๊ก «ผ่อนผัน» หรือชำระโดยหักหุ้นแล้วไม่นับ</span>
+    <div class="bar" style="margin:0 0 6px"><span class="hint">เรียงจากค้างนานที่สุด · นับตั้งแต่ ม.ค.69 เฉพาะงวดที่เลยกำหนดแล้วและไม่มีรายการชำระ ติดต่อกันถึงงวดล่าสุด (ตรงกับ «ค้าง n งวด» ในทะเบียน) · จ่ายแล้วเริ่มนับใหม่ · งวดที่ติ๊ก «ผ่อนผัน» หรือหักหุ้นชดเชยแล้วไม่นับ</span>
       <button class="ghost sm" id="nt_csv" style="margin-left:auto">ส่งออก CSV</button></div>
     <div class="tbl" style="max-height:420px"><table><thead><tr><th class="l">สมาชิก</th><th class="l">สัญญา</th><th>ค้าง</th><th class="l">งวดที่ขาด</th><th>ยอดค้าง</th><th>หนี้คงเหลือ</th><th class="l">ผู้ค้ำ</th><th></th></tr></thead><tbody>
       ${R.map(o => { const k = nwLv(o.missed), tel = (prof(o.x.no) || {}).tel, c0 = nwOldCon(o.x.no, o.pk), gs = c0 ? [c0.g1, c0.g2].filter(Boolean) : [];
