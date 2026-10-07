@@ -603,7 +603,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-75</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-76</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" title="บันทึกขึ้น Google Sheets เดี๋ยวนี้ (ปกติบันทึกให้เองทุกครั้งที่กรอก)">☁ บันทึกขึ้น Google Sheets</button>
@@ -3287,22 +3287,21 @@ function nwDashData(){
 /* ---- กราฟ (SVG วาดเอง) ---- */
 function dashLine(tot){
   const W = 760, H = 270, L = 58, R = 74, T = 18, Bm = 34, n = tot.length; if(n < 2) return '<p class="hint">ยังมีข้อมูลไม่พอวาดกราฟ</p>';
-  const mx = dshNice(Math.max(...tot.map(t => Math.max(t.sh, t.cum, t.dbt))) * 1.04), X = i => L + i * (W - L - R) / (n - 1), Y = v => T + (1 - v / mx) * (H - T - Bm);
+  const mx = dshNice(Math.max(...tot.map(t => Math.max(t.sh, t.dbt))) * 1.04), X = i => L + i * (W - L - R) / (n - 1), Y = v => T + (1 - v / mx) * (H - T - Bm);
   const path = k => tot.map((t, i) => `${i ? "L" : "M"}${X(i).toFixed(1)},${Y(t[k]).toFixed(1)}`).join(" ");
   const area = k => `${path(k)} L${X(n - 1).toFixed(1)},${Y(0)} L${X(0).toFixed(1)},${Y(0)} Z`;
   const grid = [0, 1, 2, 3, 4].map(g => { const v = mx * g / 4, y = Y(v); return `<line x1="${L}" x2="${W - R}" y1="${y}" y2="${y}" stroke="#E4EAF4" stroke-width="1"/><text x="${L - 8}" y="${y + 4}" text-anchor="end" font-size="11" fill="#6B7A99">${dshK(v)}</text>`; }).join("");
   const step = Math.ceil(n / 8), xl = tot.map((t, i) => (i % step === 0 || i === n - 1) ? `<text x="${X(i)}" y="${H - 12}" text-anchor="middle" font-size="11" fill="#6B7A99">${thPer(t.p)}</text>` : "").join("");
-  const hov = tot.map((t, i) => `<rect x="${X(i) - (W - L - R) / (n - 1) / 2}" y="${T}" width="${(W - L - R) / (n - 1)}" height="${H - T - Bm}" fill="transparent"><title>${thPer(t.p)}\nหุ้นสะสม ${B0(t.sh)}\nเงินกู้สะสม ${B0(t.cum)}\nคงเหลือ ${B0(t.dbt)}</title></rect>`).join("");
+  const hov = tot.map((t, i) => `<rect x="${X(i) - (W - L - R) / (n - 1) / 2}" y="${T}" width="${(W - L - R) / (n - 1)}" height="${H - T - Bm}" fill="transparent"><title>${thPer(t.p)}\nหุ้นสะสม ${B0(t.sh)}\nหนี้คงเหลือ ${B0(t.dbt)}</title></rect>`).join("");
   const last = tot[n - 1], dot = (k, c) => `<circle cx="${X(n - 1)}" cy="${Y(last[k])}" r="4.5" fill="#fff" stroke="${c}" stroke-width="2.5"/>`;
   const lab = (k, c, dy) => `<text x="${X(n - 1) + 9}" y="${Y(last[k]) + dy}" font-size="12" font-weight="700" fill="${c}">${dshK(last[k])}</text>`;
-  const dy = Math.abs(Y(last.sh) - Y(last.cum)) < 14 ? [-6, 12] : [4, 4];
-  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="กราฟหุ้นสะสมและเงินกู้สะสมรายเดือน" style="display:block">
+  const dy = Math.abs(Y(last.sh) - Y(last.dbt)) < 14 ? [-6, 12] : [4, 4];
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="กราฟหุ้นสะสมและหนี้คงเหลือรายเดือน" style="display:block">
     ${grid}
-    <path d="${area("sh")}" fill="${DSH.sh}" opacity=".10"/>
+    <path d="${area("sh")}" fill="${DSH.sh}" opacity=".10"/><path d="${area("dbt")}" fill="${DSH.dbt}" opacity=".10"/>
     <path d="${path("sh")}" fill="none" stroke="${DSH.sh}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
-    <path d="${path("dbt")}" fill="none" stroke="${DSH.dbt}" stroke-width="1.8" stroke-dasharray="5 4" stroke-linejoin="round" opacity=".85"/>
-    <path d="${path("cum")}" fill="none" stroke="${DSH.dbt}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
-    ${dot("sh", DSH.sh)}${dot("cum", DSH.dbt)}${lab("sh", DSH.sh, dy[0])}${lab("cum", DSH.dbt, dy[1])}${xl}${hov}</svg>`;
+    <path d="${path("dbt")}" fill="none" stroke="${DSH.dbt}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
+    ${dot("sh", DSH.sh)}${dot("dbt", DSH.dbt)}${lab("sh", DSH.sh, dy[0])}${lab("dbt", DSH.dbt, dy[1])}${xl}${hov}</svg>`;
 }
 function dashDonut(parts, centerLbl){
   const R = 54, CIR = 2 * Math.PI * R, tot = parts.reduce((s, p) => s + p.v, 0); let off = 0;
@@ -3342,17 +3341,16 @@ function drawNWDash(){
   <div class="ds-kpis">
     <div class="ds-kpi" style="border-top-color:${DSH.sh}"><div class="k">① ทุนเรือนหุ้นสะสมรวม</div><div class="v">${B0(D.shNow)} <small>บาท</small></div>
       <div class="s">${chg(D.shNow, D.open.sh)} จาก 31 ธ.ค.68</div></div>
-    <div class="ds-kpi" style="border-top-color:${DSH.dbt}"><div class="k">② เงินกู้สะสมรวมทั้งหมด</div><div class="v">${B0(D.LC.amt)} <small>บาท</small></div>
-      <div class="s">ชำระคืนแล้ว ${B0(D.LC.paid)} · คงเหลือ ${B0(D.LC.bal)}${D.LC.est + D.LC.draft ? ` · วงเงินถอดจากทะเบียน ${D.LC.est + D.LC.draft} สัญญา (ดูที่มาด้านล่าง)` : ""}</div></div>
+    <div class="ds-kpi" style="border-top-color:${DSH.dbt}"><div class="k">② หนี้คงเหลือรวม</div><div class="v">${B0(D.dbNow)} <small>บาท</small></div>
+      <div class="s">${chg(D.dbNow, D.open.dbt)} จาก 31 ธ.ค.68 · ผู้กู้ ${new Set(D.LC.items.map(i => i.no)).size} คน (ตรงกับทะเบียนผู้กู้)</div></div>
     <div class="ds-kpi" style="border-top-color:${DSH.int}"><div class="k">③ ดอกเบี้ยรับสะสม (${thPer(D.from)} – ${thPer(D.to)})</div><div class="v">${B0(D.intY)} <small>บาท</small></div>
       <div class="s">เฉลี่ยเดือนละ ${D.m > 0 ? B0(D.intY / D.m) : "0"} บาท · ${D.m} เดือน</div></div>
     <div class="ds-kpi" style="border-top-color:#0B2C6B"><div class="k">④ คาดการณ์เงินคืนสมาชิก</div><div class="v" style="color:#0B2C6B">${B0(divTot)} <small>บาท</small></div>
       <div class="s">ปันผลหุ้น ${B0(D.divS)} + เฉลี่ยคืน ${B0(D.divI)}</div></div>
   </div>
 
-  ${nwLoanSrcHTML(D.LC)}
-  <div class="card"><div class="ds-ttl">พอร์ตกองทุนรายเดือน <span class="hint">หุ้นสะสม เทียบ เงินกู้สะสม (เส้นประ = คงเหลือ) · รวมทุกคน</span>
-      <span class="ds-lg"><i style="background:${DSH.sh}"></i>ทุนเรือนหุ้นสะสม <i style="background:${DSH.dbt}"></i>เงินกู้สะสม <i style="background:#fff;border:1.5px dashed ${DSH.dbt}"></i>คงเหลือ</span></div>${dashLine(D.tot)}</div>
+  <div class="card"><div class="ds-ttl">พอร์ตกองทุนรายเดือน <span class="hint">หุ้นสะสม เทียบ หนี้คงเหลือ (รวมทุกคน)</span>
+      <span class="ds-lg"><i style="background:${DSH.sh}"></i>ทุนเรือนหุ้นสะสม <i style="background:${DSH.dbt}"></i>หนี้คงเหลือ</span></div>${dashLine(D.tot)}</div>
 
   <div class="ds-g2">
     <div class="card"><div class="ds-ttl">① หุ้นสะสมแยกตามประเภท</div>${dashDonut([{l:NW_ACCS.sam, v:D.shBy.sam, c:DSH.sam}, {l:NW_ACCS.dk, v:D.shBy.dk, c:DSH.dk}, {l:NW_ACCS.free, v:D.shBy.free, c:DSH.free}], "หุ้นรวม")}</div>
@@ -4124,7 +4122,7 @@ function nwOverviewDoc(){
       <div class="ov-title">สรุปภาพรวมกองทุน ประจำเดือน${pl} ${yr}</div><div class="ov-sub">ข้อมูลจากทะเบียน ณ สิ้นเดือน${pl} ${yr} · สมาชิก ${O.n} คน</div></div></div>
     <div class="ov-kpis">
       ${kpi("ทุนเรือนหุ้นสะสมรวม", tM(D.shNow), `บาท · ${up ? "เพิ่มขึ้น" : "ลดลง"} ${tM(Math.abs(O.chgS))} บาท (ร้อยละ ${Math.abs(O.pctS).toFixed(1)}) จากสิ้นปี 2568`, "#1F3A68")}
-      ${kpi("เงินกู้สะสมรวมทั้งหมด", tM(LN.amt), `บาท · ผู้กู้ ${O.nLoan} คน · ชำระคืนแล้ว ${tM(LN.paid)} · คงเหลือ ${tM(LN.bal)}`, "#C4570F")}
+      ${kpi("หนี้คงเหลือรวม", tM(D.dbNow), `บาท · ผู้กู้ ${O.nLoan} คน · ตรงกับทะเบียนผู้กู้`, "#C4570F")}
       ${kpi("ดอกเบี้ยรับสะสม ปี " + yr, tM(O.int69), `บาท · เทียบปี 2568 (${tM(O.int68)} บาท) ${O.int68 > 0 ? (O.chgI >= 0 ? "เพิ่มขึ้น" : "ลดลง") + " ร้อยละ " + Math.abs(O.pctI).toFixed(1) : ""}`, "#1B7F5A")}
       ${kpi("ทุนเรือนหุ้นเฉลี่ยต่อคน", tM(O.avgSh), `บาท ต่อสมาชิก ${O.n} คน`, "#1F3A68")}
       ${kpi("ทุนเรือนหุ้นสะสมสูงสุด", tM(O.maxSh), "บาท ต่อคน (สูงสุดในกลุ่ม)", "#6B4FA0")}
@@ -4138,7 +4136,7 @@ function nwOverviewDoc(){
       <div class="ov-box"><div class="ov-h">สถานะสมาชิก</div><div class="ov-pie">${ovDonut(stP, O.n, "สมาชิก")}</div>${ovLeg(stP, v => v + " คน")}</div>
       <div class="ov-box"><div class="ov-h">ดอกเบี้ยรับรายเดือน ปี ${yr} (พันบาท)</div>${ovBars(bars)}
         <div class="ov-dl">เทียบดอกเบี้ย: ปี 2568 ${O.n68} เดือน · ปี ${yr} ${O.n69} เดือน</div></div></div>
-    <div class="ov-foot">เงินคืนสมาชิกเป็นประมาณการ (ปันผลหุ้นร้อยละ ${D.C.rs} + เฉลี่ยคืนดอกเบี้ยร้อยละ ${D.C.ri}) ยังไม่ใช่มติที่ประชุมใหญ่ · เงินกู้สะสมรวมทั้งหมด = วงเงินตามสัญญาที่ยังมีหนี้${LN.est + LN.draft ? ` (วงเงินถอดจากทะเบียน ${LN.est + LN.draft} สัญญา ยังไม่ได้ตรวจกับสัญญาต้นฉบับ)` : ""}</div>
+    <div class="ov-foot">เงินคืนสมาชิกเป็นประมาณการ (ปันผลหุ้นร้อยละ ${D.C.rs} + เฉลี่ยคืนดอกเบี้ยร้อยละ ${D.C.ri}) ยังไม่ใช่มติที่ประชุมใหญ่</div>
     <div class="ov-sig"><div><div class="ln"></div><div>( ${esc(FIN())} )</div><div>กรรมการฝ่ายการเงิน</div></div><div><div class="ln"></div><div>( ${esc(CHAIR())} )</div><div>ประธานกลุ่มบุคคล</div></div>
       <div class="ov-dt">จัดทำเมื่อ ${thDay(today)}</div></div></div>`;
 }
@@ -4185,13 +4183,13 @@ function nwMonthlyDoc(p){
       ${kpi("ดอกเบี้ยรับเดือนนี้", tM(A.int), `บาท · ${cmp(A.int, Pv ? Pv.int : 0)}`, "#1B7F5A")}
       ${kpi("ฝากหุ้นเดือนนี้", tM(A.sh), `บาท · ${cmp(A.sh, Pv ? Pv.sh : 0)}`, "#C4570F")}
       ${kpi("ทุนเรือนหุ้นสะสม ณ สิ้นเดือน", tM(A.sharesEnd), Pv ? `บาท · ${A.sharesEnd >= Pv.sharesEnd ? "เพิ่มขึ้น" : "ลดลง"} ${tM(Math.abs(A.sharesEnd - Pv.sharesEnd))} บาท จากเดือนก่อน` : "บาท", "#1F3A68")}
-      ${kpi("เงินกู้สะสมรวมทั้งหมด", tM(cum), `บาท · คงเหลือ ${tM(A.debtEnd)}${A.loan > 0 ? ` · ปล่อยกู้ใหม่/กู้ทับเดือนนี้ ${tM(A.loan)}` : ""}`, "#C4570F")}
+      ${kpi("หนี้คงเหลือรวม ณ สิ้นเดือน", tM(A.debtEnd), Pv ? `บาท · ${A.debtEnd <= Pv.debtEnd ? "ลดลง" : "เพิ่มขึ้น"} ${tM(Math.abs(A.debtEnd - Pv.debtEnd))} บาท จากเดือนก่อน${A.loan > 0 ? ` · ปล่อยกู้ใหม่/กู้ทับ ${tM(A.loan)}` : ""}` : "บาท", "#C4570F")}
       ${kpi("สมาชิกที่มีรายการเดือนนี้", `${nPay} <span style="font-size:15pt;font-weight:600">คน</span>`, `จากสมาชิก ${nAll} คน · ผู้กู้ชำระแล้ว ${A.loanPay} จาก ${nBor} คน`, "#6B4FA0")}</div>
     <div class="ov-row">
       <div class="ov-box"><div class="ov-h">เงินรับชำระเดือนนี้ แยกตามรายการ</div><div class="ov-pie">${ovDonut(compP, (A.pay / 1000).toFixed(1), "พันบาท")}</div>${ovLeg(compP, tM)}</div>
       <div class="ov-box"><div class="ov-h">สมาชิกเดือนนี้</div><div class="ov-pie">${ovDonut(stP, nAll, "สมาชิก")}</div>${ovLeg(stP, v => v + " คน")}</div></div>
     <div class="ov-box"><div class="ov-h">รับชำระรวมรายเดือน (พันบาท) · เดือนที่เลือกแถบสีเข้ม</div>${ovBarsV(trend, p)}</div>
-    <div class="ov-foot">รับชำระรวม = ดอกเบี้ย + เงินต้น + เงินฝากหุ้น (รวมสะสมเพิ่ม) · เงินกู้สะสมรวมทั้งหมด = วงเงินตามสัญญาที่ยังมีหนี้อยู่ ณ สิ้นเดือนนั้น</div>
+    <div class="ov-foot">รับชำระรวม = ดอกเบี้ย + เงินต้น + เงินฝากหุ้น (รวมสะสมเพิ่ม)</div>
     <div class="ov-sig"><div><div class="ln"></div><div>( ${esc(FIN())} )</div><div>กรรมการฝ่ายการเงิน</div></div><div><div class="ln"></div><div>( ${esc(CHAIR())} )</div><div>ประธานกลุ่มบุคคล</div></div>
       <div class="ov-dt">จัดทำเมื่อ ${thDay(today)}</div></div></div>`;
 }
