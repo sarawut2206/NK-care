@@ -579,7 +579,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-68</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-69</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" title="บันทึกขึ้น Google Sheets เดี๋ยวนี้ (ปกติบันทึกให้เองทุกครั้งที่กรอก)">☁ บันทึกขึ้น Google Sheets</button>
@@ -3640,7 +3640,7 @@ function nwTrackHTML(R){
     <div class="bar" style="margin:0 0 6px"><span class="hint">เรียงจากค้างนานที่สุด · นับตั้งแต่ ม.ค.69 เฉพาะงวดที่เลยกำหนดแล้วและไม่มีรายการชำระ ติดต่อกันถึงงวดล่าสุด (ตรงกับ «ค้าง n งวด» ในทะเบียน) · จ่ายแล้วเริ่มนับใหม่ · งวดที่ติ๊ก «ผ่อนผัน» หรือหักหุ้นชดเชยแล้วไม่นับ</span>
       <button class="ghost sm" id="nt_csv" style="margin-left:auto">ส่งออก CSV</button></div>
     <div class="tbl" style="max-height:420px"><table><thead><tr><th class="l">สมาชิก</th><th class="l">สัญญา</th><th>ค้าง</th><th class="l">งวดที่ขาด</th><th>ยอดค้าง</th><th>หนี้คงเหลือ</th><th class="l">ผู้ค้ำ</th><th></th></tr></thead><tbody>
-      ${R.map(o => { const k = nwLv(o.missed), tel = (prof(o.x.no) || {}).tel, c0 = nwOldCon(o.x.no, o.pk), gs = c0 ? [c0.g1, c0.g2].filter(Boolean) : [];
+      ${R.map(o => { const k = nwLv(o.missed), tel = (prof(o.x.no) || {}).tel, c0 = nwCon(o.x.no, o.pk), gs = c0 ? [c0.g1, c0.g2].filter(Boolean) : [];
         return `<tr><td class="l ${k >= 2 ? "sevr" : "sevy"}"><span class="no">${esc(o.x.no)}</span><b>${esc(o.x.name)}</b>${tel ? `<div class="hint">โทร ${esc(tel)}</div>` : ""}</td>
           <td class="l">สินเชื่อ${o.pk}<div class="hint">งวดละ ${B(o.inst)}</div></td>
           <td class="amt"><span class="pill ${k >= 2 ? "red" : "yel"}">ขาด ${o.rows.length} งวด</span><div class="hint">${o.missed ? `ติดต่อกัน ${o.missed} งวดล่าสุด` : "งวดล่าสุดชำระแล้ว"}</div></td>
@@ -3661,7 +3661,7 @@ function nwTrackHTML(R){
 
 /* หนังสือเตือน — ดัดแปลงจากระบบเก่า ใช้ตัวเลขจากทะเบียนใหม่ · ข้อมูลสัญญา/ผู้ค้ำดึงจากสัญญาเดิมถ้ามี */
 function nwWarnDoc(o, kind, no, d, days, feeIn){
-  const m = o.x, c0 = nwOldCon(m.no, o.pk), P = PROD[o.pk], p = prof(m.no), n = o.rows.length, miss = o.missed;
+  const m = o.x, c0 = nwCon(m.no, o.pk), P = PROD[o.pk], p = prof(m.no), n = o.rows.length, miss = o.missed;
   const gs = (c0 ? [c0.g1, c0.g2] : []).filter(Boolean).slice(0, P.guar).map(g => ({no:g, name:nwNmOf(g)}));
   const fee = has(feeIn) && feeIn !== "" ? num(feeIn) : Math.min(100, r2(o.inst * 0.05)), pen = miss >= 3 ? r2(o.debt * 0.012 * (miss - 2)) : 0, total = r2(o.short + fee + pen);
   const dl = d ? (() => { const t = new Date(d); t.setDate(t.getDate() + days); return thDate(t.toISOString().slice(0, 10)); })() : "…………";
@@ -3710,18 +3710,110 @@ function nwWarnDoc(o, kind, no, d, days, feeIn){
 /* ทะเบียนสัญญา: ข้อมูลสัญญาจากระบบเก่า (เลขที่ วันที่ วงเงิน ผู้ค้ำ) คู่กับยอดปัจจุบันจากทะเบียนใหม่ */
 function nwConHTML(){
   const f = S.ncf || "all", q = (S.ncq || "").trim().toLowerCase(), rows = [];
-  NW.people().forEach(x => ["sam", "dk"].forEach(k => { const a = nwAcct(x, k), st = nwStateA(a), c0 = nwOldCon(x.no, NLP[k]);
+  NW.people().forEach(x => ["sam", "dk"].forEach(k => { const a = nwAcct(x, k), st = nwStateA(a), c0 = nwCon(x.no, NLP[k]);
     if(!(st.debt > 0.005 || c0)) return; rows.push({x, k, a, st, c0}); }));
   const list = rows.filter(r => (f === "all" || f === r.k) && (!q || `${r.x.no} ${r.x.name}`.toLowerCase().includes(q)));
   return `<div class="bar" style="margin:0 0 8px"><select id="nc_f" style="width:auto"><option value="all">ทุกประเภท</option><option value="sam" ${f === "sam" ? "selected" : ""}>สามัญ</option><option value="dk" ${f === "dk" ? "selected" : ""}>ดูแลกัน</option></select>
       <input id="nc_q" placeholder="ค้นชื่อ / เลขสมาชิก" value="${esc(S.ncq || "")}" style="max-width:240px"><span class="hint">${list.length} สัญญา · ข้อมูลสัญญาดึงจากระบบเก่า ยอดหนี้จากทะเบียนใหม่</span></div>
     <div class="tbl" style="max-height:420px"><table><thead><tr><th class="l">สมาชิก</th><th class="l">ประเภท</th><th class="l">เลขที่สัญญา</th><th class="l">วันที่ทำสัญญา</th><th>วงเงิน</th><th>งวด</th><th>งวดละ</th><th>หนี้คงเหลือ</th><th class="l">ผู้ค้ำ</th><th class="l">สถานะ</th><th></th></tr></thead><tbody>
       ${list.map(({x, k, a, st, c0}) => `<tr><td class="l"><span class="no">${esc(x.no)}</span><b>${esc(x.name)}</b></td><td class="l">${NLP[k]}</td>
-        <td class="l">${c0 ? esc(c0.code || "—") : '<span class="hint">ไม่มีในระบบเก่า</span>'}</td><td class="l">${c0 && c0.d ? thDay(c0.d) : "—"}</td>
+        <td class="l">${c0 ? esc(c0.code || "—") : '<span class="hint">ยังไม่มีสัญญา</span>'}</td><td class="l">${c0 && c0.d ? thDay(c0.d) : "—"}</td>
         <td class="amt">${c0 ? B(c0.amt) : "—"}</td><td class="amt">${c0 ? c0.terms : "—"}</td><td class="amt">${a.inst ? B(a.inst) : c0 ? B(c0.inst) : "—"}</td>
         <td class="amt"><b>${B(st.debt)}</b></td><td class="l" style="white-space:normal">${c0 ? [c0.g1, c0.g2].filter(Boolean).map(g => `${esc(g)} ${esc(nwNmOf(g))}`).join("<br>") || "—" : "—"}</td>
         <td class="l">${st.debt <= 0.005 ? '<span class="pill grn">ปิดหนี้</span>' : st.missed ? `<span class="pill red">ค้าง ${st.missed} งวด</span>` : '<span class="pill grn">ปกติ</span>'}</td>
-        <td>${c0 ? `<button class="ghost sm" data-ncp="${esc(c0.id)}">พิมพ์สัญญา</button>` : ""}</td></tr>`).join("") || '<tr><td colspan="11" class="hint" style="text-align:left">ไม่พบ</td></tr>'}</tbody></table></div>`;
+        <td>${c0 ? (c0.fromNW ? `<button class="ghost sm" data-nrp="${esc(c0.id)}">พิมพ์สัญญา</button>` : `<button class="ghost sm" data-ncp="${esc(c0.id)}">พิมพ์สัญญา</button>`) : ""}</td></tr>`).join("") || '<tr><td colspan="11" class="hint" style="text-align:left">ไม่พบ</td></tr>'}</tbody></table></div>`;
+}
+
+/* ---------- ทำสัญญาย้อนหลัง — สร้างร่างสัญญาให้ผู้กู้ทุกคนจากข้อมูลในทะเบียนใหม่ แล้วแก้/ใส่ผู้ค้ำ/พิมพ์ชุดสัญญา ----------
+   เก็บใน S.nw.cons (ไม่ปนกับทะเบียนสัญญาของระบบเก่า) · วงเงิน + จำนวนงวด: ถอดจากงวดละ หุ้นประจำ หุ้นเพิ่ม และหนี้ยกมา โดยหาจำนวนงวดที่ตารางผ่อนให้ยอดคงเหลือตรงกับทะเบียน */
+const nwCons = () => (S.nw.cons || (S.nw.cons = []));
+function nwCon(no, pk){ return nwCons().find(c => c.no === no && c.prod === pk) || nwOldCon(no, pk); }
+const nwIsoPer = iso => { const a = String(iso || "").split("-").map(Number); return a[0] && a[1] ? pFrom((a[0] + 543) * 12 + a[1] - 1) : ""; };
+function nwConCode(c){
+  const a = String(c.d || "").split("-"), be = a[0] ? +a[0] + 543 : 2569, yy = String(be).slice(2), mm = a[1] || "01";
+  if(c.prod === "ดูแลกัน"){ const n = nwCons().filter(q => q.prod === "ดูแลกัน").sort((u, v) => String(u.no).localeCompare(String(v.no))).findIndex(q => q.id === c.id) + 1;
+    return `กบข.นข.-สกก(ดูแลกัน)-D${String(n || nwCons().filter(q => q.prod === "ดูแลกัน").length + 1).padStart(3, "0")}/${be}`; }
+  return `กบขนข-${yy}/${c.no}-${mm}-01-${yy}`;
+}
+/* ถอดวงเงิน/จำนวนงวด: ลองทุกจำนวนงวด คำนวณวงเงินที่ผ่อนด้วยงวดละนี้หมดพอดี แล้วดูว่าผ่อนไปแล้ว k งวดได้ยอดคงเหลือใกล้หนี้ในทะเบียนที่สุดตอนไหน */
+function nwConGuess(x, k){
+  const a = nwAcct(x, k), pl = nwPlan(a), PK = NLP[k], P = PROD[PK], st = nwStateA(a);
+  const rfRow = NW.rowsA(a).filter(r => r.refi).pop(), ss = nwStarts(a), p1m = rfRow ? rfRow.refi.start : ss[ss.length - 1];
+  const inst = +a.inst || pl.m, B = +a.shM || pl.sh || 0, shx = has(a.shxM) ? +a.shxM : pl.shx;
+  const tNow = Math.max(1, pNum(nwCurP()) - pNum(p1m) + 1);
+  const mode = shx > 0.005 && [0.08, 0.10, 0.12, 0.14, 0.16, 0.18].some(q => Math.abs(shx - inst * q) <= 0.05) ? "calc" : "old";     // หุ้นเพิ่มตรงกับอัตราขั้นบันไดช่วงใดช่วงหนึ่ง = สูตร 2569 (ค่าในทะเบียนอาจเป็นของช่วงเก่า)
+  const maxN = Math.min(72, P.maxTerms || 72), kel = pNum(P_ANCHOR) - pNum(p1m);
+  const amtOf = N => { if(mode === "calc") return maxPrincipal(inst, B, N, RATE, false); let s = 0; for(let t = 1; t <= N; t++) s += (inst - B - shx) / Math.pow(1 + RATE, t); return +s.toFixed(2); };
+  const sim = (N, amt) => schedule({prod:PK, mode, amt, terms:N, inst, shareM:B, exFix:shx});
+  let best = null;
+  if(inst > 0){
+    for(let N = 1; N <= maxN; N++){ const amt = amtOf(N); if(!(amt > 0)) continue; const s = sim(N, amt); let err;
+      if(rfRow) err = Math.abs(amt - rfRow.refi.N);
+      else if(kel >= 1 && a.debt0 > 0.005) err = Math.abs((s.rows[kel - 1] ? s.rows[kel - 1].bal : 0) - a.debt0);
+      else err = Math.abs(amt - (st.debt || a.debt0));
+      if(!best || err < best.err - 0.0001) best = {N, amt, err}; }
+  }
+  const p1 = nwDate5(p1m);
+  if(!best) return {amt:r2(a.debt0 || st.debt), terms:estTerms(a.debt0 || st.debt, inst, B) || 36, inst, shareM:B, mode, exFix:shx, p1, d:p1, err:null, conf:"est"};
+  return {amt:rfRow ? r2(rfRow.refi.N) : r2(best.amt), terms:best.N, inst, shareM:B, mode, exFix:shx, p1, d:p1, err:r2(best.err), conf:best.err <= 1 ? "ok" : best.err <= 100 ? "near" : "est"};
+}
+function nwConDraft(x, k){
+  const g = nwConGuess(x, k), c = {id:"NC" + Math.random().toString(36).slice(2, 8), no:x.no, prod:NLP[k], k, d:g.d, p1:g.p1, amt:g.amt, terms:g.terms, inst:g.inst, shareM:g.shareM,
+    mode:g.mode, exFix:g.exFix, g1:"", g2:"", open:0, legacy:false, ben:{}, want:0, conf:g.conf, fromNW:true};
+  nwCons().push(c); c.code = nwConCode(c); return c;
+}
+/* ตรวจร่างสัญญา: ตารางผ่อนตามสัญญานี้ ณ ธ.ค.68 (หรือตอนนี้ ถ้าเริ่มหลังปีใหม่) ตรงกับหนี้ในทะเบียนหรือไม่ */
+function nwConCheck(c){
+  const x = NW.person(c.no); if(!x) return null; const a = nwAcct(x, c.k || (c.prod === "ดูแลกัน" ? "dk" : "sam")), per = nwIsoPer(c.p1); if(!per) return null;
+  const kel = pNum(P_ANCHOR) - pNum(per), st = nwStateA(a), s = schedule(c);
+  if(kel >= 1 && a.debt0 > 0.005) return {at:"ธ.ค.68", sched:(s.rows[kel - 1] ? s.rows[kel - 1].bal : 0), reg:a.debt0};
+  const last = st.last; if(!last) return null; const n = pNum(last) - pNum(per) + 1; if(n < 1) return null;
+  return {at:thPer(last), sched:(s.rows[n - 1] ? s.rows[n - 1].bal : 0), reg:st.debt};
+}
+function nwConDocs(c, pick, mode){
+  const gN = PROD[c.prod].guar === 2 ? 2 : 1;
+  if(mode === "short") return contractHTML(c, capOf(c), !!pick.sched);
+  let out = ""; if(pick.loan) out += docLoan(c);
+  if(pick.guar) for(let i = 1; i <= gN; i++) out += docGuar(c, i);
+  if(pick.consent) for(let i = 1; i <= gN; i++) out += docConsent(c, i);
+  if(pick.sched) out += docSched(c); return out;
+}
+function nwRetroHTML(){
+  const people = NW.people(), cons = nwCons(), f = S.nrf || "all", D = S.ncd || (S.ncd = {loan:1, guar:1, consent:1, sched:1, mode:"full"});
+  const need = []; people.forEach(x => ["sam", "dk"].forEach(k => { if(nwStateA(nwAcct(x, k)).debt > 0.005 && !nwCon(x.no, NLP[k])) need.push({x, k}); }));
+  const nS = need.filter(o => o.k === "sam").length, nD = need.filter(o => o.k === "dk").length;
+  const list = cons.filter(c => f === "all" || (f === "sam") === (c.prod === "สามัญ")).sort((u, v) => String(u.no).localeCompare(String(v.no), "th", {numeric:true}) || u.prod.localeCompare(v.prod));
+  const opts = sel => `<option value="">—</option>` + people.map(p => `<option value="${esc(p.no)}" ${p.no === sel ? "selected" : ""}>${esc(p.no)} ${esc(p.name)}</option>`).join("");
+  const sel = list.filter(c => c.sel !== false), noG = list.filter(c => { const P = PROD[c.prod]; return (P.guar >= 1 && !c.g1) || (P.guar >= 2 && !c.g2); }).length;
+  const per = new Set(); list.forEach(c => [c.no, c.g1, c.g2].forEach(n => n && per.add(n)));
+  const noProf = [...per].filter(n => !prof(n).cid || !prof(n).addr).length;
+  const inp = (c, f2, w, type) => `<input class="ce" type="${type || "number"}" step="0.01" data-ncf="${c.id}|${f2}" value="${esc(c[f2] === undefined || c[f2] === 0 && f2 === "exFix" ? "" : c[f2])}" style="width:${w}px">`;
+  return `<p class="hint" style="margin:0 0 8px">ทำสัญญาให้ผู้กู้ที่มีหนี้อยู่แล้วแต่ยังไม่มีสัญญา — ระบบถอดวงเงินและจำนวนงวดจากงวดละ หุ้น และหนี้ยกมาในทะเบียนให้ ตรวจแก้ได้ แล้วใส่ผู้ค้ำและพิมพ์ชุดสัญญา (สัญญาเงินกู้ · สัญญาค้ำ · หนังสือยินยอม · ตารางชำระหนี้)</p>
+    <div class="bar" style="margin:0 0 8px;flex-wrap:wrap">
+      <span class="pill ${need.length ? "red" : "grn"}">ยังไม่มีสัญญา: สามัญ ${nS} · ดูแลกัน ${nD}</span>
+      <button id="nr_make" ${need.length ? "" : "disabled"}>เตรียมร่างสัญญาให้ทุกคนที่ยังไม่มี (${need.length})</button>
+      <select id="nr_f" style="width:auto"><option value="all">แสดงทุกประเภท</option><option value="sam" ${f === "sam" ? "selected" : ""}>สามัญ</option><option value="dk" ${f === "dk" ? "selected" : ""}>ดูแลกัน</option></select>
+      <span class="hint">${list.length} ร่าง · เลือกพิมพ์ ${sel.length}${noG ? ` · <b style="color:var(--danger)">ขาดผู้ค้ำ ${noG} ฉบับ</b>` : ""}</span></div>
+    ${list.length ? `<div class="tbl" style="max-height:440px" id="nr_tbl"><table><thead><tr><th></th><th class="l">สมาชิก</th><th class="l">ประเภท</th><th>หนี้คงเหลือ</th><th>วงเงิน</th><th>งวด</th><th>งวดละ</th><th>หุ้นประจำ</th><th class="l">วันที่ทำสัญญา</th><th class="l">งวดแรก</th><th class="l">เลขที่สัญญา</th><th class="l">ผู้ค้ำ 1</th><th class="l">ผู้ค้ำ 2</th><th class="l">ตรวจ</th><th></th></tr></thead><tbody>
+      ${list.map(c => { const x = NW.person(c.no), a = x ? nwAcct(x, c.k || (c.prod === "ดูแลกัน" ? "dk" : "sam")) : null, P = PROD[c.prod], ck = nwConCheck(c), df = ck ? r2(ck.sched - ck.reg) : null;
+        return `<tr><td><input type="checkbox" data-ncs="${c.id}" ${c.sel !== false ? "checked" : ""}></td><td class="l"><span class="no">${esc(c.no)}</span><b>${esc(nwNmOf(c.no))}</b></td><td class="l">${c.prod}</td>
+          <td class="amt">${a ? B(nwStateA(a).debt) : "—"}</td><td class="amt">${inp(c, "amt", 96)}</td><td class="amt">${inp(c, "terms", 52)}</td><td class="amt">${inp(c, "inst", 84)}</td><td class="amt">${inp(c, "shareM", 70)}</td>
+          <td class="l"><input class="ce ced" type="date" data-ncf="${c.id}|d" value="${esc(c.d || "")}"></td><td class="l"><input class="ce ced" type="date" data-ncf="${c.id}|p1" value="${esc(c.p1 || "")}"></td>
+          <td class="l"><input class="ce cen" type="text" data-ncf="${c.id}|code" value="${esc(c.code || "")}" style="width:170px"></td>
+          <td class="l">${P.guar >= 1 ? `<select data-ncf="${c.id}|g1" style="width:150px">${opts(c.g1)}</select>` : "—"}</td><td class="l">${P.guar >= 2 ? `<select data-ncf="${c.id}|g2" style="width:150px">${opts(c.g2)}</select>` : "—"}</td>
+          <td class="l">${df === null ? '<span class="pill amb">ประมาณ</span>' : Math.abs(df) <= 1 ? `<span class="pill grn" title="ตารางผ่อนตามสัญญานี้ ณ ${ck.at} = ${B(ck.sched)} ตรงกับทะเบียน ${B(ck.reg)}">ตรงทะเบียน</span>` : `<span class="pill ${Math.abs(df) <= 100 ? "amb" : "red"}" title="ตารางผ่อน ณ ${ck.at} = ${B(ck.sched)} · ทะเบียน ${B(ck.reg)}">ต่าง ${B(df)}</span>`}</td>
+          <td style="white-space:nowrap"><button class="ghost sm" data-nrp="${c.id}">พิมพ์</button> <button class="ghost sm" data-ncr="${c.id}" title="ถอดวงเงิน/งวดจากทะเบียนใหม่อีกครั้ง">⟲</button> <button class="del" data-ncd="${c.id}" title="ลบร่างนี้">×</button></td></tr>`; }).join("")}
+      </tbody></table></div>
+      <div class="bar" style="margin-top:8px;flex-wrap:wrap"><span class="hint">เอกสารที่จะพิมพ์:</span>
+        ${[["loan", "สัญญาเงินกู้"], ["guar", "สัญญาค้ำประกัน"], ["consent", "หนังสือยินยอมค้ำ"], ["sched", "ตารางชำระหนี้"]].map(([k, t]) => `<label class="rlf" style="margin:0"><input type="checkbox" data-ndk="${k}" ${D[k] ? "checked" : ""}> ${t}</label>`).join("")}
+        <select id="nr_mode" style="width:auto"><option value="full" ${D.mode === "full" ? "selected" : ""}>ข้อความครบตามต้นฉบับ</option><option value="short" ${D.mode === "short" ? "selected" : ""}>ฉบับย่อ</option></select>
+        <button id="nr_print" style="margin-left:auto" ${sel.length ? "" : "disabled"}>พิมพ์ชุดสัญญาที่เลือก (${sel.length} คน)</button></div>
+      <details class="opn" style="margin-top:8px"><summary>ข้อมูลบุคคลที่ใช้ในสัญญา — ผู้กู้และผู้ค้ำ (${per.size} คน${noProf ? ` · ขาดเลขบัตร/ที่อยู่ ${noProf} คน` : ""})</summary>
+        <p class="hint" style="margin:6px 0">กรอกครั้งเดียว ระบบจำไว้ใช้ทุกสัญญา — ที่เว้นว่างไว้จะพิมพ์เป็นช่องให้เขียนมือ</p>
+        <div class="tbl" style="max-height:300px"><table><thead><tr><th class="l">สมาชิก</th><th class="l">เลขบัตรประชาชน</th><th class="l">ตำแหน่ง</th><th class="l">โทร</th><th class="l">ที่อยู่ตามทะเบียนบ้าน</th></tr></thead><tbody>
+          ${[...per].sort().map(no => { const p = prof(no); return `<tr><td class="l"><span class="no">${esc(no)}</span>${esc(nwNmOf(no))}</td>
+            ${["cid", "pos", "tel", "addr"].map(f2 => `<td><input data-npf="${esc(no)}:${f2}" value="${esc(p[f2] || "")}" ${f2 === "addr" ? 'style="min-width:260px"' : 'style="width:130px"'}></td>`).join("")}</tr>`; }).join("")}</tbody></table></div></details>`
+      : '<p class="hint">ยังไม่มีร่างสัญญา — กดปุ่ม «เตรียมร่างสัญญา» ด้านบน</p>'}`;
 }
 
 function drawNWLoanDash(){
@@ -3735,13 +3827,14 @@ function drawNWLoanDash(){
   const tot = r2(R.reduce((u, o) => u + o.short, 0)), left = Math.max(0, PROD["ดูแลกัน"].quota - sum(dk));
   el.innerHTML = `<div class="nwscreen"><div class="ds-head"><div><div class="eyebrow" style="margin:0">ระบบกู้ยืมและติดตามหนี้</div>
       <div class="hint">ขอกู้สามัญ/ดูแลกัน · ติดตามหนี้ค้าง · ทะเบียนสัญญา — ตัวเลขหนี้จากทะเบียนใหม่ ข้อมูลสัญญาจากระบบเก่า</div></div>
-      <div class="ds-ctl"><button class="ghost sm" data-nlg="nl_sam">ขอกู้สามัญ</button><button class="ghost sm" data-nlg="nl_dk">ขอกู้ดูแลกัน</button><button class="ghost sm" data-nlg="nl_trk">ติดตามหนี้</button><button class="ghost sm" data-nlg="nl_con">ทะเบียนสัญญา</button></div></div>
+      <div class="ds-ctl"><button class="ghost sm" data-nlg="nl_sam">ขอกู้สามัญ</button><button class="ghost sm" data-nlg="nl_dk">ขอกู้ดูแลกัน</button><button class="ghost sm" data-nlg="nl_trk">ติดตามหนี้</button><button class="ghost sm" data-nlg="nl_ret">ทำสัญญาย้อนหลัง</button><button class="ghost sm" data-nlg="nl_con">ทะเบียนสัญญา</button></div></div>
     <div class="ds-kpis">
       <div class="ds-kpi" style="border-top-color:#2a78d6"><div class="k">สินเชื่อสามัญ</div><div class="v">${nB(sam)} <small>ราย</small></div><div class="s">หนี้คงเหลือ ${B0(sum(sam))} บาท</div></div>
       <div class="ds-kpi" style="border-top-color:#eb6834"><div class="k">สินเชื่อดูแลกัน</div><div class="v">${nB(dk)} <small>/ ${PROD["ดูแลกัน"].slots} ราย</small></div><div class="s">หนี้ ${B0(sum(dk))} · โควตาเหลือ ${B0(left)}</div></div>
       <div class="ds-kpi" style="border-top-color:${R.length ? "#B4452B" : "#1baf7a"}"><div class="k">ค้างชำระ</div><div class="v" style="color:${R.length ? "#B4452B" : "#0F6B4A"}">${R.length} <small>สัญญา</small></div><div class="s">ยอดค้าง ${B0(tot)} บาท</div></div></div>
     ${nwLoanCardHTML("sam")}${nwLoanCardHTML("dk")}
     <div class="card" id="nl_trk"><div class="eyebrow">ติดตามหนี้ค้าง</div>${nwTrackHTML(R)}</div>
+    <div class="card" id="nl_ret"><div class="eyebrow">ทำสัญญาย้อนหลัง — ผู้กู้ที่ยังไม่มีสัญญา</div>${nwRetroHTML()}</div>
     <div class="card" id="nl_con"><div class="eyebrow">ทะเบียนสัญญา</div>${nwConHTML()}</div></div>
     <div class="nwdoc" id="nwdoc"></div>`;
   const redraw = () => { const y = window.scrollY; drawNWLoanDash(); window.scrollTo(0, y); };
@@ -3768,6 +3861,31 @@ function drawNWLoanDash(){
   if($("nt_csv")) $("nt_csv").onclick = () => csvOut("kbk-ค้างชำระ-เว็บใหม่.csv", [["ติดตามหนี้ค้าง", ["เลขสมาชิก", "ชื่อ", "สัญญา", "งวดละ", "จำนวนงวดที่ขาด", "ค้างติดต่อกัน", "ยอดค้าง", "หนี้คงเหลือ", "งวดที่ขาด"],
     R.map(o => [o.x.no, o.x.name, o.pk, f2(o.inst), o.rows.length, o.missed, f2(o.short), f2(o.debt), o.rows.map(w => thPer(w.p)).join(" ")])]]);
   drawLetter();
+  // ทำสัญญาย้อนหลัง
+  const redrawR = () => { const t = $("nr_tbl"), q = t ? [t.scrollLeft, t.scrollTop] : null; redraw(); const t2 = $("nr_tbl"); if(q && t2){ t2.scrollLeft = q[0]; t2.scrollTop = q[1]; } };
+  const conOf = id => nwCons().find(q => q.id === id), dopt = () => S.ncd || (S.ncd = {loan:1, guar:1, consent:1, sched:1, mode:"full"});
+  const kOf = c => c.k || (c.prod === "ดูแลกัน" ? "dk" : "sam");
+  if($("nr_make")) $("nr_make").onclick = () => { const todo = [];
+    NW.people().forEach(x => ["sam", "dk"].forEach(k => { if(nwStateA(nwAcct(x, k)).debt > 0.005 && !nwCon(x.no, NLP[k])) todo.push([x, k]); }));
+    if(!todo.length) return;
+    if(!confirm(`เตรียมร่างสัญญาย้อนหลัง ${todo.length} ฉบับ (สามัญ ${todo.filter(o => o[1] === "sam").length} · ดูแลกัน ${todo.filter(o => o[1] === "dk").length})\n\nระบบถอดวงเงินและจำนวนงวดจากทะเบียนให้ — ตรวจแก้และใส่ผู้ค้ำก่อนพิมพ์`)) return;
+    todo.forEach(([x, k]) => nwConDraft(x, k)); save(); redraw(); toast(`เตรียมร่างสัญญาแล้ว ${todo.length} ฉบับ — ตรวจวงเงิน/งวด แล้วใส่ผู้ค้ำ`); };
+  el.querySelectorAll("[data-ncf]").forEach(i => i.addEventListener("change", () => { const [id, f2] = i.dataset.ncf.split("|"), c = conOf(id); if(!c) return;
+    c[f2] = ["amt", "terms", "inst", "shareM"].includes(f2) ? (i.value === "" ? 0 : +i.value) : i.value; if(f2 === "terms") c.terms = Math.max(1, Math.round(c.terms)); c.conf = ""; save(); redrawR(); }));
+  el.querySelectorAll("[data-ncs]").forEach(i => i.onchange = () => { const c = conOf(i.dataset.ncs); if(c){ c.sel = i.checked; save(); redrawR(); } });
+  el.querySelectorAll("[data-ncr]").forEach(b => b.onclick = () => { const c = conOf(b.dataset.ncr), x = c && NW.person(c.no); if(!x) return;
+    const g = nwConGuess(x, kOf(c)); Object.assign(c, {amt:g.amt, terms:g.terms, inst:g.inst, shareM:g.shareM, mode:g.mode, exFix:g.exFix, p1:g.p1, d:g.d}); save(); redrawR(); toast("ถอดค่าใหม่จากทะเบียนแล้ว"); });
+  el.querySelectorAll("[data-ncd]").forEach(b => b.onclick = () => { if(!confirm("ลบร่างสัญญานี้?")) return; S.nw.cons = nwCons().filter(q => q.id !== b.dataset.ncd); save(); redrawR(); });
+  el.querySelectorAll("[data-nrp]").forEach(b => b.onclick = () => { const c = conOf(b.dataset.nrp); if(c) nwPrint(nwConDocs(c, dopt(), dopt().mode)); });
+  el.querySelectorAll("[data-ndk]").forEach(i => i.onchange = () => { dopt()[i.dataset.ndk] = i.checked ? 1 : 0; });
+  if($("nr_mode")) $("nr_mode").onchange = e => { dopt().mode = e.target.value; };
+  if($("nr_f")) $("nr_f").onchange = e => { S.nrf = e.target.value; redraw(); };
+  if($("nr_print")) $("nr_print").onclick = () => { const f = S.nrf || "all", sel = nwCons().filter(c => c.sel !== false && (f === "all" || (f === "sam") === (c.prod === "สามัญ")))
+      .sort((u, v) => String(u.no).localeCompare(String(v.no), "th", {numeric:true}) || u.prod.localeCompare(v.prod));
+    if(!sel.length) return; const D = dopt(), noG = sel.filter(c => { const P = PROD[c.prod]; return (P.guar >= 1 && !c.g1) || (P.guar >= 2 && !c.g2); }).length;
+    if(!confirm(`พิมพ์ชุดสัญญา ${sel.length} ฉบับ${noG ? `\n⚠ ${noG} ฉบับยังไม่มีผู้ค้ำ — สัญญาค้ำของฉบับนั้นจะไม่ถูกพิมพ์` : ""}\n\nหน้ากระดาษจะมากเพราะต่อฉบับหลายหน้า — ถ้าสะดวกพิมพ์ทีละกลุ่ม ให้ติ๊กเลือกเฉพาะคนที่ต้องการ`)) return;
+    nwPrint(sel.map(c => nwConDocs(c, D, D.mode)).join("")); };
+  el.querySelectorAll("[data-npf]").forEach(i => i.addEventListener("change", () => { const [no, f2] = i.dataset.npf.split(":"); S.profile = S.profile || {}; S.profile[no] = S.profile[no] || {}; S.profile[no][f2] = i.value.trim(); save(); }));
   // ทะเบียนสัญญา
   if($("nc_f")) $("nc_f").onchange = e => { S.ncf = e.target.value; redraw(); };
   if($("nc_q")) $("nc_q").oninput = e => { S.ncq = e.target.value; const y = window.scrollY; drawNWLoanDash(); window.scrollTo(0, y); const i = $("nc_q"); i.focus(); i.setSelectionRange(i.value.length, i.value.length); };
@@ -6952,9 +7070,9 @@ function docLoan(c){
 
 /* ---------- 2) สัญญาค้ำประกัน (5 หน้า ต่อผู้ค้ำ 1 คน) ---------- */
 function docGuar(c, idx){
-  const m=DB.members.find(z=>z.no===c.no)||{name:"",no:c.no};
+  const m=DB.members.find(z=>z.no===c.no)||{name:memName(c.no),no:c.no};
   const gno=[c.g1,c.g2][idx-1]; if(!gno) return "";
-  const g=DB.members.find(z=>z.no===gno)||{no:gno,name:""};
+  const g=DB.members.find(z=>z.no===gno)||{no:gno,name:memName(gno)};
   const cap=capOf(c);
   const code = c.code ? `<b class="f">${esc(c.code)}</b>` : `กบขนข – 69 / <span class="dt" style="min-width:110px"></span>`;
 
@@ -7047,9 +7165,9 @@ function docGuar(c, idx){
 
 /* ---------- 3) หนังสือยินยอมเป็นผู้ค้ำประกัน (2 หน้า) ---------- */
 function docConsent(c, idx){
-  const m=DB.members.find(z=>z.no===c.no)||{name:"",no:c.no};
+  const m=DB.members.find(z=>z.no===c.no)||{name:memName(c.no),no:c.no};
   const gno=[c.g1,c.g2][idx-1]; if(!gno) return "";
-  const g=DB.members.find(z=>z.no===gno)||{no:gno,name:""}; const p=prof(g.no);
+  const g=DB.members.find(z=>z.no===gno)||{no:gno,name:memName(gno)}; const p=prof(g.no);
   const cap=capOf(c), P=PROD[c.prod];
   const isDK = c.prod==="ดูแลกัน";
 
