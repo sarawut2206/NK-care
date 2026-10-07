@@ -351,7 +351,7 @@ function buildSheets(){
         rs.filter(function(r){ return prodOf(r, x) === k; }).forEach(function(r){
           debt = has_(r.bal) ? +r.bal : r2_(debt - n_(r.pri) + n_(r.loan));
           var s2 = n_(r.sh) + n_(r.shx) + n_(r.sv);           // หุ้นประจำ + หุ้นเพิ่ม + สะสมเพิ่ม
-          sh = r2_(sh + s2); paid += n_(r.m); it += n_(r.int); dep += s2; });
+          sh = r2_(sh + s2 - n_(r.cv)); paid += n_(r.m); it += n_(r.int); dep += s2; });       // cv = ส่วนที่หักจากทุนเรือนหุ้นชำระส่วนที่ขาด
         o.by[k] = {a:a, debt:r2_(debt), sh:r2_(sh), paid:r2_(paid), it:r2_(it), dep:r2_(dep)};
         o.debt += debt; o.sh += sh; o.paid += paid; o.it += it; o.dep += dep; o.shM += a.shM; });
       ["debt", "sh", "paid", "it", "dep", "shM"].forEach(function(k){ o[k] = r2_(o[k]); });
