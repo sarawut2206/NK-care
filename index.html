@@ -549,17 +549,18 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   html,body{background:#fff!important;padding:0;margin:0;font-size:11px;
     -webkit-print-color-adjust:exact;print-color-adjust:exact}
   .topbar,#bnr,.mast,nav,.tools,.noprint,.card,.stats{display:none!important}
-  /* ---- พิมพ์เป็นขาวดำ: ตัวอักษรสีดำล้วน เส้นและพื้นเป็นโทนเทา ---- */
-  body,body *{color:#000!important}
-  th{background:#ECECEC!important;border-bottom:1px solid #888!important}
-  .kt th,.ksec{background:#ECECEC!important}
+  /* ---- พิมพ์สีตามจริง · ติ๊ก «พิมพ์ขาวดำ» ที่หัวหน้าเมื่อต้องการประหยัดหมึก (class bw) ---- */
+  th{background:#ECECEC!important;color:#000!important;border-bottom:1px solid #888!important}
+  .kt th,.ksec{background:#ECECEC!important;color:#000!important}
   .kt .kk,.kt.sum tr.hl td,.kt.sg tr.hl td,.kt3 tr.hl td{background:#F5F5F5!important}
-  .pt,.dtl,.calcbox,.keybox,.ack,.capbox,.warnbox,.warnbox2,.benbox{background:#fff!important;border-color:#666!important}
-  .capbox,.warnbox,.warnbox2{border-left-color:#000!important}
-  .pill{background:#fff!important;border-color:#666!important}
   .dt,.ksig .ln,.f,.fill{border-color:#000!important}
-  .klogo .mark i,.khead .mark i,.lethead .mark i{background:#000!important}
-  .klogo .mark i:nth-child(2),.khead .mark i:nth-child(2),.lethead .mark i:nth-child(2){background:#777!important}
+  body.bw,body.bw *{color:#000!important}
+  body.bw .pt,body.bw .dtl,body.bw .calcbox,body.bw .keybox,body.bw .ack,body.bw .capbox,body.bw .warnbox,body.bw .warnbox2,body.bw .benbox{background:#fff!important;border-color:#666!important}
+  body.bw .capbox,body.bw .warnbox,body.bw .warnbox2{border-left-color:#000!important}
+  body.bw .pill{background:#fff!important;border-color:#666!important}
+  body.bw .klogo .mark i,body.bw .khead .mark i,body.bw .lethead .mark i{background:#000!important}
+  body.bw .klogo .mark i:nth-child(2),body.bw .khead .mark i:nth-child(2),body.bw .lethead .mark i:nth-child(2){background:#777!important}
+  body.bw img{filter:grayscale(1)}
   .eyebrow{display:none}
   .receipt .eyebrow{display:flex!important;margin:14px 0 6px;color:var(--ink);font-weight:600}
   /* โหมดปกติ = ใบเสร็จ (แท็บ 3) */
@@ -603,9 +604,10 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-77</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-78</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
+    <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
     <button class="ghost sm" id="saveNow" title="บันทึกขึ้น Google Sheets เดี๋ยวนี้ (ปกติบันทึกให้เองทุกครั้งที่กรอก)">☁ บันทึกขึ้น Google Sheets</button>
     <button class="ghost sm" id="exp">ส่งออก JSON</button>
     <button class="ghost sm" id="csv">ส่งออก CSV</button>
@@ -8688,6 +8690,8 @@ document.querySelectorAll("nav b[data-t]").forEach(b => b.onclick = () => {
   catch(err){ const el = $("tab"+tab); if(el) el.innerHTML = '<div class="card"><b style="color:var(--red)">แท็บนี้แสดงผลไม่ได้</b>'
     + '<p class="hint">' + esc(err.message||String(err)) + '</p></div>'; }
 });
+try{ if(localStorage.getItem("kbk_bw") === "1"){ document.body.classList.add("bw"); $("bwTog").checked = true; } }catch(e){}
+$("bwTog").onchange = e => { document.body.classList.toggle("bw", e.target.checked); try{ localStorage.setItem("kbk_bw", e.target.checked ? "1" : "0"); }catch(err){} };
 boot();
 
 </script>
