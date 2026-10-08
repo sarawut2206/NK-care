@@ -274,6 +274,8 @@ th.svcol{background:#FFF4D6!important}
 .pgno{position:absolute;top:12px;right:22px;font-size:10px;color:var(--soft)}
 .pgsig{position:absolute;bottom:12px;right:24px;font-size:10px;color:var(--soft)}
 .klogo{text-align:center;margin-bottom:4px}
+.lgi{height:14mm;width:auto;display:block;margin:0 auto}.klogo .lgi{height:13mm;margin-bottom:2px}.khead .lgi{margin-bottom:5px}.lethead .lgi{height:16mm;margin-bottom:6px}
+.nwr .r-lg{display:flex;align-items:center;gap:14px}.nwr .r-lg .lgi{height:18mm;margin:0;flex:none}
 .klogo .mark{display:inline-flex;gap:3px;align-items:flex-end}
 .klogo .mark i{display:block;width:6px;border-radius:6px 6px 2px 2px}
 .klogo .mark i:nth-child(1){height:13px;background:var(--red)}
@@ -563,6 +565,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   body.bw .pt,body.bw .dtl,body.bw .calcbox,body.bw .keybox,body.bw .ack,body.bw .capbox,body.bw .warnbox,body.bw .warnbox2,body.bw .benbox{background:#fff!important;border-color:#666!important}
   body.bw .capbox,body.bw .warnbox,body.bw .warnbox2{border-left-color:#000!important}
   body.bw .pill{background:#fff!important;border-color:#666!important}
+  body.bw .lgi{filter:grayscale(1)}
   body.bw .klogo .mark i,body.bw .khead .mark i,body.bw .lethead .mark i{background:#000!important}
   body.bw .klogo .mark i:nth-child(2),body.bw .khead .mark i:nth-child(2),body.bw .lethead .mark i:nth-child(2){background:#777!important}
   body.bw img{filter:grayscale(1)}
@@ -609,7 +612,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-83</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-84</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -3437,10 +3440,10 @@ const pct = v => (+v).toFixed(2) + "%";
 function nwSumDoc(x, D){
   const s = nwSum(x, D), today = nwToday(), R = nwRangeShort(D);
   return `<div class="receipt nwr">
-    <div class="r-head"><div>
+    <div class="r-head"><div class="r-lg"><img class="lgi" src="${NW_LOGO}" alt="กบข.นข."><div>
         <div class="org">${ORGF} (กบข.นข.)</div>
         <div class="title">ใบสรุปชำระรายเดือน + สรุปปันผล (${nwRangeLbl(D)})</div>
-        <div class="badges"><span class="badge ${s.loan?"b-borrow":"b-save"}">${s.loan?"ผู้กู้":"ผู้ฝาก"}</span></div></div>
+        <div class="badges"><span class="badge ${s.loan?"b-borrow":"b-save"}">${s.loan?"ผู้กู้":"ผู้ฝาก"}</span></div></div></div>
       <div class="meta"><div><b>เลขที่เอกสาร:</b> KB-${esc(x.no)}-${nwAdYm(D.from)}-${nwAdYm(D.to)}</div>
         <div><b>วันที่ออก:</b> ${thDay(today)}</div>
         <div><b>ช่วงเดือน:</b> ${thPer(D.from)} – ${thPer(D.to)} (${s.months} เดือน)</div></div></div>
@@ -6762,7 +6765,7 @@ function slipHTML(m){
 
   return `<div class="receipt">
   <div class="lethead">
-    <div class="mark"><i></i><i></i><i></i></div>
+    <img class="lgi" src="${NW_LOGO}" alt="กบข.นข.">
     <div class="org">กลุ่มบุคคลเพื่อบริหารจัดการเงินของข้าราชการครูและบุคลากร (กบข.นข.)
       <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีรับชำระ 206-2-63177-8</small></div>
   </div>
@@ -7289,7 +7292,7 @@ function contractHTML(c, cap, withSch){
   const ver = c.prod==="ดูแลกัน" ? "ข้อกำหนดมาตรฐานสินเชื่อดูแลกัน ฉบับ 1/2569" : "ข้อกำหนดมาตรฐานสินเชื่อสามัญ ฉบับ 1/2569";
 
   const head = t => `<div class="khead">
-    <div class="mark"><i></i><i></i><i></i></div>
+    <img class="lgi" src="${NW_LOGO}" alt="กบข.นข.">
     <div class="korg">กลุ่มบุคคลเพื่อบริหารจัดการเงินของข้าราชการครูและบุคลากร (กบข.นข.)
       <small>โรงเรียนมัธยมวัดหนองแขม</small></div>
     <div class="ktitle">${t}</div></div>`;
@@ -7490,8 +7493,7 @@ function thDate(d){ if(!d) return `………….. เดือน …………�
 function pg(n,tot,body,sig){ return `<div class="kpage">
   <div class="pgno">หน้า ${n} จาก ${tot}</div>${body}
   <div class="pgsig">ลายเซ็น ${sig} .............................</div></div>`; }
-function logo(){ return `<div class="klogo"><span class="mark"><i></i><i></i><i></i></span>
-  <span class="wm">กบข.นข.</span></div>`; }
+function logo(){ return `<div class="klogo"><img class="lgi" src="${NW_LOGO}" alt="กบข.นข."></div>`; }
 function party(role, name, no, p){ return `<div class="pt">
   <div>${role} <b class="f">${esc(name||"")}</b> ${no?`เลขที่สมาชิก <b class="f">${no}</b>`:""}</div>
   <div>เลขประจำตัวประชาชน: ${CID(p.cid)} &nbsp; ตำแหน่ง: ${V(p.pos,130)} &nbsp; โทร: ${V(p.tel,110)}</div>
