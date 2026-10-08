@@ -603,7 +603,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-76</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-77</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <button class="ghost sm" id="saveNow" title="บันทึกขึ้น Google Sheets เดี๋ยวนี้ (ปกติบันทึกให้เองทุกครั้งที่กรอก)">☁ บันทึกขึ้น Google Sheets</button>
@@ -3655,6 +3655,13 @@ function nwLoanCardHTML(k){
   </div>`;
 }
 
+/* ผู้ค้ำของสัญญา: ตามสัญญา (ทำย้อนหลัง/ระบบเก่า) ก่อน ถ้าไม่มีใช้ที่เลือกไว้ในหน้าหนังสือเตือน (S.nw.guar) */
+function nwGuarOf(no, pk){ const P = PROD[pk], c = nwCon(no, pk), g = (S.nw.guar || {})[no + "|" + pk] || [];
+  return [(c && c.g1) || g[0], (c && c.g2) || g[1]].filter(Boolean).slice(0, P.guar); }
+function nwSetGuar(no, pk, i, v){
+  const c = nwCon(no, pk); if(c) c[i ? "g2" : "g1"] = v;
+  if(!S.nw.guar) S.nw.guar = {}; const a = S.nw.guar[no + "|" + pk] || ["", ""]; a[i] = v; S.nw.guar[no + "|" + pk] = a;
+}
 function nwTrackHTML(R){
   const cnt = k => R.filter(o => nwLv(o.missed) === k).length, tot = r2(R.reduce((u, o) => u + o.short, 0));
   if(!S.ntk) S.ntk = {sel:"", kind:"warn", no:"", d:new Date().toISOString().slice(0, 10), days:15, fee:""};
@@ -3669,29 +3676,35 @@ function nwTrackHTML(R){
     <div class="bar" style="margin:0 0 6px"><span class="hint">เรียงจากค้างนานที่สุด · นับตั้งแต่ ม.ค.69 เฉพาะงวดที่เลยกำหนดแล้วและไม่มีรายการชำระ ติดต่อกันถึงงวดล่าสุด (ตรงกับ «ค้าง n งวด» ในทะเบียน) · จ่ายแล้วเริ่มนับใหม่ · งวดที่ติ๊ก «ผ่อนผัน» หรือหักหุ้นชดเชยแล้วไม่นับ</span>
       <button class="ghost sm" id="nt_csv" style="margin-left:auto">ส่งออก CSV</button></div>
     <div class="tbl" style="max-height:420px"><table><thead><tr><th class="l">สมาชิก</th><th class="l">สัญญา</th><th>ค้าง</th><th class="l">งวดที่ขาด</th><th>ยอดค้าง</th><th>หนี้คงเหลือ</th><th class="l">ผู้ค้ำ</th><th></th></tr></thead><tbody>
-      ${R.map(o => { const k = nwLv(o.missed), tel = (prof(o.x.no) || {}).tel, c0 = nwCon(o.x.no, o.pk), gs = c0 ? [c0.g1, c0.g2].filter(Boolean) : [];
+      ${R.map(o => { const k = nwLv(o.missed), tel = (prof(o.x.no) || {}).tel, c0 = nwCon(o.x.no, o.pk), gs = nwGuarOf(o.x.no, o.pk);
         return `<tr><td class="l ${k >= 2 ? "sevr" : "sevy"}"><span class="no">${esc(o.x.no)}</span><b>${esc(o.x.name)}</b>${tel ? `<div class="hint">โทร ${esc(tel)}</div>` : ""}</td>
           <td class="l">สินเชื่อ${o.pk}<div class="hint">งวดละ ${B(o.inst)}</div></td>
           <td class="amt"><span class="pill ${k >= 2 ? "red" : "yel"}">ขาด ${o.rows.length} งวด</span><div class="hint">${o.missed ? `ติดต่อกัน ${o.missed} งวดล่าสุด` : "งวดล่าสุดชำระแล้ว"}</div></td>
           <td class="l" style="white-space:normal;max-width:260px">${o.rows.map(w => `${thPer(w.p)}${w.got > 0 ? ` <span class="hint">(รับ ${B0(w.got)})</span>` : ""}`).join(" · ")}</td>
           <td class="amt" style="color:var(--red)"><b>${B(o.short)}</b></td><td class="amt">${B(o.debt)}</td>
           <td class="l" style="white-space:normal;max-width:190px">${gs.map(q => `${esc(q)} ${esc(nwNmOf(q))}`).join("<br>") || "—"}</td>
-          <td><button class="ghost sm" data-nlt="${esc(key(o))}">ออกหนังสือเตือน</button></td></tr>`; }).join("")
+          <td style="white-space:nowrap">${gs.length ? `<button class="ghost sm" data-nlg2="${esc(key(o))}" title="ออกหนังสือแจ้งผู้ค้ำประกัน">แจ้งผู้ค้ำ</button> ` : ""}<button class="ghost sm" data-nlt="${esc(key(o))}">ออกหนังสือเตือน</button></td></tr>`; }).join("")
         || '<tr><td colspan="8" class="hint" style="text-align:left;padding:14px">ไม่มีผู้ค้างชำระ</td></tr>'}</tbody></table></div>
     ${R.length ? `<div class="card" style="margin-top:12px" id="nt_letter"><div class="eyebrow">ออกหนังสือเตือน<button class="ghost sm" id="nt_print" style="margin-left:auto">พิมพ์หนังสือ</button></div>
       <div class="pf"><div style="grid-column:span 2"><label>สัญญา</label><select data-ntk="sel">${R.map(o => `<option value="${esc(key(o))}" ${key(o) === T.sel ? "selected" : ""}>${esc(o.x.no)} · ${esc(o.x.name)} · ${o.pk} · ค้าง ${o.rows.length} งวด</option>`).join("")}</select></div>
-        <div><label>ประเภทหนังสือ</label><select data-ntk="kind"><option value="warn" ${T.kind === "warn" ? "selected" : ""}>แจ้งเตือนถึงผู้กู้</option><option value="guar" ${T.kind === "guar" ? "selected" : ""}>แจ้งผู้ค้ำประกัน</option><option value="final" ${T.kind === "final" ? "selected" : ""}>ทวงถามครั้งสุดท้าย</option></select></div>
+        <div><label>ประเภทหนังสือ</label><select data-ntk="kind"><option value="warn" ${T.kind === "warn" ? "selected" : ""}>แจ้งเตือนถึงผู้กู้</option><option value="guar" ${T.kind === "guar" ? "selected" : ""}>แจ้งผู้ค้ำประกัน</option><option value="all" ${T.kind === "all" ? "selected" : ""}>ชุดครบ: ผู้กู้ + ผู้ค้ำทุกคน</option><option value="final" ${T.kind === "final" ? "selected" : ""}>ทวงถามครั้งสุดท้าย</option></select></div>
         <div><label>เลขที่หนังสือ</label><input data-ntk="no" value="${esc(T.no)}" placeholder="กบข.นข. 69/…"></div>
         <div><label>ลงวันที่</label><input type="date" data-ntk="d" value="${esc(T.d)}"></div>
         <div><label>ให้ชำระภายใน (วัน)</label><input type="number" data-ntk="days" value="${T.days}"></div>
         <div><label>ค่าธรรมเนียมทวงถาม (บาท)</label><input type="number" step="0.01" data-ntk="fee" value="${esc(T.fee)}" placeholder="ว่าง = 5% ของงวด ไม่เกิน 100"></div></div>
+      ${(() => { const so = R.find(o => key(o) === T.sel); if(!so) return ""; const P = PROD[so.pk], gs = nwGuarOf(so.x.no, so.pk), ppl = NW.people();
+        const opts = sel => `<option value="">— เลือกผู้ค้ำ —</option>` + ppl.filter(q => q.no !== so.x.no).map(q => `<option value="${esc(q.no)}" ${q.no === sel ? "selected" : ""}>${esc(q.no)} ${esc(q.name)}</option>`).join("");
+        const need = (T.kind === "guar" || T.kind === "all") && !gs.length;
+        return `<div class="pf" style="margin-top:6px"><div style="grid-column:span 4"><label>ผู้ค้ำประกันของสัญญานี้ (สินเชื่อ${so.pk} ต้องมีผู้ค้ำ ${P.guar} คน) — เลือกที่นี่ได้ ระบบจำไว้ใช้ออกหนังสือแจ้งผู้ค้ำ${need ? ' <b style="color:var(--danger)">· ยังไม่ได้ระบุผู้ค้ำ หนังสือแจ้งผู้ค้ำจะเว้นชื่อไว้</b>' : ""}</label></div>
+          ${[0, 1].filter(i => i < P.guar).map(i => `<div style="grid-column:span 2"><label>ผู้ค้ำที่ ${i + 1}</label><select data-ngu="${esc(so.x.no)}|${so.pk}|${i}">${opts(gs[i])}</select></div>`).join("")}</div>`; })()}
       <div id="nt_doc"></div></div>` : ""}`;
 }
 
 /* หนังสือเตือน — ดัดแปลงจากระบบเก่า ใช้ตัวเลขจากทะเบียนใหม่ · ข้อมูลสัญญา/ผู้ค้ำดึงจากสัญญาเดิมถ้ามี */
 function nwWarnDoc(o, kind, no, d, days, feeIn){
+  if(kind === "all") return nwWarnDoc(o, "warn", no, d, days, feeIn) + nwWarnDoc(o, "guar", no, d, days, feeIn);          // ผู้กู้ ๑ ฉบับ + ผู้ค้ำคนละ ๑ ฉบับ
   const m = o.x, c0 = nwCon(m.no, o.pk), P = PROD[o.pk], p = prof(m.no), n = o.rows.length, miss = o.missed;
-  const gs = (c0 ? [c0.g1, c0.g2] : []).filter(Boolean).slice(0, P.guar).map(g => ({no:g, name:nwNmOf(g)}));
+  const gs = nwGuarOf(m.no, o.pk).map(g => ({no:g, name:nwNmOf(g)}));
   const fee = has(feeIn) && feeIn !== "" ? num(feeIn) : Math.min(100, r2(o.inst * 0.05)), pen = miss >= 3 ? r2(o.debt * 0.012 * (miss - 2)) : 0, total = r2(o.short + fee + pen);
   const dl = d ? (() => { const t = new Date(d); t.setDate(t.getDate() + days); return thDate(t.toISOString().slice(0, 10)); })() : "…………";
   const lv = n >= 12 ? "ค้างเกิน 12 งวด" : n >= 6 ? "ค้าง 6 งวดขึ้นไป" : n >= 3 ? "ค้าง 3 งวดขึ้นไป" : `ค้าง ${n} งวด`;
@@ -3712,7 +3725,7 @@ function nwWarnDoc(o, kind, no, d, days, feeIn){
     <div class="kmeta2"><span>ที่ <b>${esc(no) || "…………"}</b></span><span>โรงเรียนมัธยมวัดหนองแขม</span><span>วันที่ ${thDate(d)}</span></div>
     <p><b>เรื่อง</b> &nbsp; ${kind === "guar" ? "แจ้งการผิดนัดชำระหนี้ของผู้กู้ที่ท่านค้ำประกัน" : kind === "final" ? "บอกกล่าวทวงถามให้ชำระหนี้ครั้งสุดท้าย ก่อนดำเนินคดีตามกฎหมาย" : "แจ้งเตือนการค้างชำระหนี้ตามสัญญาเงินกู้"}</p>
     <p><b>เรียน</b> &nbsp; ${esc(who.name)} ${who.no ? `(สมาชิกเลขที่ ${who.no})` : ""} ${kind === "guar" ? "&nbsp;— ในฐานะผู้ค้ำประกัน" : ""}</p>
-    <p>${wp.addr ? `ที่อยู่ ${esc(wp.addr)}` : '<b style="color:#B3261E">ไม่มีที่อยู่ในระบบ — กรอกที่แท็บ ทะเบียนคุม ก่อนส่ง</b>'}</p>
+    <p>${wp.addr ? `ที่อยู่ ${esc(wp.addr)}` : '<b style="color:#B3261E">ไม่มีที่อยู่ในระบบ — กรอกที่แท็บ ฐานข้อมูลสมาชิก ก่อนส่ง</b>'}</p>
     <p><b>อ้างถึง</b> &nbsp; สัญญาเงินกู้เลขที่ <b>${esc(c0 && c0.code) || "…………"}</b> ลงวันที่ ${thDate(c0 && c0.d)} · ${AGREE}</p>
     <p class="i2">ตามที่ ${kind === "guar" ? `<b>${esc(m.name)}</b> (สมาชิกเลขที่ ${m.no}) ซึ่งท่านเป็นผู้ค้ำประกัน ได้` : "ท่านได้"}ทำสัญญากู้ยืมเงินสินเชื่อ${o.pk}กับกลุ่มบุคคลฯ
       ${c0 ? `วงเงิน <b>${B(c0.amt)}</b> บาท ผ่อนชำระ <b>${c0.terms}</b> งวด ` : ""}งวดละ <b>${B(o.inst)}</b> บาท โดยกำหนดชำระภายในวันที่ 5 ของทุกเดือน นั้น</p>
@@ -3996,6 +4009,8 @@ function drawNWLoanDash(){
   const T = S.ntk, byKey = {}; R.forEach(o => byKey[o.x.no + "|" + o.a.prod] = o);
   const drawLetter = () => { const o = byKey[T.sel], d = $("nt_doc"); if(o && d) d.innerHTML = nwWarnDoc(o, T.kind, T.no, T.d, +T.days || 15, T.fee); };
   el.querySelectorAll("[data-ntk]").forEach(i => i.addEventListener("change", () => { T[i.dataset.ntk] = i.value; drawLetter(); }));
+  el.querySelectorAll("[data-ngu]").forEach(i => i.addEventListener("change", () => { const [no, pk, k] = i.dataset.ngu.split("|"); nwSetGuar(no, pk, +k, i.value); save(); redraw(); }));
+  el.querySelectorAll("[data-nlg2]").forEach(b => b.onclick = () => { T.sel = b.dataset.nlg2; T.kind = "guar"; redraw(); const t = $("nt_letter"); if(t) t.scrollIntoView({behavior:"smooth", block:"start"}); });
   el.querySelectorAll("[data-nlt]").forEach(b => b.onclick = () => { T.sel = b.dataset.nlt; redraw(); const t = $("nt_letter"); if(t) t.scrollIntoView({behavior:"smooth", block:"start"}); });
   if($("nt_print")) $("nt_print").onclick = () => { const o = byKey[T.sel]; if(o) nwPrint(nwWarnDoc(o, T.kind, T.no, T.d, +T.days || 15, T.fee)); };
   if($("nt_csv")) $("nt_csv").onclick = () => csvOut("kbk-ค้างชำระ-เว็บใหม่.csv", [["ติดตามหนี้ค้าง", ["เลขสมาชิก", "ชื่อ", "สัญญา", "งวดละ", "จำนวนงวดที่ขาด", "ค้างติดต่อกัน", "ยอดค้าง", "หนี้คงเหลือ", "งวดที่ขาด"],
