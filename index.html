@@ -612,7 +612,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-84</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-85</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -7944,6 +7944,13 @@ function docOrder(){
   return [p1,p2].map((b,i)=>pg(i+1,2,b,"คณะกรรมการ")).join("");
 }
 
+/* เลขที่สัญญาตามรูปแบบเดิมของกลุ่ม: สามัญ = กบขนข-ปี/เลขสมาชิก-เดือน-01-ปี · ดูแลกัน = กบข.นข.-สกก(ดูแลกัน)-D###/ปี (ต่อจากเลขสูงสุดที่ใช้แล้ว) */
+function conCodeSuggest(c){
+  const a = String(c.d || "").split("-"), be = a[0] ? +a[0] + 543 : 2569, yy = String(be).slice(2), mm = a[1] || "01";
+  if(c.prod === "ดูแลกัน"){ let mx = 0; S.contracts.concat((S.nw && S.nw.cons) || []).forEach(q => { const m = String(q.code || "").match(/-D(\d+)\//); if(m) mx = Math.max(mx, +m[1]); });
+    return `กบข.นข.-สกก(ดูแลกัน)-D${String(mx + 1).padStart(3, "0")}/${be}`; }
+  return `กบขนข-${yy}/${c.no}-${mm}-01-${yy}`;
+}
 /* ============ แท็บ 5 — พิมพ์ชุดสัญญา ============ */
 let docMode = "full", docPick = {loan:1, guar:1, consent:1, sched:1};
 function drawT5(){
@@ -7976,6 +7983,10 @@ function drawT5(){
       <div><label>วงเงินรับผิดผู้ค้ำ/คน</label><input type="number" id="k_cap" step="1000" style="width:120px"></div>
       <div><label>&nbsp;</label><button id="k_print">พิมพ์ชุดสัญญา</button></div>
     </div>
+    ${cur ? `<div class="grid" style="grid-template-columns:1fr 170px auto;margin-top:8px;align-items:end">
+      <div><label>เลขที่สัญญา <span class="hint">(พิมพ์ในสัญญา สัญญาค้ำ และตารางชำระหนี้)</span></label><input id="k_code" value="${esc(cur.code || "")}" placeholder="เช่น กบขนข-69/022-01-01-69"></div>
+      <div><label>วันที่ทำสัญญา</label><input type="date" id="k_date" value="${esc(cur.d || "")}"></div>
+      <div><label>&nbsp;</label><button class="ghost" id="k_gen" title="ออกเลขตามรูปแบบเดิมของกลุ่ม จากวันที่ทำสัญญา — แก้ไขต่อได้">ออกเลขให้</button></div></div>` : ""}
     <div class="bar" style="border-top:1px solid var(--rule);padding-top:10px;margin-top:11px">
       <span class="hint" style="margin:0">เอกสารที่จะพิมพ์:</span>
       ${[["loan","สัญญาเงินกู้"],["guar","สัญญาค้ำประกัน"],["consent","หนังสือยินยอมเป็นผู้ค้ำ"],["sched","ตารางการชำระหนี้"]]
@@ -8036,6 +8047,12 @@ function drawT5(){
 
   $("k_sel").onchange = e => { S.pick = e.target.value; drawT5(); };
   $("k_cap").onchange = e => { cur.cap = +e.target.value||0; all(); };
+  $("k_code").onchange = e => { cur.code = e.target.value.trim(); all(); };
+  $("k_date").onchange = e => { cur.d = e.target.value; all(); };
+  $("k_gen").onclick = () => { if(!cur.d){ toast("เลือกวันที่ทำสัญญาก่อน — เลขที่สัญญาอิงปี/เดือนที่ทำสัญญา"); $("k_date").focus(); return; }
+    if(cur.code && !confirm(`สัญญานี้มีเลขที่อยู่แล้ว (${cur.code})
+ออกเลขใหม่ทับหรือไม่?`)) return;
+    cur.code = conCodeSuggest(cur); all(); toast("ออกเลขที่สัญญาแล้ว — แก้ในช่องได้"); };
   $("k_mode").onchange = e => { docMode = e.target.value; drawT5(); };
   document.querySelectorAll("[data-dp]").forEach(i=>i.onchange=e=>{ docPick[e.target.dataset.dp]=e.target.checked?1:0; drawT5(); });
   document.querySelectorAll("[data-pf]").forEach(i=>i.onchange=e=>{
