@@ -609,7 +609,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-82</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-83</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -3147,7 +3147,7 @@ function drawNW(kind){
   if($("cv_box")){
     const g = S.ncv && S.ncv.no === x.no && S.ncv.prod === a.prod ? S.ncv : null;
     $("cv_box").ontoggle = e => { if(g) g.open = e.target.open; };
-    if(g){
+    if(g && $("cv_go")){                                           // ไม่มีรายการชำระ = กล่องแสดงแค่คำอธิบาย ไม่มีปุ่ม (g ค้างจากตอนที่เคยมีรายการ)
       el.querySelectorAll("[data-cvs]").forEach(i => i.addEventListener(i.tagName === "SELECT" ? "change" : "input", () => {
         g[i.dataset.cvs] = i.value; g.open = true;
         if(i.tagName === "SELECT"){ if(pNum(g.from) > pNum(g.to)){ if(i.dataset.cvs === "from") g.to = g.from; else g.from = g.to; } drawNW(kind); } }));
