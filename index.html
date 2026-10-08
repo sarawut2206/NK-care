@@ -275,7 +275,7 @@ th.svcol{background:#FFF4D6!important}
 .pgsig{position:absolute;bottom:12px;right:24px;font-size:10px;color:var(--soft)}
 .klogo{text-align:center;margin-bottom:4px}
 .lgi{height:14mm;width:auto;display:block;margin:0 auto}.klogo .lgi{height:13mm;margin-bottom:2px}.khead .lgi{margin-bottom:5px}.lethead .lgi{height:16mm;margin-bottom:6px}
-.nwr .r-lg{display:flex;align-items:center;gap:14px}.nwr .r-lg .lgi{height:18mm;margin:0;flex:none}
+.nwr .r-lg{display:flex;align-items:center;gap:14px;flex:1 1 300px;min-width:0}.nwr .r-lg .lgi{height:18mm;margin:0;flex:none}
 .klogo .mark{display:inline-flex;gap:3px;align-items:flex-end}
 .klogo .mark i{display:block;width:6px;border-radius:6px 6px 2px 2px}
 .klogo .mark i:nth-child(1){height:13px;background:var(--red)}
@@ -612,7 +612,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-85</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-88</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -3018,6 +3018,157 @@ function nwPrint(html){
   setTimeout(()=>{ window.print(); document.body.classList.remove("nwprint"); }, 250);
 }
 
+/* ============ ส่งออกเอกสาร: Word (.docx) และรูปภาพ (PNG) ============
+   ใช้เอกสารชุดเดียวกับที่พิมพ์ (html จาก nwConDocs / nwOverviewDoc / ใบเสร็จ ฯลฯ) — วางในเวทีซ่อน แล้วแปลงจากหน้าที่แสดงจริง
+   · Word: แปลง DOM → HTML ที่ Word อ่านได้ (flex/grid → ตาราง, SVG → รูป) แล้วห่อเป็น .docx ด้วย html-docx-js · แก้ไขข้อความต่อใน Word ได้
+   · รูปภาพ: html2canvas ต่อหน้า · หลายหน้า = ZIP
+   ไลบรารีโหลดจาก CDN เฉพาะตอนกดใช้ (ต้องมีอินเทอร์เน็ต) */
+const NWX_LIB = {
+  hd:["htmlDocx", "https:\/\/cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.js"],
+  jz:["JSZip", "https:\/\/cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"],
+  h2c:["html2canvas", "https:\/\/cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"]
+};
+const nwxLoad = k => { const [g, u] = NWX_LIB[k]; if(window[g]) return Promise.resolve();
+  return new Promise((ok, no) => { const t = document.createElement("script"); t.src = u; t.onload = ok; t.onerror = () => no(new Error("โหลดส่วนเสริมไม่สำเร็จ (ไม่มีอินเทอร์เน็ต?)")); document.head.appendChild(t); }); };
+const nwxSave = (blob, name) => { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); };
+const nwxName = s => String(s || "เอกสาร").replace(/[\\/:*?"<>|]+/g, "-").trim().slice(0, 80) || "เอกสาร";
+
+/* เวทีซ่อน — จัดหน้าแบบ A4 เหมือนตอนพิมพ์ */
+function nwxStage(html){
+  if(!document.getElementById("nwx_css")){ const st = document.createElement("style"); st.id = "nwx_css";
+    st.textContent = `.nwstage{position:fixed;left:-12000px;top:0;width:210mm;background:#fff;display:block!important}
+      .nwstage>*{box-sizing:border-box;margin:0!important;border-radius:0!important;box-shadow:none!important;background:#fff}
+      .nwstage>.receipt,.nwstage>.kpage{border:0!important}
+      .nwstage>.receipt{padding:0 6mm 0 16mm!important}.nwstage>.ovp{padding-left:16mm;padding-right:6mm}
+      .nwstage>.receipt.nwrc,.nwstage>.ovp{min-height:297mm}
+      .nwstage .ovp .ov-stack span{color:#fff!important}`; document.head.appendChild(st); }
+  const d = document.createElement("div"); d.className = "nwdoc nwstage"; d.innerHTML = html; document.body.appendChild(d); return d;
+}
+
+/* ---------- รูปภาพ ---------- */
+async function nwxPng(html, base){
+  await nwxLoad("h2c"); const st = nwxStage(html), cvs = [];
+  try{ await (document.fonts && document.fonts.ready);
+    for(const pg of [...st.children]) cvs.push(await html2canvas(pg, {scale:2, backgroundColor:"#ffffff", logging:false, useCORS:true}));
+  } finally { st.remove(); }
+  const blobs = await Promise.all(cvs.map(c => new Promise(r => c.toBlob(r, "image/png"))));
+  if(blobs.length === 1){ nwxSave(blobs[0], nwxName(base) + ".png"); return 1; }
+  await nwxLoad("jz"); const z = new JSZip(), w = String(blobs.length).length;
+  blobs.forEach((b, i) => z.file(`${nwxName(base)}-${String(i + 1).padStart(w, "0")}.png`, b));
+  nwxSave(await z.generateAsync({type:"blob"}), nwxName(base) + ".zip"); return blobs.length;
+}
+
+/* ---------- Word ---------- */
+const NWX_ONE = {K:0.85, SC:0.9, mt:10, mb:10, ml:16, mr:8};      /* เอกสาร ๑ หน้า/ใบ: ขอบแคบแบบเดียวกับตอนพิมพ์ */
+const NWX_FIT = {K:0.78, SC:0.8, mt:8, mb:8, ml:16, mr:8};      /* สรุป ๑ หน้า (มีกราฟ): ย่อให้พอดี ๑ หน้า A4 */
+const NWX_FONT = "'TH Sarabun New','TH SarabunPSK',Tahoma,sans-serif";
+const nwxHex = c => { const m = String(c || "").match(/rgba?\(\s*(\d+)[ ,]+(\d+)[ ,]+(\d+)(?:[ ,/]+([\d.]+))?/); if(!m) return ""; if(m[4] !== undefined && +m[4] === 0) return "";
+  return "#" + [m[1], m[2], m[3]].map(v => (+v).toString(16).padStart(2, "0")).join(""); };
+const nwxEsc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/ /g, "&nbsp;");
+async function nwxSvgPng(svg){
+  const r = svg.getBoundingClientRect(), w = Math.max(1, Math.round(r.width)), h = Math.max(1, Math.round(r.height)), c = svg.cloneNode(true);
+  c.setAttribute("xmlns", "http:\/\/www.w3.org/2000/svg"); c.setAttribute("width", w); c.setAttribute("height", h);
+  const img = new Image(); img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(new XMLSerializer().serializeToString(c));
+  await new Promise((ok, no) => { img.onload = ok; img.onerror = () => no(new Error("แปลงกราฟเป็นรูปไม่สำเร็จ")); });
+  const cv = document.createElement("canvas"); cv.width = w * 2; cv.height = h * 2; const x = cv.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, cv.width, cv.height); x.drawImage(img, 0, 0, cv.width, cv.height);
+  return {src:cv.toDataURL("image/png"), w, h};
+}
+
+/* DOM → HTML ที่ Word อ่านได้ · K = ตัวคูณขนาดอักษร · SC = ตัวคูณขนาดรูป */
+async function nwxWordBody(stage, K, SC){
+  const sp = v => Math.round((parseFloat(v) || 0) * 0.75 * 10) / 10, fs = v => Math.round((parseFloat(v) || 0) * 0.75 * K * 2) / 2;
+  const bdr = (cs, side) => { const w = parseFloat(cs["border" + side + "Width"]) || 0, st = cs["border" + side + "Style"]; if(!(w > 0) || st === "none" || st === "hidden") return "";
+    return `border-${side.toLowerCase()}:${Math.max(0.5, Math.round(w * 0.75 * 2) / 2)}pt ${st === "dotted" || st === "dashed" ? st : "solid"} ${nwxHex(cs["border" + side + "Color"]) || "#000000"};`; };
+  const box = (cs, noPad) => { let s = ["Top", "Right", "Bottom", "Left"].map(q => bdr(cs, q)).join("");
+    const bg = nwxHex(cs.backgroundColor); if(bg && bg !== "#ffffff") s += `background:${bg};`;
+    if(!noPad) ["Top", "Right", "Bottom", "Left"].forEach(q => { const v = parseFloat(cs["padding" + q]) || 0; if(v > 0.5) s += `padding-${q.toLowerCase()}:${sp(v)}pt;`; });
+    return s; };
+  const txt = cs => { let s = `font-family:${NWX_FONT};font-size:${fs(cs.fontSize)}pt;`;
+    if((parseInt(cs.fontWeight, 10) || 400) >= 600) s += "font-weight:bold;"; if(cs.fontStyle === "italic") s += "font-style:italic;";
+    s += `color:${nwxHex(cs.color) || "#000000"};`; const td = cs.textDecorationLine; if(td && td !== "none") s += `text-decoration:${td};`; return s; };
+  const align = cs => { const a = cs.textAlign; return a === "center" ? "center" : a === "right" || a === "end" ? "right" : a === "justify" ? "justify" : "left"; };
+  const lh = cs => { const l = parseFloat(cs.lineHeight), f = parseFloat(cs.fontSize); return l > 0 && f > 0 ? `line-height:${Math.round(Math.min(1.3, Math.max(1, l / f)) * 100)}%;` : ""; };
+  const pseudo = (el, w) => { try{ const c = getComputedStyle(el, w).content; if(c && c !== "none" && c !== "normal" && c !== '""') return nwxEsc(c.replace(/^["']|["']$/g, "")); }catch(e){} return ""; };
+  const skip = el => { const q = getComputedStyle(el); return /^(SCRIPT|STYLE|NOSCRIPT|BUTTON|INPUT|SELECT|TEXTAREA)$/.test(el.tagName) || q.display === "none" || q.visibility === "hidden" || q.position === "absolute" && !el.matches("svg,img")
+    || el.classList.contains("pgno") || el.classList.contains("pgsig"); };
+
+  async function kids(el){ let o = ""; for(const n of el.childNodes) o += await conv(n); return o; }
+
+  async function table(n, cs){
+    const W = n.getBoundingClientRect().width || 1; let o = `<table cellspacing="0" cellpadding="0" style="width:100%;border-collapse:collapse;${["Top", "Right", "Bottom", "Left"].map(q => bdr(cs, q)).join("")}">`;
+    for(const sec of n.children){ if(!/^(THEAD|TBODY|TFOOT)$/.test(sec.tagName)) continue;
+      for(const tr of sec.children){ if(tr.tagName !== "TR" || getComputedStyle(tr).display === "none") continue; const rbg = nwxHex(getComputedStyle(tr).backgroundColor); o += "<tr>";
+        for(const td of tr.children){ if(!/^(TD|TH)$/.test(td.tagName)) continue; const c = getComputedStyle(td), r = td.getBoundingClientRect(), tg = td.tagName.toLowerCase();
+          let st = box(c); const bg = nwxHex(c.backgroundColor) || rbg; if(bg && bg !== "#ffffff" && !/background:/.test(st)) st += `background:${bg};`;
+          const lum = h => { const v = [1, 3, 5].map(i => parseInt((h || "#ffffff").slice(i, i + 2), 16) / 255); return .3 * v[0] + .59 * v[1] + .11 * v[2]; };
+          const fixCol = lum(nwxHex(c.color)) > .75 && lum(bg || "#ffffff") > .6;
+          o += `<${tg} ${td.colSpan > 1 ? `colspan="${td.colSpan}" ` : ""}${td.rowSpan > 1 ? `rowspan="${td.rowSpan}" ` : ""}style="width:${Math.round(r.width / W * 100)}%;${st}vertical-align:${c.verticalAlign === "middle" ? "middle" : c.verticalAlign === "bottom" ? "bottom" : "top"};text-align:${align(c)};${txt(c)}${fixCol ? "color:#000000;" : ""}${lh(c)}">${(await kids(td)) || "&nbsp;"}</${tg}>`; }
+        o += "</tr>"; } }
+    return o + "</table>";
+  }
+
+  /* flex แถว / grid → ตาราง (ช่องละ ๑ รายการ) */
+  async function grid(n, cs){
+    const isGrid = /grid/.test(cs.display), items = [...n.children].filter(c => !skip(c)), W = n.getBoundingClientRect().width || 1;
+    const cols = isGrid ? Math.max(1, (cs.gridTemplateColumns || "").split(/\s+/).filter(v => /px|fr|%/.test(v)).length) : Math.max(1, items.length);
+    const tops = items.map(it => Math.round(it.getBoundingClientRect().top)), wrapRows = !isGrid && new Set(tops.map(t => Math.round(t / 4))).size > 1;      // flex-wrap: บางรายการตกลงบรรทัดถัดไป
+    const jc = cs.justifyContent, vy = /center/.test(cs.alignItems) ? "middle" : "top", rows = []; let row = [], used = 0;
+    if(wrapRows){ let cur = [], lastTop = null; items.forEach((it, i) => { if(lastTop !== null && tops[i] > lastTop + 3){ rows.push(cur.map(it2 => ({it:it2, span:1}))); cur = []; } cur.push(it); lastTop = tops[i]; }); if(cur.length) rows.push(cur.map(it2 => ({it:it2, span:1}))); }
+    else for(const it of items){ const q = getComputedStyle(it); let span = 1;
+      if(isGrid){ const m = /span\s+(\d+)/.exec(q.gridColumnStart); if(m) span = +m[1]; else if(/^-1/.test(q.gridColumnEnd)) span = cols - used; span = Math.max(1, Math.min(span, cols - used || cols)); }
+      if(used + span > cols){ rows.push(row); row = []; used = 0; } row.push({it, span}); used += span; if(used >= cols){ rows.push(row); row = []; used = 0; } }
+    if(!wrapRows && row.length) rows.push(row);
+    const gap = Math.max(parseFloat(cs.columnGap) || 0, 0);
+    let o = `<table cellspacing="0" cellpadding="0" style="width:100%;table-layout:fixed;border-collapse:collapse;${box(cs, true)}">`;
+    for(const r of rows){ o += "<tr>";
+      for(let k = 0; k < r.length; k++){ const {it, span} = r[k], q = getComputedStyle(it), rect = it.getBoundingClientRect(); let al = align(q);
+        if(!isGrid && jc === "space-between" && r.length > 1 && q.textAlign === "start") al = k === 0 ? "left" : k === r.length - 1 ? "right" : "center";
+        const RW = wrapRows ? r.reduce((u, z) => u + z.it.getBoundingClientRect().width + gap, 0) : W; o += `<td ${span > 1 ? `colspan="${span}" ` : ""}style="width:${Math.round((rect.width + gap) / RW * 100)}%;vertical-align:${vy};text-align:${al};${gap ? `padding-right:${sp(gap)}pt;` : ""}">${await conv(it)}</td>`; }
+      o += "</tr>"; }
+    return o + "</table>";
+  }
+
+  async function conv(n){
+    if(n.nodeType === 3){ const t = n.data.replace(/[ \t\r\n\f]+/g, " "); return nwxEsc(t); }
+    if(n.nodeType !== 1 || skip(n)) return "";
+    const tag = n.tagName, cs = getComputedStyle(n);
+    if(tag === "BR") return "<br>";
+    if(tag === "svg" || tag === "SVG"){ try{ const p = await nwxSvgPng(n); return `<img src="${p.src}" width="${Math.round(p.w * SC)}" height="${Math.round(p.h * SC)}">`; }catch(e){ return ""; } }
+    if(tag === "IMG"){ const r = n.getBoundingClientRect(); return `<img src="${n.src}" width="${Math.round(r.width * SC)}" height="${Math.round(r.height * SC)}">`; }
+    if(tag === "TABLE") return table(n, cs);
+    if((/flex/.test(cs.display) && !/column/.test(cs.flexDirection) || /grid/.test(cs.display)) && n.children.length) return grid(n, cs);
+    const inline = /^inline/.test(cs.display) && !n.matches(".dt"), inner = await kids(n), pre = pseudo(n, "::before"), post = pseudo(n, "::after");
+    if(n.matches(".dt") && !n.textContent.trim()){ const w = n.getBoundingClientRect().width; return `<span style="${txt(cs)}">${"…".repeat(Math.max(3, Math.round(w / 5)))}</span>`; }   // ช่องว่างให้เขียนมือ
+    if(inline) return `<span style="${txt(cs)}${(parseInt(cs.fontWeight, 10) || 400) >= 600 ? "" : ""}">${pre}${inner}${post}</span>`;
+    const li = cs.display === "list-item", cap = v => Math.min(6, sp(v)), mtb = `margin-top:${cap(cs.marginTop)}pt;margin-bottom:${cap(cs.marginBottom)}pt;`, mlf = (parseFloat(cs.marginLeft) || 0) + (li ? 14 : 0) > 0.5 ? `margin-left:${sp((parseFloat(cs.marginLeft) || 0) + (li ? 14 : 0))}pt;` : "";
+    if(["Left", "Right"].some(q => parseFloat(cs["border" + q + "Width"]) > 0 && cs["border" + q + "Style"] !== "none"))          // กล่องมีขอบข้าง → ตาราง ๑ ช่อง (Word วาดขอบกล่องได้ครบกว่า)
+      return `<table cellspacing="0" cellpadding="0" style="width:100%;border-collapse:collapse;${mtb}"><tr><td style="${box(cs)}${txt(cs)}${lh(cs)}text-align:${align(cs)};vertical-align:top">${pre}${inner}${post}</td></tr></table>`;
+    return `<div style="${txt(cs)}${lh(cs)}text-align:${align(cs)};${mtb}${mlf}${box(cs)}">${li ? "• " : ""}${pre}${inner}${post}</div>`;
+  }
+
+  const brk = `<p style="margin:0;font-size:1pt;line-height:1pt;page-break-before:always">&nbsp;</p>`;
+  let o = "", i = 0; for(const pgEl of [...stage.children]){ if(i++) o += brk; o += await conv(pgEl); }
+  return o;
+}
+
+async function nwxDocx(html, base, o){
+  o = o || {}; await Promise.all([nwxLoad("hd")]); const st = nwxStage(html); let body;
+  try{ await (document.fonts && document.fonts.ready);
+    const K = o.K || ((st.firstElementChild && st.firstElementChild.classList.contains("kpage")) ? 1.3 : 1), SC = o.SC || 0.85;
+    body = await nwxWordBody(st, K, SC);
+  } finally { st.remove(); }
+  const mm = v => Math.round(v * 56.7), full = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${nwxEsc(base || "")}</title><style>body{font-family:${NWX_FONT}}p{margin:0}</style></head><body>${body}</body></html>`;
+  const blob = htmlDocx.asBlob(full, {orientation:"portrait", margins:{top:mm(o.mt || 15), right:mm(o.mr || 15), bottom:mm(o.mb || 15), left:mm(o.ml || 20), header:mm(8), footer:mm(8), gutter:0}});
+  nwxSave(blob, nwxName(base) + ".docx"); return blob;
+}
+
+async function nwxRun(label, fn){
+  toast(label + " …กำลังสร้างไฟล์ (ครั้งแรกต้องโหลดส่วนเสริมจากอินเทอร์เน็ต)");
+  try{ const r = await fn(); toast("เสร็จแล้ว — ไฟล์อยู่ในโฟลเดอร์ดาวน์โหลด" + (typeof r === "number" && r > 1 ? ` (${r} ภาพ ในไฟล์ ZIP)` : "")); }
+  catch(e){ console.error(e); alert("สร้างไฟล์ไม่สำเร็จ: " + (e.message || e)); }
+}
+const nwxBtns = id => `<button class="ghost" id="${id}_w" title="บันทึกเป็นไฟล์ Word (.docx) แก้ไขต่อได้">Word</button><button class="ghost" id="${id}_i" title="บันทึกเป็นรูป PNG (หลายหน้า = ไฟล์ ZIP)">บันทึกเป็นรูป</button>`;
+
 function drawNW(kind){
   const id = kind==="loan" ? "tab20" : "tab21", el = $(id); if(!el) return;
   const T = kind==="loan" ? "ทะเบียนผู้กู้" : "ทะเบียนผู้ฝาก";
@@ -3517,7 +3668,7 @@ function drawNWDiv(){
       <select id="dv_f" style="width:auto"><option value="all">ทุกคน</option><option value="loan" ${f==="loan"?"selected":""}>ผู้กู้</option>
         <option value="save" ${f==="save"?"selected":""}>ผู้ฝาก</option></select>
       <input id="dv_q" placeholder="ค้นชื่อ / เลขสมาชิก" value="${esc(S.dvq||"")}" style="max-width:260px">
-      <button class="ghost sm" id="dv_all" style="margin-left:auto">พิมพ์ใบสรุปทั้งหมด (คนละหน้า)</button>
+      <button class="ghost sm" id="dv_all" style="margin-left:auto">พิมพ์ใบสรุปทั้งหมด (คนละหน้า)</button><button class="ghost sm" id="dv_w" title="บันทึกใบสรุปที่แสดงเป็นไฟล์ Word (.docx)">Word</button><button class="ghost sm" id="dv_i" title="บันทึกใบสรุปที่แสดงเป็นรูป PNG (หลายคน = ไฟล์ ZIP)">บันทึกเป็นรูป</button>
       <button class="ghost sm" id="dv_csv">ส่งออก CSV</button>
     </div>
     <div class="tbl" style="max-height:480px"><table><thead><tr><th class="l">เลขที่</th><th class="l">ชื่อ</th><th class="l">สถานะ</th>
@@ -3549,6 +3700,8 @@ function drawNWDiv(){
   el.querySelectorAll("[data-dv]").forEach(tr=>tr.onclick = () => { S.dvsel = tr.dataset.dv; drawNWDiv();
     const c = $("dv_p1"); if(c) c.scrollIntoView({behavior:"smooth", block:"start"}); });
   if($("dv_p1")) $("dv_p1").onclick = () => nwPrint(nwSumDoc(cur, D));
+  $("dv_w").onclick = () => { if(list.length) nwxRun("ใบสรุป → Word", () => nwxDocx(list.map(a => nwSumDoc(a.x, D)).join(""), `ใบสรุป-${nwAdYm(D.from)}-${nwAdYm(D.to)}-${list.length}คน`, NWX_ONE)); };
+  $("dv_i").onclick = () => { if(list.length) nwxRun("ใบสรุป → รูป", () => nwxPng(list.map(a => nwSumDoc(a.x, D)).join(""), `ใบสรุป-${nwAdYm(D.from)}-${nwAdYm(D.to)}`)); };
   $("dv_all").onclick = () => { if(!list.length || !confirm(`พิมพ์ใบสรุป ${list.length} คน คนละหน้า?`)) return;
     nwPrint(list.map(a=>nwSumDoc(a.x, D)).join("")); };
   $("dv_csv").onclick = () => csvOut(`kbk-ใบสรุปปันผล-${nwAdYm(D.from)}-${nwAdYm(D.to)}.csv`, [[`ใบสรุป + ปันผล ${nwRangeLbl(D)} (${Math.max(0, pNum(D.to)-pNum(D.from)+1)} เดือน · หุ้น ${pct(D.rs)} · ดอกเบี้ย ${pct(D.ri)})`,
@@ -3821,21 +3974,73 @@ function nwAckDoc(o, no, d, days, feeIn, inst){
   return page1 + page2;
 }
 
-/* ทะเบียนสัญญา: ข้อมูลสัญญาจากระบบเก่า (เลขที่ วันที่ วงเงิน ผู้ค้ำ) คู่กับยอดปัจจุบันจากทะเบียนใหม่ */
+/* ทะเบียนสัญญา — ทุกผู้กู้ที่ยังมีหนี้ ประเภทละ ๑ ฉบับ = สัญญาล่าสุดที่กำลังผ่อน (สัญญาที่ปิดแล้ว/ถูกกู้ทับไม่ลงทะเบียน)
+   วันที่ทำสัญญา: ที่กรอกไว้ ถ้าไม่มีใช้งวดแรกของสัญญาล่าสุดจากทะเบียน (ใครกู้ปี 68 ยังไม่ปิด/ไม่ได้กู้ใหม่ = สัญญาปี 68 · กู้ทับปี 69 = สัญญาปี 69)
+   เลขที่สัญญา: กบขนข-ปี/ลำดับ ออกเรียงตามวันที่ทำสัญญา (เก่าสุดได้เลขแรก) ลำดับเริ่มใหม่ทุกปี ใช้รูปแบบเดียวกันทั้งสามัญและดูแลกัน */
+const nwConAuto = c => !!(c && c.fromNW && !c.codeUser);                         // เลขที่ระบบออกให้เอง (ร่างสัญญา) — ออกเลขใหม่ทับได้ · เลขที่ผู้ใช้พิมพ์เอง/มาจากระบบเก่าไม่แตะ
+const nwConYear = d => (+String(d || "").slice(0, 4) + 543) || 2569;
+const nwConCmp = (u, v) => String(u.d).localeCompare(String(v.d)) || String(u.x.no).localeCompare(String(v.x.no), "th", {numeric:true}) || (u.k === "sam" ? -1 : 1) - (v.k === "sam" ? -1 : 1);
+function nwConRows(){
+  const R = [];
+  NW.people().forEach(x => ["sam", "dk"].forEach(k => { const a = nwAcct(x, k), st = nwStateA(a); if(!(st.debt > 0.005)) return;
+    const c = nwCon(x.no, NLP[k]); R.push({x, k, a, st, c, d: (c && c.d) || nwConGuess(x, k).d || ""}); }));
+  return R.sort(nwConCmp);
+}
+function nwConNumber(){
+  const R = nwConRows(); let made = 0;
+  R.forEach(r => { if(!r.c){ r.c = nwConDraft(r.x, r.k); r.d = r.c.d || r.d; made++; } });
+  R.sort(nwConCmp);
+  const need = r => !r.c.code || nwConAuto(r.c), used = {}, cnt = {}; let n = 0;
+  R.filter(r => !need(r)).forEach(r => { const m = String(r.c.code).match(/^กบขนข-(\d\d)\/(\d+)$/); if(m) (used[m[1]] = used[m[1]] || new Set()).add(+m[2]); });
+  R.filter(need).forEach(r => { const yy = String(nwConYear(r.c.d || r.d)).slice(2); let q = (cnt[yy] || 0) + 1; while(used[yy] && used[yy].has(q)) q++; cnt[yy] = q;
+    r.c.code = `กบขนข-${yy}/${String(q).padStart(3, "0")}`; n++; });
+  return {made, n, total:R.length};
+}
+function nwConStat(r){
+  const c = r.c, st = r.st;
+  return st.missed ? `<span class="pill red">ค้าง ${st.missed} งวด</span>` : '<span class="pill grn">ปกติ</span>';
+}
 function nwConHTML(){
-  const f = S.ncf || "all", q = (S.ncq || "").trim().toLowerCase(), rows = [];
-  NW.people().forEach(x => ["sam", "dk"].forEach(k => { const a = nwAcct(x, k), st = nwStateA(a), c0 = nwCon(x.no, NLP[k]);
-    if(!(st.debt > 0.005 || c0)) return; rows.push({x, k, a, st, c0}); }));
-  const list = rows.filter(r => (f === "all" || f === r.k) && (!q || `${r.x.no} ${r.x.name}`.toLowerCase().includes(q)));
-  return `<div class="bar" style="margin:0 0 8px"><select id="nc_f" style="width:auto"><option value="all">ทุกประเภท</option><option value="sam" ${f === "sam" ? "selected" : ""}>สามัญ</option><option value="dk" ${f === "dk" ? "selected" : ""}>ดูแลกัน</option></select>
-      <input id="nc_q" placeholder="ค้นชื่อ / เลขสมาชิก" value="${esc(S.ncq || "")}" style="max-width:240px"><span class="hint">${list.length} สัญญา · ข้อมูลสัญญาดึงจากระบบเก่า ยอดหนี้จากทะเบียนใหม่</span></div>
-    <div class="tbl" style="max-height:420px"><table><thead><tr><th class="l">สมาชิก</th><th class="l">ประเภท</th><th class="l">เลขที่สัญญา</th><th class="l">วันที่ทำสัญญา</th><th>วงเงิน</th><th>งวด</th><th>งวดละ</th><th>หนี้คงเหลือ</th><th class="l">ผู้ค้ำ</th><th class="l">สถานะ</th><th></th></tr></thead><tbody>
-      ${list.map(({x, k, a, st, c0}) => `<tr><td class="l"><span class="no">${esc(x.no)}</span><b>${esc(x.name)}</b></td><td class="l">${NLP[k]}</td>
-        <td class="l">${c0 ? esc(c0.code || "—") : '<span class="hint">ยังไม่มีสัญญา</span>'}</td><td class="l">${c0 && c0.d ? thDay(c0.d) : "—"}</td>
-        <td class="amt">${c0 ? B(c0.amt) : "—"}</td><td class="amt">${c0 ? c0.terms : "—"}</td><td class="amt">${a.inst ? B(a.inst) : c0 ? B(c0.inst) : "—"}</td>
-        <td class="amt"><b>${B(st.debt)}</b></td><td class="l" style="white-space:normal">${c0 ? [c0.g1, c0.g2].filter(Boolean).map(g => `${esc(g)} ${esc(nwNmOf(g))}`).join("<br>") || "—" : "—"}</td>
-        <td class="l">${st.debt <= 0.005 ? '<span class="pill grn">ปิดหนี้</span>' : st.missed ? `<span class="pill red">ค้าง ${st.missed} งวด</span>` : '<span class="pill grn">ปกติ</span>'}</td>
-        <td>${c0 ? (c0.fromNW ? `<button class="ghost sm" data-nrp="${esc(c0.id)}">พิมพ์สัญญา</button>` : `<button class="ghost sm" data-ncp="${esc(c0.id)}">พิมพ์สัญญา</button>`) : ""}</td></tr>`).join("") || '<tr><td colspan="11" class="hint" style="text-align:left">ไม่พบ</td></tr>'}</tbody></table></div>`;
+  const f = S.ncf || "all", q = (S.ncq || "").trim().toLowerCase(), all = nwConRows();
+  const list = all.filter(r => (f === "all" || f === r.k) && (!q || `${r.x.no} ${r.x.name} ${(r.c && r.c.code) || ""}`.toLowerCase().includes(q)));
+  const nS = all.filter(r => r.k === "sam").length, nD = all.length - nS, noCode = all.filter(r => !(r.c && r.c.code)).length, noCon = all.filter(r => !r.c).length;
+  const sumAmt = r2(all.reduce((u, r) => u + (r.c ? +r.c.amt || 0 : 0), 0)), sumDebt = r2(all.reduce((u, r) => u + r.st.debt, 0));
+  const old = r => { if(!r.c || !r.c.d) return false; const g = nwConGuess(r.x, r.k); return pNum(nwIsoPer(g.p1)) - pNum(nwIsoPer(r.c.d)) > 1; };   // สัญญาที่มีอยู่เก่ากว่างวดแรกของสัญญาล่าสุดในทะเบียน = อาจถูกกู้ทับไปแล้ว
+  return `<div class="stats" style="margin:0 0 10px">
+      <div class="stat"><div class="k">สัญญาที่กำลังผ่อน</div><div class="v">${all.length}</div><div class="hint">สามัญ ${nS} · ดูแลกัน ${nD}</div></div>
+      <div class="stat" style="border-top-color:${noCode ? "var(--red)" : "var(--green)"}"><div class="k">ยังไม่มีเลขที่สัญญา</div><div class="v" style="color:${noCode ? "var(--red)" : "var(--green)"}">${noCode}</div>${noCon ? `<div class="hint">ยังไม่มีสัญญา ${noCon} ฉบับ</div>` : ""}</div>
+      <div class="stat"><div class="k">วงเงินตามสัญญารวม</div><div class="v">${B0(sumAmt)} <small>บาท</small></div></div>
+      <div class="stat"><div class="k">หนี้คงเหลือรวม</div><div class="v">${B0(sumDebt)} <small>บาท</small></div></div></div>
+    <div class="bar" style="margin:0 0 8px;flex-wrap:wrap"><select id="nc_f" style="width:auto"><option value="all">ทุกประเภท</option><option value="sam" ${f === "sam" ? "selected" : ""}>สามัญ</option><option value="dk" ${f === "dk" ? "selected" : ""}>ดูแลกัน</option></select>
+      <input id="nc_q" placeholder="ค้นชื่อ / เลขสมาชิก / เลขที่สัญญา" value="${esc(S.ncq || "")}" style="max-width:260px">
+      <button id="nc_num" ${noCode || all.some(r => nwConAuto(r.c)) ? "" : "disabled"} title="ออกเลขเรียงตามวันที่ทำสัญญา (เก่าสุดเลขแรก) · ไม่แตะเลขที่พิมพ์เองหรือมาจากระบบเก่า">ออกเลขที่สัญญาให้ทุกฉบับ</button>
+      <button class="ghost sm" id="nc_pr" style="margin-left:auto">🖨 พิมพ์ทะเบียนสัญญา</button><button class="ghost sm" id="nc_prw">Word</button><button class="ghost sm" id="nc_csv">ส่งออก CSV</button></div>
+    <p class="hint" style="margin:0 0 6px">เรียงตามวันที่ทำสัญญา · ผู้กู้ที่กู้ทับหรือทบหนี้ ใช้เฉพาะสัญญาล่าสุดที่กำลังผ่อน · วันที่ที่ไม่ได้กรอกใช้งวดแรกของสัญญาจากทะเบียน (แก้ในช่องได้) · เลขที่และวันที่พิมพ์แก้ในตารางได้เลย</p>
+    <div class="tbl" style="max-height:460px"><table><thead><tr><th>ที่</th><th class="l">เลขที่สัญญา</th><th class="l">ผู้กู้</th><th class="l">ประเภท</th><th class="l">วันที่ทำสัญญา</th><th>วงเงิน</th><th>งวด</th><th>งวดละ</th><th class="l">ผู้ค้ำ</th><th>หนี้คงเหลือ</th><th class="l">สถานะ</th><th></th></tr></thead><tbody>
+      ${list.map(r => { const {x, k, a, st, c} = r, key = esc(x.no + "|" + k), i = all.indexOf(r) + 1;
+        return `<tr><td class="amt">${i}</td>
+        <td class="l"><input class="ce cen" type="text" data-ncn="${key}" value="${esc((c && c.code) || "")}" placeholder="— ยังไม่มีเลข —" style="width:150px"></td>
+        <td class="l"><span class="no">${esc(x.no)}</span><b>${esc(x.name)}</b></td><td class="l">${NLP[k]}</td>
+        <td class="l"><input class="ce ced" type="date" data-nct="${key}" value="${esc((c && c.d) || r.d || "")}">${c && c.d ? "" : '<div class="hint">ประมาณ</div>'}${old(r) ? '<div class="hint" style="color:var(--danger)">เก่ากว่างวดแรกในทะเบียน</div>' : ""}</td>
+        <td class="amt">${c ? B(c.amt) : "—"}</td><td class="amt">${c ? c.terms : "—"}</td><td class="amt">${a.inst ? B(a.inst) : c ? B(c.inst) : "—"}</td>
+        <td class="l" style="white-space:normal">${c ? [c.g1, c.g2].filter(Boolean).map(g => `${esc(g)} ${esc(nwNmOf(g))}`).join("<br>") || '<span class="hint">ยังไม่ระบุ</span>' : "—"}</td>
+        <td class="amt"><b>${B(st.debt)}</b></td><td class="l">${nwConStat(r)}</td>
+        <td style="white-space:nowrap">${c ? `<button class="ghost sm" data-ncx="${esc(c.id)}">พิมพ์</button> <button class="ghost sm" data-ncw="${esc(c.id)}" title="บันทึกเป็นไฟล์ Word (.docx)">Word</button>` : `<button class="ghost sm" data-ncmk="${key}">สร้างร่าง</button>`}</td></tr>`; }).join("")
+        || '<tr><td colspan="12" class="hint" style="text-align:left">ไม่มีผู้กู้ที่ยังมีหนี้</td></tr>'}</tbody></table></div>`;
+}
+/* เอกสารทะเบียนสัญญา (พิมพ์) — ๒๒ แถวต่อหน้า */
+function nwConRegDoc(){
+  const R = nwConRows(), per = 22, pages = Math.max(1, Math.ceil(R.length / per)), today = nwToday();
+  return Array.from({length:pages}, (_, i) => { const part = R.slice(i * per, (i + 1) * per);
+    return pg(i + 1, pages, `${logo()}<div class="kt1">ทะเบียนสัญญาเงินกู้</div>
+      <div class="kt2">${ORG}<br>โรงเรียนมัธยมวัดหนองแขม (กบข.นข.)</div>
+      <div class="kmeta2"><span>สัญญาที่กำลังผ่อน ${R.length} ฉบับ (สามัญ ${R.filter(r => r.k === "sam").length} · ดูแลกัน ${R.filter(r => r.k === "dk").length})</span><span>วันที่ ${thDate(today)}</span></div>
+      <table class="kt"><thead><tr><th>ที่</th><th class="l">เลขที่สัญญา</th><th class="l">ผู้กู้</th><th class="l">ประเภท</th><th class="l">วันที่ทำสัญญา</th><th>วงเงิน</th><th>งวด</th><th>งวดละ</th><th class="l">ผู้ค้ำประกัน</th><th>หนี้คงเหลือ</th></tr></thead><tbody>
+      ${part.map((r, j) => { const c = r.c; return `<tr><td class="n">${i * per + j + 1}</td><td class="l">${esc((c && c.code) || "—")}</td><td class="l">${esc(r.x.no)} ${esc(r.x.name)}</td><td class="l">${NLP[r.k]}</td>
+        <td class="l">${(c && c.d) || r.d ? thDayS((c && c.d) || r.d) : "—"}</td><td class="n">${c ? B(c.amt) : "—"}</td><td class="n">${c ? c.terms : "—"}</td><td class="n">${r.a.inst ? B(r.a.inst) : c ? B(c.inst) : "—"}</td>
+        <td class="l">${c ? [c.g1, c.g2].filter(Boolean).map(g => esc(nwNmOf(g))).join(", ") || "—" : "—"}</td><td class="n">${B(r.st.debt)}</td></tr>`; }).join("")}
+      ${i === pages - 1 ? `<tr class="hl"><td></td><td class="l" colspan="4"><b>รวม ${R.length} ฉบับ</b></td><td class="n"><b>${B(r2(R.reduce((u, r) => u + (r.c ? +r.c.amt || 0 : 0), 0)))}</b></td><td></td><td></td><td></td><td class="n"><b>${B(r2(R.reduce((u, r) => u + r.st.debt, 0)))}</b></td></tr>` : ""}</tbody></table>
+      ${i === pages - 1 ? `<div class="ksigs" style="grid-template-columns:1fr 1fr;max-width:420px;margin:14px auto 0">${sigOf("กรรมการฝ่ายติดตามหนี้", DEBT())}${sigOf("ประธานคณะกรรมการ", CHAIR())}</div>` : ""}`, "ผู้จัดทำ"); }).join("");
 }
 
 /* ---------- ทำสัญญาย้อนหลัง — สร้างร่างสัญญาให้ผู้กู้ทุกคนจากข้อมูลในทะเบียนใหม่ แล้วแก้/ใส่ผู้ค้ำ/พิมพ์ชุดสัญญา ----------
@@ -3843,12 +4048,6 @@ function nwConHTML(){
 const nwCons = () => (S.nw.cons || (S.nw.cons = []));
 function nwCon(no, pk){ return nwCons().find(c => c.no === no && c.prod === pk) || nwOldCon(no, pk); }
 const nwIsoPer = iso => { const a = String(iso || "").split("-").map(Number); return a[0] && a[1] ? pFrom((a[0] + 543) * 12 + a[1] - 1) : ""; };
-function nwConCode(c){
-  const a = String(c.d || "").split("-"), be = a[0] ? +a[0] + 543 : 2569, yy = String(be).slice(2), mm = a[1] || "01";
-  if(c.prod === "ดูแลกัน"){ const n = nwCons().filter(q => q.prod === "ดูแลกัน").sort((u, v) => String(u.no).localeCompare(String(v.no))).findIndex(q => q.id === c.id) + 1;
-    return `กบข.นข.-สกก(ดูแลกัน)-D${String(n || nwCons().filter(q => q.prod === "ดูแลกัน").length + 1).padStart(3, "0")}/${be}`; }
-  return `กบขนข-${yy}/${c.no}-${mm}-01-${yy}`;
-}
 /* ถอดวงเงิน/จำนวนงวด: ลองทุกจำนวนงวด คำนวณวงเงินที่ผ่อนด้วยงวดละนี้หมดพอดี แล้วดูว่าผ่อนไปแล้ว k งวดได้ยอดคงเหลือใกล้หนี้ในทะเบียนที่สุดตอนไหน */
 function nwConGuess(x, k){
   const a = nwAcct(x, k), pl = nwPlan(a), PK = NLP[k], P = PROD[PK], st = nwStateA(a);
@@ -3874,7 +4073,7 @@ function nwConGuess(x, k){
 function nwConDraft(x, k){
   const g = nwConGuess(x, k), c = {id:"NC" + Math.random().toString(36).slice(2, 8), no:x.no, prod:NLP[k], k, d:g.d, p1:g.p1, amt:g.amt, terms:g.terms, inst:g.inst, shareM:g.shareM,
     mode:g.mode, exFix:g.exFix, g1:"", g2:"", open:0, legacy:false, ben:{}, want:0, conf:g.conf, fromNW:true};
-  nwCons().push(c); c.code = nwConCode(c); return c;
+  nwCons().push(c); c.code = ""; return c;
 }
 /* ตรวจร่างสัญญา: ตารางผ่อนตามสัญญานี้ ณ ธ.ค.68 (หรือตอนนี้ ถ้าเริ่มหลังปีใหม่) ตรงกับหนี้ในทะเบียนหรือไม่ */
 function nwConCheck(c){
@@ -3917,12 +4116,12 @@ function nwRetroHTML(){
           <td class="l"><input class="ce cen" type="text" data-ncf="${c.id}|code" value="${esc(c.code || "")}" style="width:170px"></td>
           <td class="l">${P.guar >= 1 ? `<select data-ncf="${c.id}|g1" style="width:150px">${opts(c.g1)}</select>` : "—"}</td><td class="l">${P.guar >= 2 ? `<select data-ncf="${c.id}|g2" style="width:150px">${opts(c.g2)}</select>` : "—"}</td>
           <td class="l">${df === null ? '<span class="pill amb">ประมาณ</span>' : Math.abs(df) <= 1 ? `<span class="pill grn" title="ตารางผ่อนตามสัญญานี้ ณ ${ck.at} = ${B(ck.sched)} ตรงกับทะเบียน ${B(ck.reg)}">ตรงทะเบียน</span>` : `<span class="pill ${Math.abs(df) <= 100 ? "amb" : "red"}" title="ตารางผ่อน ณ ${ck.at} = ${B(ck.sched)} · ทะเบียน ${B(ck.reg)}">ต่าง ${B(df)}</span>`}</td>
-          <td style="white-space:nowrap"><button class="ghost sm" data-nrd="${c.id}" title="กรอกข้อมูลบุคคลของผู้กู้/ผู้ค้ำ พยาน ผู้รับผลประโยชน์">รายละเอียด</button> <button class="ghost sm" data-nrp="${c.id}">พิมพ์</button> <button class="ghost sm" data-ncr="${c.id}" title="ถอดวงเงิน/งวดจากทะเบียนใหม่อีกครั้ง">⟲</button> <button class="del" data-ncd="${c.id}" title="ลบร่างนี้">×</button></td></tr>`; }).join("")}
+          <td style="white-space:nowrap"><button class="ghost sm" data-nrd="${c.id}" title="กรอกข้อมูลบุคคลของผู้กู้/ผู้ค้ำ พยาน ผู้รับผลประโยชน์">รายละเอียด</button> <button class="ghost sm" data-nrp="${c.id}">พิมพ์</button> <button class="ghost sm" data-nrw="${c.id}" title="บันทึกเป็นไฟล์ Word (.docx)">Word</button> <button class="ghost sm" data-ncr="${c.id}" title="ถอดวงเงิน/งวดจากทะเบียนใหม่อีกครั้ง">⟲</button> <button class="del" data-ncd="${c.id}" title="ลบร่างนี้">×</button></td></tr>`; }).join("")}
       </tbody></table></div>
       <div class="bar" style="margin-top:8px;flex-wrap:wrap"><span class="hint">เอกสารที่จะพิมพ์:</span>
         ${[["loan", "สัญญาเงินกู้"], ["guar", "สัญญาค้ำประกัน"], ["consent", "หนังสือยินยอมค้ำ"], ["sched", "ตารางชำระหนี้"]].map(([k, t]) => `<label class="rlf" style="margin:0"><input type="checkbox" data-ndk="${k}" ${D[k] ? "checked" : ""}> ${t}</label>`).join("")}
         <select id="nr_mode" style="width:auto"><option value="full" ${D.mode === "full" ? "selected" : ""}>ข้อความครบตามต้นฉบับ</option><option value="short" ${D.mode === "short" ? "selected" : ""}>ฉบับย่อ</option></select>
-        <button id="nr_print" style="margin-left:auto" ${sel.length ? "" : "disabled"}>พิมพ์ชุดสัญญาที่เลือก (${sel.length} คน)</button></div>
+        <span style="margin-left:auto;display:flex;gap:6px"><button id="nr_print" ${sel.length ? "" : "disabled"}>พิมพ์ชุดสัญญาที่เลือก (${sel.length} คน)</button><button class="ghost" id="nr_word" ${sel.length ? "" : "disabled"} title="บันทึกชุดที่เลือกเป็นไฟล์ Word (.docx) ไฟล์เดียว">Word</button></span></div>
       <div class="bar" style="margin-top:8px;flex-wrap:wrap"><span class="hint">ข้อมูลบุคคลที่ใช้ในสัญญา (ผู้กู้และผู้ค้ำ ${per.size} คน): ${noProf ? `<b style="color:var(--danger)">ขาดเลขบัตร/ที่อยู่ ${noProf} คน</b>` : "ครบแล้ว"} — กดแถวสัญญา หรือปุ่ม «รายละเอียด» เพื่อกรอก · ข้อมูลทั้งหมดเก็บเป็นฐานข้อมูลสมาชิก</span>
         <button class="ghost sm" data-gomdb="" style="margin-left:auto">👥 เปิดฐานข้อมูลสมาชิก</button></div>
       ${S.nrd && list.some(c => c.id === S.nrd) ? nwRetroDetail(list.find(c => c.id === S.nrd)) : ""}`
@@ -4022,7 +4221,7 @@ function nwOcrHTML(no){
       <div id="ocr_mb"><label>โมเดล</label><input id="ocr_mod" value="${esc(ocrLS("m") || "claude-sonnet-5-5")}"></div></div>
     <p class="hint" id="ocr_priv" style="margin:0 0 8px">โหมด Claude Vision ส่งรูปบัตรไปประมวลผลที่ API ของ Anthropic โดยตรงจากเบราว์เซอร์นี้ · <b>ต้องได้รับความยินยอมจากเจ้าของบัตรก่อน</b> · ระบบไม่เก็บรูปบัตร เก็บเฉพาะข้อความที่อ่านได้ · คีย์ไม่ถูกบันทึกขึ้น Google Sheets และไม่อยู่ใน repo</p>
     <div class="ocrdrop" id="ocr_drop" tabindex="0" role="button">ลากรูปบัตรมาวาง · คลิกเพื่อเลือกไฟล์ · หรือกด Ctrl+V วางรูป (JPG / PNG)</div>
-    <input type="file" id="ocr_file" accept="image/*" hidden>
+    <input type="file" id="ocr_file" accept="image/\u002a" hidden>
     <div id="ocr_work" style="display:none;margin-top:10px;gap:14px;flex-wrap:wrap;align-items:flex-start">
       <div style="flex:0 0 280px;max-width:100%"><canvas id="ocr_cv" style="width:100%;border:1px solid var(--rule);border-radius:8px;background:#fff"></canvas>
         <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"><button class="ghost sm" data-ocrrot="270">⟲ ซ้าย</button><button class="ghost sm" data-ocrrot="90">ขวา ⟳</button><button class="ghost sm" data-ocrrot="180">กลับหัว</button></div></div>
@@ -4080,7 +4279,7 @@ function nwBindOcr(root, no){
     ocrLS("k", key); ocrLS("m", $o("ocr_mod").value.trim()); prog(0.3, "กำลังส่งภาพให้ Claude อ่าน…");
     const k = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight)), o = document.createElement("canvas"); o.width = Math.round(img.naturalWidth * k); o.height = Math.round(img.naturalHeight * k);
     o.getContext("2d").drawImage(img, 0, 0, o.width, o.height);
-    const r = await fetch("https://api.anthropic.com/v1/messages", {method:"POST", headers:{"content-type":"application/json", "x-api-key":key, "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true"},
+    const r = await fetch("https:\/\/api.anthropic.com/v1/messages", {method:"POST", headers:{"content-type":"application/json", "x-api-key":key, "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true"},
       body:JSON.stringify({model:$o("ocr_mod").value.trim(), max_tokens:1200, messages:[{role:"user", content:[{type:"image", source:{type:"base64", media_type:"image/jpeg", data:o.toDataURL("image/jpeg", 0.9).split(",")[1]}}, {type:"text", text:OCR_PROMPT}]}]})});
     const j = await r.json(); if(!r.ok) throw new Error((j.error && j.error.message) || r.status);
     const txt = j.content.filter(b => b.type === "text").map(b => b.text).join(""); $o("ocr_raw").textContent = txt;
@@ -4092,7 +4291,7 @@ function nwBindOcr(root, no){
     else finish(res);
   };
   const runTess = async () => {
-    prog(0.02, "กำลังโหลดตัวอ่าน Tesseract…"); await ocrLoad("https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js");
+    prog(0.02, "กำลังโหลดตัวอ่าน Tesseract…"); await ocrLoad("https:\/\/cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js");
     prog(0.05, "กำลังตรวจทิศทางของภาพ…"); const wE = await Tesseract.createWorker("eng"); let best = {rot, score:-1};
     const order = [rot, (rot + 180) % 360, (rot + 90) % 360, (rot + 270) % 360];
     for(let i = 0; i < order.length; i++){ const { data } = await wE.recognize(draw(order[i], 1100, true)), t = data.text;
@@ -4246,7 +4445,7 @@ function drawNWLoanDash(){
     if(!confirm(`เตรียมร่างสัญญาย้อนหลัง ${todo.length} ฉบับ (สามัญ ${todo.filter(o => o[1] === "sam").length} · ดูแลกัน ${todo.filter(o => o[1] === "dk").length})\n\nระบบถอดวงเงินและจำนวนงวดจากทะเบียนให้ — ตรวจแก้และใส่ผู้ค้ำก่อนพิมพ์`)) return;
     todo.forEach(([x, k]) => nwConDraft(x, k)); save(); redraw(); toast(`เตรียมร่างสัญญาแล้ว ${todo.length} ฉบับ — ตรวจวงเงิน/งวด แล้วใส่ผู้ค้ำ`); };
   el.querySelectorAll("[data-ncf]").forEach(i => i.addEventListener("change", () => { const [id, f2] = i.dataset.ncf.split("|"), c = conOf(id); if(!c) return;
-    c[f2] = ["amt", "terms", "inst", "shareM"].includes(f2) ? (i.value === "" ? 0 : +i.value) : i.value; if(f2 === "terms") c.terms = Math.max(1, Math.round(c.terms)); c.conf = ""; save(); if(["w1", "w2", "note"].includes(f2)) return; redrawR(); }));
+    c[f2] = ["amt", "terms", "inst", "shareM"].includes(f2) ? (i.value === "" ? 0 : +i.value) : i.value; if(f2 === "code") c.codeUser = !!i.value.trim(); if(f2 === "terms") c.terms = Math.max(1, Math.round(c.terms)); c.conf = ""; save(); if(["w1", "w2", "note"].includes(f2)) return; redrawR(); }));
   el.querySelectorAll("[data-ncs]").forEach(i => i.onchange = () => { const c = conOf(i.dataset.ncs); if(c){ c.sel = i.checked; save(); redrawR(); } });
   el.querySelectorAll("[data-ncr]").forEach(b => b.onclick = () => { const c = conOf(b.dataset.ncr), x = c && NW.person(c.no); if(!x) return;
     const g = nwConGuess(x, kOf(c)); Object.assign(c, {amt:g.amt, terms:g.terms, inst:g.inst, shareM:g.shareM, mode:g.mode, exFix:g.exFix, p1:g.p1, d:g.d}); save(); redrawR(); toast("ถอดค่าใหม่จากทะเบียนแล้ว"); });
@@ -4270,6 +4469,30 @@ function drawNWLoanDash(){
   if($("nc_f")) $("nc_f").onchange = e => { S.ncf = e.target.value; redraw(); };
   if($("nc_q")) $("nc_q").oninput = e => { S.ncq = e.target.value; const y = window.scrollY; drawNWLoanDash(); window.scrollTo(0, y); const i = $("nc_q"); i.focus(); i.setSelectionRange(i.value.length, i.value.length); };
   el.querySelectorAll("[data-ncp]").forEach(b => b.onclick = () => { S.pick = b.dataset.ncp; goTab(5); });
+  const rowOf = key => { const [no, k] = key.split("|"), x = NW.person(no); return x ? {x, k, c:nwCon(no, NLP[k])} : null; };
+  const ensure = key => { const r = rowOf(key); if(!r) return null; return r.c || nwConDraft(r.x, r.k); };
+  el.querySelectorAll("[data-ncn]").forEach(i => i.addEventListener("change", () => { const c = ensure(i.dataset.ncn); if(!c) return;
+    c.code = i.value.trim(); c.codeUser = !!c.code; save(); redraw(); }));
+  el.querySelectorAll("[data-nct]").forEach(i => i.addEventListener("change", () => { const c = ensure(i.dataset.nct); if(!c) return; c.d = i.value; save(); redraw(); }));
+  el.querySelectorAll("[data-ncmk]").forEach(b => b.onclick = () => { const c = ensure(b.dataset.ncmk); if(c){ save(); redraw(); toast("สร้างร่างสัญญาแล้ว — ตรวจวงเงิน/งวด และใส่ผู้ค้ำที่ «ทำสัญญาย้อนหลัง»"); } });
+  const conById = id => nwCons().find(q => q.id === id) || S.contracts.find(q => q.id === id);
+  const conWord = c => nwxRun("สัญญา → Word", () => nwxDocx(nwConDocs(c, dopt(), dopt().mode), `สัญญา-${(c.code || c.no + "-" + c.prod).replace(/[/]/g, "-")}-${nwNmOf(c.no)}`));
+  el.querySelectorAll("[data-ncw]").forEach(b => b.onclick = () => { const c = conById(b.dataset.ncw); if(c) conWord(c); });
+  el.querySelectorAll("[data-nrw]").forEach(b => b.onclick = () => { const c = conOf(b.dataset.nrw); if(c) conWord(c); });
+  if($("nr_word")) $("nr_word").onclick = () => { const f = S.nrf || "all", sel = nwCons().filter(c => c.sel !== false && (f === "all" || (f === "sam") === (c.prod === "สามัญ")))
+      .sort((u, v) => String(u.no).localeCompare(String(v.no), "th", {numeric:true}) || u.prod.localeCompare(v.prod)); if(!sel.length) return;
+    if(!confirm(`บันทึกชุดสัญญา ${sel.length} ฉบับเป็นไฟล์ Word ไฟล์เดียว?\n(หลายหน้ามาก — ถ้าสะดวกให้ติ๊กเลือกเฉพาะบางคน)`)) return;
+    const D = dopt(); nwxRun("ชุดสัญญา → Word", () => nwxDocx(sel.map(c => nwConDocs(c, D, D.mode)).join(""), `ชุดสัญญา-${sel.length}ฉบับ`)); };
+  if($("nc_prw")) $("nc_prw").onclick = () => nwxRun("ทะเบียนสัญญา → Word", () => nwxDocx(nwConRegDoc(), "ทะเบียนสัญญา", {K:1.1}));
+  el.querySelectorAll("[data-ncx]").forEach(b => b.onclick = () => { const c = nwCons().find(q => q.id === b.dataset.ncx) || S.contracts.find(q => q.id === b.dataset.ncx); if(!c) return;
+    if(c.fromNW) nwPrint(nwConDocs(c, dopt(), dopt().mode)); else { S.pick = c.id; goTab(5); } });
+  if($("nc_num")) $("nc_num").onclick = () => { const R = nwConRows(), noCon = R.filter(r => !r.c).length, auto = R.filter(r => r.c && nwConAuto(r.c) && r.c.code).length;
+    if(!confirm(`ออกเลขที่สัญญาให้ผู้กู้ที่ยังมีหนี้ ${R.length} ฉบับ เรียงตามวันที่ทำสัญญา (เก่าสุดได้เลขแรก)\nรูปแบบ กบขนข-ปี/ลำดับ ใช้เหมือนกันทั้งสามัญและดูแลกัน\n${noCon ? `• สร้างร่างสัญญาให้ที่ยังไม่มี ${noCon} ฉบับ\n` : ""}${auto ? `• เลขที่ระบบเคยออกให้เองไว้ ${auto} ฉบับ จะออกใหม่ทับ\n` : ""}• เลขที่คุณพิมพ์เองหรือมาจากระบบเก่าไม่ถูกแตะ\n\nดำเนินการหรือไม่?`)) return;
+    const o = nwConNumber(); save(); redraw(); toast(`ออกเลขที่สัญญาแล้ว ${o.n} ฉบับ${o.made ? ` (สร้างร่าง ${o.made})` : ""}`); };
+  if($("nc_pr")) $("nc_pr").onclick = () => nwPrint(nwConRegDoc());
+  if($("nc_csv")) $("nc_csv").onclick = () => { const R = nwConRows();
+    csvOut("kbk-ทะเบียนสัญญา.csv", [["ทะเบียนสัญญา", ["ที่", "เลขที่สัญญา", "เลขสมาชิก", "ผู้กู้", "ประเภท", "วันที่ทำสัญญา", "วงเงิน", "งวด", "งวดละ", "ผู้ค้ำ 1", "ผู้ค้ำ 2", "หนี้คงเหลือ", "ค้าง (งวด)"],
+      R.map((r, i) => { const c = r.c || {}; return [i + 1, c.code || "", r.x.no, r.x.name, NLP[r.k], c.d || r.d || "", c.amt ? f2(c.amt) : "", c.terms || "", f2(r.a.inst || c.inst || 0), c.g1 ? c.g1 + " " + nwNmOf(c.g1) : "", c.g2 ? c.g2 + " " + nwNmOf(c.g2) : "", f2(r.st.debt), r.st.missed || 0]; })]]); };
 }
 
 /* ============ เว็บใหม่: สรุปภาพรวม กบข.นข. สำหรับสมาชิก — ๑ หน้า A4 ============
@@ -4439,10 +4662,10 @@ function drawNWOverview(){
       <div class="bar" style="margin:0 0 8px"><button class="${mode === "cum" ? "" : "ghost"}" id="ov_mc">ภาพรวมสะสม</button><button class="${mode === "month" ? "" : "ghost"}" id="ov_mm">สรุปรายเดือน</button></div>
       <div class="pf">${mode === "month"
         ? `<div><label>เดือนที่ต้องการพิมพ์</label><div style="display:flex;gap:6px"><button class="ghost sm" id="ov_pm">◀</button><select id="ov_m">${mths.map(q => `<option value="${q}" ${q === p ? "selected" : ""}>${nwPFull(q)}</option>`).join("")}</select><button class="ghost sm" id="ov_nm">▶</button></div></div>
-           <div style="align-self:end"><button id="ov_print">🖨 พิมพ์เดือนนี้ ๑ หน้า A4</button></div><div style="align-self:end"><button class="ghost" id="ov_pall">พิมพ์ทุกเดือนปี ${D.end.split("-")[0]} (${yrM.length} หน้า)</button></div>`
+           <div style="align-self:end;display:flex;gap:6px;flex-wrap:wrap"><button id="ov_print">🖨 พิมพ์เดือนนี้ ๑ หน้า A4</button>${nwxBtns("ov")}</div><div style="align-self:end"><button class="ghost" id="ov_pall">พิมพ์ทุกเดือนปี ${D.end.split("-")[0]} (${yrM.length} หน้า)</button></div>`
         : `<div><label>ปันผลหุ้น (% ต่อปี)</label><input type="number" step="0.01" min="0" id="ov_rs" value="${C.rs}"></div>
            <div><label>เฉลี่ยคืนดอกเบี้ย (% ต่อปี)</label><input type="number" step="0.01" min="0" id="ov_ri" value="${C.ri}"></div>
-           <div style="align-self:end"><button id="ov_print">🖨 พิมพ์ ๑ หน้า A4</button></div>`}</div>
+           <div style="align-self:end;display:flex;gap:6px;flex-wrap:wrap"><button id="ov_print">🖨 พิมพ์ ๑ หน้า A4</button>${nwxBtns("ov")}</div>`}</div>
       <p class="hint" style="margin:8px 0 0">ตัวเลขทั้งหมดมาจากทะเบียน (รวมสมาชิกที่ยังไม่ลาออก ไม่มีชื่อรายบุคคล) · ตัวอักษร TH Sarabun New ขอบซ้าย ๓ ซม. ขวา ๒ ซม. · ในหน้าต่างพิมพ์ให้ปิด «หัวกระดาษและท้ายกระดาษ»
         ${mode === "cum" ? " · อัตราและช่วงเดือนใช้ค่าเดียวกับแท็บ แดชบอร์ด" : " · รายเดือนเทียบกับเดือนก่อนหน้า (ข้อมูลเริ่ม พ.ค.68)"}</p></div>
     <div class="ov-wrap"><div class="ov-paper">${mode === "month" ? nwMonthlyDoc(p) : nwOverviewDoc()}</div></div></div>
@@ -4453,11 +4676,15 @@ function drawNWOverview(){
   const set = patch => { S.nw.dash = Object.assign({}, S.nw.dash || {}, patch); save(); drawNWOverview(); };
   $("ov_mc").onclick = () => { S.ovmode = "cum"; drawNWOverview(); }; $("ov_mm").onclick = () => { S.ovmode = "month"; drawNWOverview(); };
   if(mode === "cum"){ $("ov_rs").onchange = e => set({rs:Math.max(0, +e.target.value || 0)}); $("ov_ri").onchange = e => set({ri:Math.max(0, +e.target.value || 0)});
-    $("ov_print").onclick = () => nwPrint(nwOverviewDoc()); }
+    $("ov_print").onclick = () => nwPrint(nwOverviewDoc());
+    $("ov_w").onclick = () => nwxRun("สรุปภาพรวม → Word", () => nwxDocx(nwOverviewDoc(), `สรุปภาพรวม-${D.end}`, NWX_FIT));
+    $("ov_i").onclick = () => nwxRun("สรุปภาพรวม → รูป", () => nwxPng(nwOverviewDoc(), `สรุปภาพรวม-${D.end}`)); }
   else { const i = mths.indexOf(p);
     $("ov_m").onchange = e => { S.ovm = e.target.value; drawNWOverview(); };
     $("ov_pm").onclick = () => { if(mths[i - 1]){ S.ovm = mths[i - 1]; drawNWOverview(); } }; $("ov_nm").onclick = () => { if(mths[i + 1]){ S.ovm = mths[i + 1]; drawNWOverview(); } };
     $("ov_print").onclick = () => nwPrint(nwMonthlyDoc(p));
+    $("ov_w").onclick = () => nwxRun("สรุปรายเดือน → Word", () => nwxDocx(nwMonthlyDoc(p), `สรุปรายเดือน-${p}`, NWX_FIT));
+    $("ov_i").onclick = () => nwxRun("สรุปรายเดือน → รูป", () => nwxPng(nwMonthlyDoc(p), `สรุปรายเดือน-${p}`));
     $("ov_pall").onclick = () => { if(!yrM.length || !confirm(`พิมพ์สรุปรายเดือน ${yrM.length} หน้า (เดือนละ ๑ หน้า A4)?`)) return; nwPrint(yrM.map(q => nwMonthlyDoc(q)).join("")); }; }
 }
 
@@ -4591,7 +4818,7 @@ function drawNWRc(){
       <select id="rc_f" style="width:auto"><option value="all">ทุกคน</option><option value="loan" ${f === "loan" ? "selected" : ""}>ผู้กู้</option><option value="save" ${f === "save" ? "selected" : ""}>ผู้ฝาก</option></select>
       <input id="rc_q" placeholder="ค้นชื่อ / เลขสมาชิก" value="${esc(S.rcq || "")}" style="max-width:260px">
       <button class="ghost sm" id="rc_all">เลือกทั้งหมด</button><button class="ghost sm" id="rc_none">ไม่เลือก</button>
-      <button class="cta" id="rc_print" style="margin-left:auto" ${chosen.length ? "" : "disabled"}>🖨 พิมพ์ที่เลือก ${chosen.length} ใบ (${pages} หน้า)</button>
+      <span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap"><button class="cta" id="rc_print" ${chosen.length ? "" : "disabled"}>🖨 พิมพ์ที่เลือก ${chosen.length} ใบ (${pages} หน้า)</button><button class="ghost" id="rc_w" ${chosen.length ? "" : "disabled"} title="บันทึกที่เลือกเป็นไฟล์ Word (.docx)">Word</button><button class="ghost" id="rc_i" ${chosen.length ? "" : "disabled"} title="บันทึกที่เลือกเป็นรูป PNG (หลายใบ = ไฟล์ ZIP)">บันทึกเป็นรูป</button></span>
     </div>
     <div class="tbl" style="max-height:440px"><table><thead><tr><th></th><th class="l">เลขที่</th><th class="l">ชื่อ</th><th class="l">สถานะ</th>
       <th>ดอกเบี้ย</th><th>เงินต้น</th><th>ฝากหุ้น</th><th>รวมรับ</th><th>หุ้นสะสม</th><th>หนี้คงเหลือ</th></tr></thead><tbody>
@@ -4620,6 +4847,8 @@ function drawNWRc(){
   el.querySelectorAll("[data-rc]").forEach(tr => tr.onclick = () => { S.rcv = tr.dataset.rc; redo(); const c = $("rc_p1"); if(c) c.scrollIntoView({behavior:"smooth", block:"start"}); });
   const go = arr => nwPrint(arr.map(x => nwRcDoc(x, p)).join(""));
   if($("rc_p1")) $("rc_p1").onclick = () => go([cur]);
+  $("rc_w").onclick = () => { if(chosen.length) nwxRun("ใบเสร็จ → Word", () => nwxDocx(chosen.map(a => nwRcDoc(a.x, p)).join(""), `ใบเสร็จ-${p}-${chosen.length}ใบ`, NWX_ONE)); };
+  $("rc_i").onclick = () => { if(chosen.length) nwxRun("ใบเสร็จ → รูป", () => nwxPng(chosen.map(a => nwRcDoc(a.x, p)).join(""), `ใบเสร็จ-${p}`)); };
   $("rc_print").onclick = () => { if(!chosen.length) return;
     if(!confirm(`พิมพ์ใบเสร็จเดือน ${nwPFull(p)} จำนวน ${chosen.length} ใบ (${pages} หน้า A4 · 1 คนต่อ 1 หน้า)?`)) return; go(chosen.map(a => a.x)); };
 }
@@ -7947,7 +8176,7 @@ function docOrder(){
 /* เลขที่สัญญาตามรูปแบบเดิมของกลุ่ม: สามัญ = กบขนข-ปี/เลขสมาชิก-เดือน-01-ปี · ดูแลกัน = กบข.นข.-สกก(ดูแลกัน)-D###/ปี (ต่อจากเลขสูงสุดที่ใช้แล้ว) */
 function conCodeSuggest(c){
   const a = String(c.d || "").split("-"), be = a[0] ? +a[0] + 543 : 2569, yy = String(be).slice(2), mm = a[1] || "01";
-  if(c.prod === "ดูแลกัน"){ let mx = 0; S.contracts.concat((S.nw && S.nw.cons) || []).forEach(q => { const m = String(q.code || "").match(/-D(\d+)\//); if(m) mx = Math.max(mx, +m[1]); });
+  if(c.prod === "ดูแลกัน"){ let mx = 0; S.contracts.concat((S.nw && S.nw.cons) || []).forEach(q => { const m = String(q.code || "").match(/-D(\d+)[/]/); if(m) mx = Math.max(mx, +m[1]); });
     return `กบข.นข.-สกก(ดูแลกัน)-D${String(mx + 1).padStart(3, "0")}/${be}`; }
   return `กบขนข-${yy}/${c.no}-${mm}-01-${yy}`;
 }
@@ -7981,7 +8210,7 @@ function drawT5(){
     <div class="grid" style="grid-template-columns:1fr auto auto">
       <div><label>สัญญาในทะเบียน</label><select id="k_sel">${opts||'<option value="">— ยังไม่มีสัญญาใหม่ในทะเบียน —</option>'}</select></div>
       <div><label>วงเงินรับผิดผู้ค้ำ/คน</label><input type="number" id="k_cap" step="1000" style="width:120px"></div>
-      <div><label>&nbsp;</label><button id="k_print">พิมพ์ชุดสัญญา</button></div>
+      <div><label>&nbsp;</label><span style="display:flex;gap:6px"><button id="k_print">พิมพ์ชุดสัญญา</button><button class="ghost" id="k_word" title="บันทึกเป็นไฟล์ Word (.docx) แก้ไขต่อได้">Word</button></span></div>
     </div>
     ${cur ? `<div class="grid" style="grid-template-columns:1fr 170px auto;margin-top:8px;align-items:end">
       <div><label>เลขที่สัญญา <span class="hint">(พิมพ์ในสัญญา สัญญาค้ำ และตารางชำระหนี้)</span></label><input id="k_code" value="${esc(cur.code || "")}" placeholder="เช่น กบขนข-69/022-01-01-69"></div>
@@ -8032,7 +8261,7 @@ function drawT5(){
   const hard = bad.filter(x=>!x.startsWith("ยังไม่มีเลขบัตร"));
   $("k_warn").innerHTML = hard.length ? `<b style="color:var(--red)">ยังพิมพ์ไม่ได้:</b> ${hard.join(" · ")}`
     : `<b style="color:var(--green)">พร้อมพิมพ์</b> · ${pages} หน้า` + (bad.length>hard.length?` · <span style="color:#8A6400">${bad[bad.length-1]}</span>`:"");
-  $("k_print").disabled = hard.length>0;
+  $("k_print").disabled = hard.length>0; $("k_word").disabled = hard.length>0;
 
   const cap = +$("k_cap").value || capOf(cur);
   let out = "";
@@ -8060,6 +8289,7 @@ function drawT5(){
     S.profile = S.profile||{}; S.profile[no]=S.profile[no]||{}; S.profile[no][f]=e.target.value.trim(); all(); });
   document.querySelectorAll("[data-bn]").forEach(i=>i.onchange=e=>{
     cur.ben = cur.ben||{}; cur.ben[e.target.dataset.bn]=e.target.value.trim(); all(); });
+  $("k_word").onclick = () => nwxRun("สัญญา → Word", () => nwxDocx(docMode === "short" ? contractHTML(cur, cap, !!docPick.sched) : out, `สัญญา-${String(cur.code || cur.no).replace(/[/]/g, "-")}-${memName(cur.no)}`));
   $("k_print").onclick = () => { document.body.classList.add("kprint");
     setTimeout(()=>{ window.print(); document.body.classList.remove("kprint"); }, 250); };
 }
