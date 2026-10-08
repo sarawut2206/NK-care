@@ -604,7 +604,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-79</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-80</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -3693,7 +3693,7 @@ function nwTrackHTML(R){
         <div><label>เลขที่หนังสือ</label><input data-ntk="no" value="${esc(T.no)}" placeholder="กบข.นข. 69/…"></div>
         <div><label>ลงวันที่</label><input type="date" data-ntk="d" value="${esc(T.d)}"></div>
         <div><label>ให้ชำระภายใน (วัน)</label><input type="number" data-ntk="days" value="${T.days}"></div>
-        <div><label>ค่าทวงถามต่อเดือน (บาท)</label><input type="number" step="0.01" min="0" data-ntk="fee" value="${esc(T.fee)}" placeholder="200 (ตามระเบียบ)"></div></div>
+        <div><label>ค่าทวงถามต่อเดือน (บาท) — ว่าง = ตามระเบียบ</label><input type="number" step="0.01" min="0" data-ntk="fee" value="${esc(T.fee)}" placeholder="5% ไม่เกิน 100 × 2 ครั้ง = สูงสุด 200"></div></div>
       ${(() => { const so = R.find(o => key(o) === T.sel); if(!so) return ""; const P = PROD[so.pk], gs = nwGuarOf(so.x.no, so.pk), ppl = NW.people();
         const opts = sel => `<option value="">— เลือกผู้ค้ำ —</option>` + ppl.filter(q => q.no !== so.x.no).map(q => `<option value="${esc(q.no)}" ${q.no === sel ? "selected" : ""}>${esc(q.no)} ${esc(q.name)}</option>`).join("");
         const need = (T.kind === "guar" || T.kind === "all") && !gs.length;
@@ -3707,18 +3707,22 @@ function nwWarnDoc(o, kind, no, d, days, feeIn){
   if(kind === "all") return nwWarnDoc(o, "warn", no, d, days, feeIn) + nwWarnDoc(o, "guar", no, d, days, feeIn);          // ผู้กู้ ๑ ฉบับ + ผู้ค้ำคนละ ๑ ฉบับ
   const m = o.x, c0 = nwCon(m.no, o.pk), P = PROD[o.pk], p = prof(m.no), n = o.rows.length, miss = o.missed;
   const gs = nwGuarOf(m.no, o.pk).map(g => ({no:g, name:nwNmOf(g)}));
-  const perM = has(feeIn) && feeIn !== "" ? num(feeIn) : 200, fee = r2(perM * n), pen = miss >= 3 ? r2(o.debt * 0.012 * (miss - 2)) : 0, total = r2(o.short + fee + pen);
+  const dd = d || nwToday(), flat = has(feeIn) && feeIn !== "" ? num(feeIn) : null;
+  // ค่าทวงถาม: ค้างเกิน 5 วัน ร้อยละ 5 ของยอดงวด ไม่เกิน 100 บาท/ครั้ง ไม่เกิน 2 ครั้ง/เดือน (หมวด 5/1 ข้อ 2.4) · ดอกเบี้ยผิดนัด 1.2%/เดือน จากยอดค้างของงวดที่ค้างเกิน 90 วัน (ข้อ 2.1)
+  const rx = o.rows.map(w => { const dl = nwDays(nwDate5(w.p), dd);
+    return {...w, dl, fee: dl > 5 ? (flat !== null ? flat : r2(Math.min(100, w.exp * 0.05) * 2)) : 0, pen: dl > 90 ? r2(w.short * 0.012 * Math.ceil((dl - 90) / 30)) : 0}; });
+  const fee = r2(rx.reduce((u, w) => u + w.fee, 0)), pen = r2(rx.reduce((u, w) => u + w.pen, 0)), total = r2(o.short + fee + pen);
   const dl = d ? (() => { const t = new Date(d); t.setDate(t.getDate() + days); return thDate(t.toISOString().slice(0, 10)); })() : "…………";
   const lv = n >= 12 ? "ค้างเกิน 12 งวด" : n >= 6 ? "ค้าง 6 งวดขึ้นไป" : n >= 3 ? "ค้าง 3 งวดขึ้นไป" : `ค้าง ${n} งวด`;
   const T = {warn:"หนังสือแจ้งเตือนการค้างชำระหนี้", guar:"หนังสือแจ้งผู้ค้ำประกันกรณีผู้กู้ผิดนัดชำระหนี้", final:"หนังสือบอกกล่าวทวงถามครั้งสุดท้าย (ก่อนดำเนินคดี)"}[kind];
   const to = kind === "guar" ? (gs.length ? gs : [{no:"", name:"…………"}]) : [{no:m.no, name:m.name}];
-  const tbl = `<table class="kt"><thead><tr><th class="l">งวด</th><th>ยอดที่ต้องชำระ</th><th>รับชำระจริง</th><th>คงค้าง</th><th>ค่าทวงถาม</th><th class="l">สถานะการชำระ</th></tr></thead><tbody>
-    ${o.rows.map(w => `<tr><td class="l">${thPer(w.p)}</td><td class="n">${B(w.exp)}</td><td class="n">${B(w.got)}</td><td class="n"><b>${B(w.short)}</b></td><td class="n">${B(perM)}</td><td class="l">${w.kind}</td></tr>`).join("")}
-    <tr class="hl"><td class="l"><b>รวมยอดค้างชำระ</b></td><td class="n">—</td><td class="n">—</td><td class="n"><b>${B(o.short)}</b></td><td class="n"><b>${B(fee)}</b></td><td></td></tr></tbody></table>`;
+  const tbl = `<table class="kt"><thead><tr><th class="l">งวด</th><th>ยอดที่ต้องชำระ</th><th>รับชำระจริง</th><th>คงค้าง</th><th>ค้างมาแล้ว (วัน)</th><th>ค่าทวงถาม</th><th>ดอกเบี้ยผิดนัด</th></tr></thead><tbody>
+    ${rx.map(w => `<tr><td class="l">${thPer(w.p)}</td><td class="n">${B(w.exp)}</td><td class="n">${B(w.got)}</td><td class="n"><b>${B(w.short)}</b></td><td class="n">${w.dl}</td><td class="n">${w.fee ? B(w.fee) : "—"}</td><td class="n">${w.pen ? B(w.pen) : "—"}</td></tr>`).join("")}
+    <tr class="hl"><td class="l"><b>รวม</b></td><td class="n">—</td><td class="n">—</td><td class="n"><b>${B(o.short)}</b></td><td class="n">—</td><td class="n"><b>${B(fee)}</b></td><td class="n"><b>${B(pen)}</b></td></tr></tbody></table>`;
   const money = `<table class="kt sum"><tbody>
     <tr><td>ยอดค้างชำระสะสม (เงินต้น + ดอกเบี้ย + เงินฝากหุ้นค้างงวด)</td><td class="n">${B(o.short)}</td></tr>
-    <tr><td>ค่าทวงถามรายเดือน (ข้อ 3.1 — เดือนละ ${B(perM)} บาท × ${n} เดือน)</td><td class="n">${B(fee)}</td></tr>
-    <tr><td>ดอกเบี้ยผิดนัด 1.20%/เดือน กรณีค้างเกิน 90 วัน (ข้อ 3.2)</td><td class="n">${B(pen)}</td></tr>
+    <tr><td>ค่าทวงถาม (ข้อตกลง หมวด 5/1 ข้อ 2.4 — ร้อยละ 5 ของยอดงวด ไม่เกิน 100 บาท/ครั้ง ไม่เกิน 2 ครั้ง/เดือน · เฉพาะงวดที่ค้างเกิน 5 วัน)</td><td class="n">${B(fee)}</td></tr>
+    <tr><td>ดอกเบี้ยผิดนัด 1.20%/เดือน จากยอดค้างชำระ เฉพาะงวดที่ค้างเกิน 90 วัน (ข้อตกลง หมวด 5/1 ข้อ 2.1)</td><td class="n">${B(pen)}</td></tr>
     <tr class="hl"><td><b>รวมยอดที่ต้องชำระเพื่อระงับการดำเนินคดี (ข้อ 3.4)</b></td><td class="n"><b>${B(total)}</b></td></tr>
     <tr><td>เงินต้นคงเหลือตามสัญญา ณ วันที่ออกหนังสือ</td><td class="n">${B(o.debt)}</td></tr></tbody></table>`;
   return to.map(who => { const wp = prof(who.no);
