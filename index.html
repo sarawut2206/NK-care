@@ -395,6 +395,11 @@ table.hmx th.nm{z-index:3}
 .pfchk{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;min-height:26px}
 .rlf{display:flex;gap:6px;align-items:center;font-weight:400;font-size:12.5px;color:var(--soft);margin:4px 0 0}
 .rlf input[type=checkbox]{width:15px;height:15px;accent-color:var(--green)}
+.ocr-ok{background:#E8F6EE!important;border-color:#2F9E62!important}
+.ocr-chk{background:#FFF4DC!important;border-color:#D99A1B!important}
+.ocrdrop{border:2px dashed var(--rule);border-radius:10px;padding:16px;text-align:center;color:var(--soft);cursor:pointer;font-size:13px}
+.ocrdrop.over{border-color:var(--brand);background:#FFF9E8}
+.ocrbar{height:7px;background:var(--rule);border-radius:5px;overflow:hidden;margin:8px 0 3px}.ocrbar i{display:block;height:100%;width:0;background:var(--brand);transition:width .2s}
 details.opn{border:1px solid var(--rule);border-radius:9px;padding:9px 12px;background:var(--paper)}
 details.opn summary{cursor:pointer;font-weight:600;font-size:13px;color:var(--brand)}
 details.opn[open] summary{margin-bottom:9px}
@@ -604,7 +609,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-81</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-82</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -3959,6 +3964,151 @@ function nwBindMf(root){
     mfSet(no, f, v); save(); refresh(); }));
   root.querySelectorAll("[data-mverify]").forEach(i => i.addEventListener("change", () => { const p = nwProf(i.dataset.mverify); if(i.checked) delete p.addrSrc; save(); }));
 }
+/* ---------- อ่านบัตรประชาชนด้วย OCR (Claude Vision / Tesseract) ----------
+   รูปบัตรไม่ถูกเก็บ — เก็บเฉพาะข้อความที่อ่านได้ลงฐานข้อมูลสมาชิก · API key เก็บในเบราว์เซอร์เครื่องนี้เท่านั้น (ไม่ขึ้น Sheets ไม่อยู่ใน repo) */
+const OCR_TH_MON = {"ม.ค":1, "ก.พ":2, "มี.ค":3, "เม.ย":4, "พ.ค":5, "มิ.ย":6, "ก.ค":7, "ส.ค":8, "ก.ย":9, "ต.ค":10, "พ.ย":11, "ธ.ค":12};
+const OCR_EN_MON = {jan:1, feb:2, mar:3, apr:4, may:5, jun:6, jul:7, aug:8, sep:9, oct:10, nov:11, dec:12};
+const OCR_PFX = "(นางสาว|น\\.ส\\.?|นาย|นาง|เด็กชาย|เด็กหญิง|ด\\.ช\\.|ด\\.ญ\\.)";
+const ocrLS = (k, v) => { try{ if(v === undefined) return localStorage.getItem("nkocr_" + k) || ""; localStorage.setItem("nkocr_" + k, v); }catch(e){} return ""; };
+function ocrFindCID(text){
+  const t = text.replace(/(?<=\d)[ \-](?=\d)/g, "").replace(/(?<=\d)[ \-](?=\d)/g, "");
+  return [...t.matchAll(/(?<!\d)\d{13}(?!\d)/g)].map(x => x[0]).find(c => cidOK(c)) || null;
+}
+function ocrCleanThai(s){
+  s = s.replace(/[|_\[\]{}()“”"'`~]/g, " ").replace(/([\u0E00-\u0E7F])\s+(?=[\u0E00-\u0E7F])/g, "$1");
+  s = s.replace(/(หมู่ที่|หมู่|ต\.|อ\.|จ\.|ซ\.|ซอย|ถ\.|ถนน|แขวง|เขต|ตำบล|อำเภอ|จังหวัด)(?=\S)/g, "$1 ").replace(/\s*(?=(หมู่ที่|หมู่|ต\.|อ\.|จ\.|ซอย|ถนน|แขวง|เขต|ตำบล|อำเภอ|จังหวัด))/g, " ");
+  return s.replace(/หมู่ ที่/g, "หมู่ที่").replace(/\s+/g, " ").trim();
+}
+/* ข้อความดิบจาก Tesseract → {name, cid, dob(YYYY-MM-DD), addr, flags} */
+function ocrParse(text){
+  const out = {flags:{}}, lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean), pad = n => String(n).padStart(2, "0");
+  out.cid = ocrFindCID(text); out.flags.cid = !!out.cid;
+  let dob = null, m = text.match(/Birth\s*[:\-]?\s*(\d{1,2})\s*([A-Za-z]{3,4})\.?\s*(\d{4})/i);
+  if(m && OCR_EN_MON[m[2].slice(0, 3).toLowerCase()]) dob = {d:+m[1], mo:OCR_EN_MON[m[2].slice(0, 3).toLowerCase()], y:+m[3]};
+  if(!dob){ m = text.replace(/\s+/g, "").match(/เกิดวันที่(\d{1,2})([ก-๛\.]+?)(\d{4})/);
+    if(m){ const key = Object.keys(OCR_TH_MON).find(k => m[2].replace(/\./g, "").startsWith(k.replace(".", ""))); if(key) dob = {d:+m[1], mo:OCR_TH_MON[key], y:+m[3] - 543}; } }
+  if(dob && dob.y > 1900 && dob.y < 2100 && dob.d >= 1 && dob.d <= 31){ out.dob = `${dob.y}-${pad(dob.mo)}-${pad(dob.d)}`; out.flags.dob = true; }
+  let name = ""; const rxP = new RegExp(OCR_PFX), nl = lines.find(l => rxP.test(l) && /[\u0E00-\u0E7F]/.test(l) && !/ที่อยู่/.test(l));
+  if(nl){ const i = nl.search(rxP); let t = nl.slice(i).replace(/[^\u0E00-\u0E7F\.\s]/g, " ");
+    const pm = t.match(new RegExp("^" + OCR_PFX + "\\s*")); const prefix = pm ? pm[1] : ""; t = t.slice(pm ? pm[0].length : 0).trim();
+    const parts = t.split(/\s+/).filter(q => q.length > 1 || /[\u0E00-\u0E7F]/.test(q)); name = (prefix + " " + parts.join(" ")).trim(); out.flags.name = parts.length === 2; }
+  if(!name){ const en = text.match(/Name\s+((?:Mr|Mrs|Miss|Ms)\.?\s*[A-Za-z]+)/i), ln = text.match(/Last\s*name\s+([A-Za-z]+)/i); if(en) name = en[1] + (ln ? " " + ln[1] : ""); }
+  out.name = name;
+  const ai = lines.findIndex(l => /ที่\s*อยู่/.test(l));
+  if(ai >= 0){ const buf = [];
+    for(let i = ai; i < Math.min(lines.length, ai + 3); i++){ let l = lines[i];
+      if(i > ai && /(\d{1,2}\s*[ก-ฮ]\.\s*[ก-ฮ]\.|วันออกบัตร|Date of|\d{4}\s*วัน)/.test(l)) break;
+      buf.push(l.replace(/\d{1,2}\s*[ก-ฮ]\.\s*[ก-ฮ]\.?\s*\d{4}.*$/, "")); }
+    out.addr = ocrCleanThai(buf.join(" ").replace(/^.*?ที่\s*อยู่/, "").replace(/[^\u0E00-\u0E7F0-9\/\.\s\-]/g, " "));
+    out.flags.addr = /(ต\.|ตำบล|แขวง)/.test(out.addr) && /(จ\.|จังหวัด|กรุงเทพ)/.test(out.addr); }
+  return out;
+}
+const OCR_PROMPT = `นี่คือรูปถ่ายบัตรประจำตัวประชาชนไทย (อาจหมุน กลับหัว เอียง เบลอ หรือมีลายเซ็นทับ ให้อ่านเท่าที่เห็นให้ครบ)
+ตอบเป็น JSON อย่างเดียว ห้ามมีข้อความอื่นหรือ markdown ตามรูปแบบนี้:
+{"prefix_th":"","first_name_th":"","last_name_th":"","cid":"13 หลักไม่มีเว้นวรรค","birth_date_ce":"YYYY-MM-DD","address_th":"ที่อยู่ตามที่พิมพ์บนบัตรทั้งหมด ตั้งแต่บ้านเลขที่ถึงจังหวัด","uncertain":["ชื่อฟิลด์ที่อ่านไม่ชัด"]}
+กฎ: อ่านภาษาไทยให้ตรงตามบัตร ห้ามเดา ถ้าไม่ชัดให้ใส่ชื่อฟิลด์ใน uncertain ถ้าไม่มีให้ใส่ ""
+ตรวจเลข 13 หลักกับตัวเลขที่พิมพ์ไว้ใต้ Identification Number อีกครั้ง`;
+const ocrLoad = src => new Promise((ok, no) => { if(window.Tesseract) return ok(); const t = document.createElement("script"); t.src = src; t.onload = ok; t.onerror = () => no(new Error("โหลดตัวอ่าน Tesseract ไม่สำเร็จ (ไม่มีอินเทอร์เน็ต?)")); document.head.appendChild(t); });
+
+function nwOcrHTML(no){
+  const eng = ocrLS("e") || "claude";
+  return `<details class="opn" id="ocr_box" style="margin:8px 0 6px"><summary>📷 อ่านบัตรประชาชนด้วย OCR — ใส่ชื่อ เลขบัตร วันเกิด ที่อยู่ ให้อัตโนมัติ</summary>
+    <div class="pf" style="margin-bottom:8px">
+      <div style="grid-column:span 2"><label>วิธีอ่านบัตร</label><select id="ocr_eng"><option value="claude" ${eng === "claude" ? "selected" : ""}>Claude Vision (แม่นยำสูง – แนะนำ)</option><option value="tess" ${eng === "tess" ? "selected" : ""}>Tesseract OCR (ออฟไลน์ ไม่ต้องใช้คีย์ แต่แม่นน้อยกว่า)</option></select></div>
+      <div id="ocr_kb" style="grid-column:span 2"><label>Anthropic API key (เก็บในเครื่องนี้เท่านั้น)</label><input id="ocr_key" type="password" autocomplete="off" placeholder="sk-ant-..." value="${esc(ocrLS("k"))}"></div>
+      <div id="ocr_mb"><label>โมเดล</label><input id="ocr_mod" value="${esc(ocrLS("m") || "claude-sonnet-5-5")}"></div></div>
+    <p class="hint" id="ocr_priv" style="margin:0 0 8px">โหมด Claude Vision ส่งรูปบัตรไปประมวลผลที่ API ของ Anthropic โดยตรงจากเบราว์เซอร์นี้ · <b>ต้องได้รับความยินยอมจากเจ้าของบัตรก่อน</b> · ระบบไม่เก็บรูปบัตร เก็บเฉพาะข้อความที่อ่านได้ · คีย์ไม่ถูกบันทึกขึ้น Google Sheets และไม่อยู่ใน repo</p>
+    <div class="ocrdrop" id="ocr_drop" tabindex="0" role="button">ลากรูปบัตรมาวาง · คลิกเพื่อเลือกไฟล์ · หรือกด Ctrl+V วางรูป (JPG / PNG)</div>
+    <input type="file" id="ocr_file" accept="image/*" hidden>
+    <div id="ocr_work" style="display:none;margin-top:10px;gap:14px;flex-wrap:wrap;align-items:flex-start">
+      <div style="flex:0 0 280px;max-width:100%"><canvas id="ocr_cv" style="width:100%;border:1px solid var(--rule);border-radius:8px;background:#fff"></canvas>
+        <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"><button class="ghost sm" data-ocrrot="270">⟲ ซ้าย</button><button class="ghost sm" data-ocrrot="90">ขวา ⟳</button><button class="ghost sm" data-ocrrot="180">กลับหัว</button></div></div>
+      <div style="flex:1;min-width:230px"><button id="ocr_go">อ่านข้อมูลจากบัตร</button>
+        <div class="ocrbar"><i id="ocr_pg"></i></div><div class="hint" id="ocr_st">พร้อมแล้ว</div>
+        <label class="rlf" style="margin-top:6px"><input type="checkbox" id="ocr_over"> เขียนทับช่องที่มีข้อมูลอยู่แล้ว <span class="hint">(ไม่ติ๊ก = เติมเฉพาะช่องที่ว่าง)</span></label>
+        <p class="hint" style="margin:6px 0 0"><span class="pill grn">เขียวอ่อน</span> = อ่านได้และผ่านการตรวจ · <span class="pill amb">เหลือง</span> = ควรตรวจทานก่อนใช้ · ช่องที่กรอกจะบันทึกให้ทันที</p>
+        <details style="margin-top:6px;font-size:12.5px"><summary>ข้อความดิบจาก OCR (ไว้ตรวจสอบ)</summary><pre id="ocr_raw" style="white-space:pre-wrap;max-height:200px;overflow:auto"></pre></details></div></div></details>`;
+}
+function nwBindOcr(root, no){
+  const $o = id => root.querySelector("#" + id); if(!$o("ocr_box")) return;
+  let img = null, rot = 0, last = null;
+  const prog = (v, msg) => { $o("ocr_pg").style.width = Math.round(v * 100) + "%"; if(msg) $o("ocr_st").textContent = msg; };
+  const draw = (r, maxW, enh) => { const w = img.naturalWidth, h = img.naturalHeight, sw = r % 180 !== 0, cw = sw ? h : w, ch = sw ? w : h, k = Math.min(1, maxW / Math.max(cw, ch)),
+      c = document.createElement("canvas"); c.width = Math.round(cw * k); c.height = Math.round(ch * k);
+    const x = c.getContext("2d"); x.translate(c.width / 2, c.height / 2); x.rotate(r * Math.PI / 180); x.drawImage(img, -w * k / 2, -h * k / 2, w * k, h * k);
+    if(enh){ const d = x.getImageData(0, 0, c.width, c.height), q = d.data; let lo = 255, hi = 0;
+      for(let i = 0; i < q.length; i += 4){ const g = .3 * q[i] + .59 * q[i + 1] + .11 * q[i + 2]; q[i] = q[i + 1] = q[i + 2] = g; if(g < lo) lo = g; if(g > hi) hi = g; }
+      const rg = Math.max(1, hi - lo); for(let i = 0; i < q.length; i += 4){ const v = Math.max(0, Math.min(255, (q[i] - lo) * 255 / rg)); q[i] = q[i + 1] = q[i + 2] = v; }
+      x.putImageData(d, 0, 0); }
+    return c; };
+  const preview = () => { const c = draw(rot, 900, false), v = $o("ocr_cv"); v.width = c.width; v.height = c.height; v.getContext("2d").drawImage(c, 0, 0); };
+  const load = f => { if(!f || !f.type.startsWith("image/")) return; const im = new Image();
+    im.onload = () => { img = im; rot = 0; last = null; $o("ocr_work").style.display = "flex"; preview(); prog(0, 'พร้อมแล้ว กด "อ่านข้อมูลจากบัตร"'); }; im.src = URL.createObjectURL(f); };
+  const eng = () => { const c = $o("ocr_eng").value === "claude"; $o("ocr_kb").style.display = $o("ocr_mb").style.display = $o("ocr_priv").style.display = c ? "" : "none"; ocrLS("e", $o("ocr_eng").value); };
+  $o("ocr_eng").onchange = eng; eng();
+  const dz = $o("ocr_drop"), fi = $o("ocr_file");
+  dz.onclick = () => fi.click(); dz.onkeydown = e => { if(e.key === "Enter" || e.key === " ") fi.click(); };
+  fi.onchange = e => load(e.target.files[0]);
+  ["dragover", "dragenter"].forEach(t => dz.addEventListener(t, e => { e.preventDefault(); dz.classList.add("over"); }));
+  ["dragleave", "drop"].forEach(t => dz.addEventListener(t, e => { e.preventDefault(); dz.classList.remove("over"); }));
+  dz.addEventListener("drop", e => load(e.dataTransfer.files[0]));
+  $o("ocr_box").addEventListener("paste", e => { const it = [...(e.clipboardData || {}).items || []].find(q => q.type.startsWith("image/")); if(it){ e.preventDefault(); load(it.getAsFile()); } });
+  root.querySelectorAll("[data-ocrrot]").forEach(b => b.onclick = () => { if(!img) return; rot = (rot + +b.dataset.ocrrot) % 360; preview(); });
+
+  /* ใส่ผลลงช่องของสมาชิก — ช่องที่มีค่าแล้วจะข้าม ยกเว้นติ๊กเขียนทับ · เปลี่ยนค่า = บันทึกเองผ่านตัวผูกช่องเดิม */
+  const apply = r => {
+    const over = $o("ocr_over").checked, skipped = [], put = (f, lbl, v, ok) => { const i = root.querySelector(`[data-mf="${no}|${f}"]`); if(!i || !v) return;
+      const cur = i.value.trim(); const nm = q => f === "cid" || f === "dob" ? String(q).replace(/\D/g, "") : String(q).trim(); if(cur && nm(cur) !== nm(v) && !over){ skipped.push(lbl); return; }
+      i.value = v; i.dispatchEvent(new Event("change")); i.classList.remove("ocr-ok", "ocr-chk"); i.classList.add(ok ? "ocr-ok" : "ocr-chk"); };
+    put("name", "ชื่อ", r.name, r.flags.name); put("cid", "เลขบัตร", r.cid ? mfCid(r.cid) : "", true); put("dob", "วันเกิด", r.dob, true); put("addr", "ที่อยู่", r.addr, r.flags.addr);
+    if(!r.cid){ const i = root.querySelector(`[data-mf="${no}|cid"]`); if(i) i.classList.add("ocr-chk"); }
+    return skipped;
+  };
+  const same = (a, b) => { const t = s => String(s || "").replace(new RegExp(OCR_PFX, "g"), " ").split(/\s+/).filter(q => q.length > 1); const A = t(a), B2 = t(b);
+    return !A.length || !B2.length || A.some(q => B2.some(z => z.includes(q) || q.includes(z))); };
+  const finish = (r, note) => {
+    if(!same(nwNmOf(no), r.name) && !confirm(`ชื่อบนบัตร "${r.name}" ไม่ตรงกับสมาชิกคนนี้ "${nwNmOf(no)}"\n\nถ้าเลือกสมาชิกผิดคน ให้กด ยกเลิก\nถ้าตั้งใจใส่ข้อมูลของบัตรใบนี้ให้สมาชิกคนนี้ กด ตกลง`)){ prog(1, "ยกเลิกการใส่ข้อมูล — ชื่อบนบัตรไม่ตรงกับสมาชิก"); return; }
+    last = r; const sk = apply(r);
+    prog(1, (note || "เสร็จแล้ว กรุณาตรวจช่องสีเหลือง (ถ้ามี)") + (sk.length ? ` · ข้ามช่องที่มีข้อมูลแล้ว: ${sk.join(", ")} (ติ๊ก «เขียนทับ» แล้วกดอ่านใหม่หรือเปลี่ยนติ๊กเพื่อใส่ทับ)` : "")); };
+  $o("ocr_over").onchange = () => { if(last) finish(last, "ใส่ข้อมูลใหม่ตามตัวเลือกแล้ว"); };
+
+  const runClaude = async () => {
+    const key = $o("ocr_key").value.trim(); if(!key){ prog(0, "กรุณาใส่ Anthropic API key หรือเปลี่ยนไปใช้ Tesseract"); return; }
+    ocrLS("k", key); ocrLS("m", $o("ocr_mod").value.trim()); prog(0.3, "กำลังส่งภาพให้ Claude อ่าน…");
+    const k = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight)), o = document.createElement("canvas"); o.width = Math.round(img.naturalWidth * k); o.height = Math.round(img.naturalHeight * k);
+    o.getContext("2d").drawImage(img, 0, 0, o.width, o.height);
+    const r = await fetch("https://api.anthropic.com/v1/messages", {method:"POST", headers:{"content-type":"application/json", "x-api-key":key, "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true"},
+      body:JSON.stringify({model:$o("ocr_mod").value.trim(), max_tokens:1200, messages:[{role:"user", content:[{type:"image", source:{type:"base64", media_type:"image/jpeg", data:o.toDataURL("image/jpeg", 0.9).split(",")[1]}}, {type:"text", text:OCR_PROMPT}]}]})});
+    const j = await r.json(); if(!r.ok) throw new Error((j.error && j.error.message) || r.status);
+    const txt = j.content.filter(b => b.type === "text").map(b => b.text).join(""); $o("ocr_raw").textContent = txt;
+    const d = JSON.parse(txt.replace(/```json|```/g, "").trim()), unc = new Set(d.uncertain || []), cid = (d.cid || "").replace(/\D/g, "");
+    const res = {name:[d.prefix_th, d.first_name_th, d.last_name_th].filter(Boolean).join(" ").replace(/\s+/g, " "), cid:cid.length === 13 ? cid : null,
+      dob:/^\d{4}-\d{2}-\d{2}$/.test(d.birth_date_ce || "") ? d.birth_date_ce : null, addr:(d.address_th || "").replace(/\s+/g, " ").trim(),
+      flags:{name:!unc.has("first_name_th") && !unc.has("last_name_th") && !unc.has("name"), addr:!unc.has("address_th") && !unc.has("address")}};
+    if(cid.length === 13 && !cidOK(cid)){ finish(res, "เสร็จแล้ว แต่เลขบัตรไม่ผ่านการตรวจ checksum กรุณาตรวจเลขอีกครั้ง"); const i = root.querySelector(`[data-mf="${no}|cid"]`); if(i){ i.classList.remove("ocr-ok"); i.classList.add("ocr-chk"); } }
+    else finish(res);
+  };
+  const runTess = async () => {
+    prog(0.02, "กำลังโหลดตัวอ่าน Tesseract…"); await ocrLoad("https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js");
+    prog(0.05, "กำลังตรวจทิศทางของภาพ…"); const wE = await Tesseract.createWorker("eng"); let best = {rot, score:-1};
+    const order = [rot, (rot + 180) % 360, (rot + 90) % 360, (rot + 270) % 360];
+    for(let i = 0; i < order.length; i++){ const { data } = await wE.recognize(draw(order[i], 1100, true)), t = data.text;
+      const sc = (ocrFindCID(t) ? 1000 : 0) + (/(thai national|identification|date of birth|last name|national id)/i.test(t) ? 300 : 0) + data.confidence;
+      if(sc > best.score) best = {rot:order[i], score:sc}; prog(0.08 + i * 0.08); if(sc >= 1300) break; }
+    await wE.terminate(); rot = best.rot; preview();
+    prog(0.4, "กำลังโหลดโมเดลภาษาไทย (ครั้งแรกอาจใช้เวลาสักครู่)…");
+    const w = await Tesseract.createWorker("tha+eng", 1, {logger:m => { if(m.status === "recognizing text") prog(0.5 + m.progress * 0.5, "กำลังอ่านข้อความ…"); }}), im = draw(rot, 2400, true);
+    const d1 = await w.recognize(im); await w.setParameters({tessedit_pageseg_mode:"11"}); const d2 = await w.recognize(im); await w.terminate();
+    const all = d1.data.text + "\n" + d2.data.text; $o("ocr_raw").textContent = all;
+    const res = ocrParse(d1.data.text), res2 = ocrParse(all); ["cid", "dob"].forEach(k => { if(!res[k] && res2[k]){ res[k] = res2[k]; res.flags[k] = true; } });
+    finish(res, "เสร็จแล้ว (Tesseract แม่นน้อยกว่า — ตรวจทุกช่อง โดยเฉพาะชื่อและที่อยู่)");
+  };
+  $o("ocr_go").onclick = async () => { if(!img) return; const b = $o("ocr_go"); b.disabled = true;
+    try{ if($o("ocr_eng").value === "claude") await runClaude(); else await runTess(); }
+    catch(e){ prog(0, "อ่านไม่สำเร็จ: " + (e.message || e) + ($o("ocr_eng").value === "claude" ? " (ตรวจ API key ชื่อโมเดล และอินเทอร์เน็ต)" : "")); }
+    finally{ b.disabled = false; } };
+}
+
 function nwMdbEditor(no){
   const x = NW.person(no); if(!x) return "";
   const p = prof(no), g = (f, l, t, o) => mfIn(no, f, l, t, o), st = nwState(x);
@@ -3967,6 +4117,7 @@ function nwMdbEditor(no){
     <div class="eyebrow"><span class="no">${esc(no)}</span>${esc(x.name)} <span class="pill ${st.debt > 0.005 ? "" : "grn"}">${st.debt > 0.005 ? "ผู้กู้" : "ผู้ฝาก"}</span>
       <span data-mpill="${esc(no)}">${nwMdbPill(no)}</span>
       <span style="margin-left:auto"><button class="ghost sm" id="mdb_prev">◀ คนก่อนหน้า</button> <button class="ghost sm" id="mdb_next">คนถัดไป ▶</button></span></div>
+    ${nwOcrHTML(no)}
     <div class="eyebrow" style="margin-top:6px">ข้อมูลสมาชิก</div>
     <div class="pf">${g("name", "ชื่อ–สกุล (ใส่คำนำหน้าได้ — ใช้พิมพ์ในเอกสาร)", "text", {span:2})}${g("cid", "เลขบัตรประชาชน (๑๓ หลัก)", "text", {ph:"x-xxxx-xxxxx-xx-x"})}${g("dob", "วันเกิด", "date")}
       ${g("pos", "ตำแหน่ง / วิทยฐานะ", "text", {span:2})}${g("svc", "อายุราชการ (ปี)", "number")}${g("sal", "เงินเดือนปัจจุบัน (บาท)", "number")}</div>
@@ -4005,7 +4156,7 @@ function drawNWMdb(){
           <td class="l">${p.cid ? esc(mfCid(p.cid)) : "—"}</td><td class="l">${esc(p.pos || "—")}</td><td class="l">${esc(p.tel || "—")}</td>
           <td class="l" style="max-width:260px;overflow:hidden;text-overflow:ellipsis">${esc(p.addr || "—")}</td><td class="l" data-mpill="${esc(x.no)}">${nwMdbPill(x.no)}</td></tr>`; }).join("") || '<tr><td colspan="7" class="hint" style="text-align:left">ไม่พบ</td></tr>'}</tbody></table></div></div>
     ${sel ? nwMdbEditor(sel) : ""}</div>`;
-  nwBindMf(el);
+  nwBindMf(el); if(sel) nwBindOcr(el, sel);
   const go = d => { const j = idx + d; if(list[j]){ S.mdbSel = list[j].no; drawNWMdb(); const e = $("mdb_ed"); if(e) e.scrollIntoView({block:"start"}); } };
   if($("mdb_prev")) $("mdb_prev").onclick = () => go(-1); if($("mdb_next")) $("mdb_next").onclick = () => go(1);
   el.querySelectorAll("[data-mdbr]").forEach(tr => tr.onclick = () => { S.mdbSel = tr.dataset.mdbr; drawNWMdb(); const e = $("mdb_ed"); if(e) e.scrollIntoView({behavior:"smooth", block:"start"}); });
