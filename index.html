@@ -604,7 +604,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-80</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-81</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -3685,15 +3685,18 @@ function nwTrackHTML(R){
           <td class="l" style="white-space:normal;max-width:260px">${o.rows.map(w => `${thPer(w.p)}${w.got > 0 ? ` <span class="hint">(รับ ${B0(w.got)})</span>` : ""}`).join(" · ")}</td>
           <td class="amt" style="color:var(--red)"><b>${B(o.short)}</b></td><td class="amt">${B(o.debt)}</td>
           <td class="l" style="white-space:normal;max-width:190px">${gs.map(q => `${esc(q)} ${esc(nwNmOf(q))}`).join("<br>") || "—"}</td>
-          <td style="white-space:nowrap">${gs.length ? `<button class="ghost sm" data-nlg2="${esc(key(o))}" title="ออกหนังสือแจ้งผู้ค้ำประกัน">แจ้งผู้ค้ำ</button> ` : ""}<button class="ghost sm" data-nlt="${esc(key(o))}">ออกหนังสือเตือน</button></td></tr>`; }).join("")
+          <td style="white-space:nowrap">${gs.length ? `<button class="ghost sm" data-nlg2="${esc(key(o))}" title="ออกหนังสือแจ้งผู้ค้ำประกัน">แจ้งผู้ค้ำ</button> ` : ""}<button class="ghost sm" data-nlt="${esc(key(o))}">ออกหนังสือเตือน</button>${nwDunCalc(o).maxDl > 90 ? ` <button class="ghost sm" data-nla="${esc(key(o))}" title="ค้างเกิน 90 วัน — ออกหนังสือรับสภาพหนี้">รับสภาพหนี้</button>` : ""}</td></tr>`; }).join("")
         || '<tr><td colspan="8" class="hint" style="text-align:left;padding:14px">ไม่มีผู้ค้างชำระ</td></tr>'}</tbody></table></div>
     ${R.length ? `<div class="card" style="margin-top:12px" id="nt_letter"><div class="eyebrow">ออกหนังสือเตือน<button class="ghost sm" id="nt_print" style="margin-left:auto">พิมพ์หนังสือ</button></div>
       <div class="pf"><div style="grid-column:span 2"><label>สัญญา</label><select data-ntk="sel">${R.map(o => `<option value="${esc(key(o))}" ${key(o) === T.sel ? "selected" : ""}>${esc(o.x.no)} · ${esc(o.x.name)} · ${o.pk} · ค้าง ${o.rows.length} งวด</option>`).join("")}</select></div>
-        <div><label>ประเภทหนังสือ</label><select data-ntk="kind"><option value="warn" ${T.kind === "warn" ? "selected" : ""}>แจ้งเตือนถึงผู้กู้</option><option value="guar" ${T.kind === "guar" ? "selected" : ""}>แจ้งผู้ค้ำประกัน</option><option value="all" ${T.kind === "all" ? "selected" : ""}>ชุดครบ: ผู้กู้ + ผู้ค้ำทุกคน</option><option value="final" ${T.kind === "final" ? "selected" : ""}>ทวงถามครั้งสุดท้าย</option></select></div>
+        <div><label>ประเภทหนังสือ</label><select data-ntk="kind"><option value="warn" ${T.kind === "warn" ? "selected" : ""}>แจ้งเตือนถึงผู้กู้</option><option value="guar" ${T.kind === "guar" ? "selected" : ""}>แจ้งผู้ค้ำประกัน</option><option value="all" ${T.kind === "all" ? "selected" : ""}>ชุดครบ: ผู้กู้ + ผู้ค้ำทุกคน</option><option value="final" ${T.kind === "final" ? "selected" : ""}>ทวงถามครั้งสุดท้าย</option><option value="ack" ${T.kind === "ack" ? "selected" : ""}>หนังสือรับสภาพหนี้ (ค้างเกิน 90 วัน)</option></select></div>
         <div><label>เลขที่หนังสือ</label><input data-ntk="no" value="${esc(T.no)}" placeholder="กบข.นข. 69/…"></div>
         <div><label>ลงวันที่</label><input type="date" data-ntk="d" value="${esc(T.d)}"></div>
         <div><label>ให้ชำระภายใน (วัน)</label><input type="number" data-ntk="days" value="${T.days}"></div>
-        <div><label>ค่าทวงถามต่อเดือน (บาท) — ว่าง = ตามระเบียบ</label><input type="number" step="0.01" min="0" data-ntk="fee" value="${esc(T.fee)}" placeholder="5% ไม่เกิน 100 × 2 ครั้ง = สูงสุด 200"></div></div>
+        <div><label>ค่าทวงถามต่อเดือน (บาท) — ว่าง = ตามระเบียบ</label><input type="number" step="0.01" min="0" data-ntk="fee" value="${esc(T.fee)}" placeholder="5% ไม่เกิน 100 × 2 ครั้ง = สูงสุด 200"></div>
+        ${T.kind === "ack" ? `<div><label>รับสภาพหนี้: ผ่อนค้างเพิ่มเดือนละ (บาท) — ว่าง = ชำระครั้งเดียว</label><input type="number" step="0.01" min="0" data-ntk="ack" value="${esc(T.ack || "")}"></div>` : ""}</div>
+      ${T.kind === "ack" ? (() => { const so = R.find(o => key(o) === T.sel); if(!so) return ""; const md = nwDunCalc(so, T.d, T.fee).maxDl;
+        return `<p class="hint" style="margin:6px 0 0">${md > 90 ? `<span class="pill grn">ค้างนานสุด ${md} วัน — เกิน 90 วัน ออกหนังสือรับสภาพหนี้ได้ตามข้อตกลง</span>` : `<span class="pill amb">ค้างนานสุด ${md} วัน — ยังไม่เกิน 90 วัน</span> ตามข้อตกลงใช้เมื่อค้างเกิน 90 วัน`} · ผู้กู้ ผู้ค้ำ และพยาน ๒ คน ลงนามท้ายหนังสือ (พยานดึงจากสัญญาถ้ากรอกไว้) · ยอดต่าง ๆ คำนวณจากวันที่ ลงวันที่ ที่เลือก</p>`; })() : ""}
       ${(() => { const so = R.find(o => key(o) === T.sel); if(!so) return ""; const P = PROD[so.pk], gs = nwGuarOf(so.x.no, so.pk), ppl = NW.people();
         const opts = sel => `<option value="">— เลือกผู้ค้ำ —</option>` + ppl.filter(q => q.no !== so.x.no).map(q => `<option value="${esc(q.no)}" ${q.no === sel ? "selected" : ""}>${esc(q.no)} ${esc(q.name)}</option>`).join("");
         const need = (T.kind === "guar" || T.kind === "all") && !gs.length;
@@ -3702,16 +3705,21 @@ function nwTrackHTML(R){
       <div id="nt_doc"></div></div>` : ""}`;
 }
 
+/* ค่าทวงถาม: ค้างเกิน 5 วัน ร้อยละ 5 ของยอดงวด ไม่เกิน 100 บาท/ครั้ง ไม่เกิน 2 ครั้ง/เดือน (หมวด 5/1 ข้อ 2.4) · ดอกเบี้ยผิดนัด 1.2%/เดือน จากยอดค้างของงวดที่ค้างเกิน 90 วัน (ข้อ 2.1) */
+function nwDunCalc(o, d, feeIn){
+  const dd = d || nwToday(), flat = has(feeIn) && feeIn !== "" ? num(feeIn) : null;
+  const rx = o.rows.map(w => { const dl = nwDays(nwDate5(w.p), dd);
+    return {...w, dl, fee: dl > 5 ? (flat !== null ? flat : r2(Math.min(100, w.exp * 0.05) * 2)) : 0, pen: dl > 90 ? r2(w.short * 0.012 * Math.ceil((dl - 90) / 30)) : 0}; });
+  const fee = r2(rx.reduce((u, w) => u + w.fee, 0)), pen = r2(rx.reduce((u, w) => u + w.pen, 0));
+  return {dd, rx, fee, pen, total: r2(o.short + fee + pen), maxDl: rx.reduce((u, w) => Math.max(u, w.dl), 0)};
+}
+
 /* หนังสือเตือน — ดัดแปลงจากระบบเก่า ใช้ตัวเลขจากทะเบียนใหม่ · ข้อมูลสัญญา/ผู้ค้ำดึงจากสัญญาเดิมถ้ามี */
 function nwWarnDoc(o, kind, no, d, days, feeIn){
   if(kind === "all") return nwWarnDoc(o, "warn", no, d, days, feeIn) + nwWarnDoc(o, "guar", no, d, days, feeIn);          // ผู้กู้ ๑ ฉบับ + ผู้ค้ำคนละ ๑ ฉบับ
   const m = o.x, c0 = nwCon(m.no, o.pk), P = PROD[o.pk], p = prof(m.no), n = o.rows.length, miss = o.missed;
   const gs = nwGuarOf(m.no, o.pk).map(g => ({no:g, name:nwNmOf(g)}));
-  const dd = d || nwToday(), flat = has(feeIn) && feeIn !== "" ? num(feeIn) : null;
-  // ค่าทวงถาม: ค้างเกิน 5 วัน ร้อยละ 5 ของยอดงวด ไม่เกิน 100 บาท/ครั้ง ไม่เกิน 2 ครั้ง/เดือน (หมวด 5/1 ข้อ 2.4) · ดอกเบี้ยผิดนัด 1.2%/เดือน จากยอดค้างของงวดที่ค้างเกิน 90 วัน (ข้อ 2.1)
-  const rx = o.rows.map(w => { const dl = nwDays(nwDate5(w.p), dd);
-    return {...w, dl, fee: dl > 5 ? (flat !== null ? flat : r2(Math.min(100, w.exp * 0.05) * 2)) : 0, pen: dl > 90 ? r2(w.short * 0.012 * Math.ceil((dl - 90) / 30)) : 0}; });
-  const fee = r2(rx.reduce((u, w) => u + w.fee, 0)), pen = r2(rx.reduce((u, w) => u + w.pen, 0)), total = r2(o.short + fee + pen);
+  const {rx, fee, pen, total} = nwDunCalc(o, d, feeIn);
   const dl = d ? (() => { const t = new Date(d); t.setDate(t.getDate() + days); return thDate(t.toISOString().slice(0, 10)); })() : "…………";
   const lv = n >= 12 ? "ค้างเกิน 12 งวด" : n >= 6 ? "ค้าง 6 งวดขึ้นไป" : n >= 3 ? "ค้าง 3 งวดขึ้นไป" : `ค้าง ${n} งวด`;
   const T = {warn:"หนังสือแจ้งเตือนการค้างชำระหนี้", guar:"หนังสือแจ้งผู้ค้ำประกันกรณีผู้กู้ผิดนัดชำระหนี้", final:"หนังสือบอกกล่าวทวงถามครั้งสุดท้าย (ก่อนดำเนินคดี)"}[kind];
@@ -3753,6 +3761,56 @@ function nwWarnDoc(o, kind, no, d, days, feeIn){
     <div class="ksigs" style="grid-template-columns:1fr 1fr;max-width:420px;margin:10px auto 0">${sigOf("ประธานกลุ่มบุคคล", CHAIR())}${sigOf("กรรมการฝ่ายติดตามหนี้", DEBT())}</div>
     <p class="kh" style="margin-top:12px">สำเนาเรียน: ${kind === "guar" ? `ผู้กู้ (${esc(m.name)})` : gs.map(g => `ผู้ค้ำประกัน (${esc(g.name)})`).join(" · ") || "—"} · แฟ้มสัญญาเลขที่ ${esc(c0 && c0.code) || "…………"}</p>
     <div class="ackbox"><b>ส่วนสำหรับผู้รับหนังสือ</b> — ข้าพเจ้าได้รับหนังสือฉบับนี้แล้วเมื่อวันที่ ......../......../.......... &nbsp;&nbsp;ลงชื่อ .............................................. ผู้รับหนังสือ</div>`, "ผู้รับหนังสือ"); }).join("");
+}
+
+/* หนังสือรับสภาพหนี้ (ข้อตกลง หมวด 5/1 ข้อ 5 — ค้างเกิน 90 วัน ผู้กู้และ/หรือผู้ค้ำลงนามยืนยันยอดค้างและต่ออายุความ โดยไม่กระทบสิทธิของกลุ่มในการฟ้องร้อง) · ๒ หน้า */
+function nwAckDoc(o, no, d, days, feeIn, inst){
+  const m = o.x, c0 = nwCon(m.no, o.pk), n = o.rows.length, p = prof(m.no), P = PROD[o.pk];
+  const gs = nwGuarOf(m.no, o.pk).map(g => ({no:g, name:nwNmOf(g)})), {rx, fee, pen, total} = nwDunCalc(o, d, feeIn);
+  const dl = d ? (() => { const t = new Date(d); t.setDate(t.getDate() + days); return thDate(t.toISOString().slice(0, 10)); })() : "…………";
+  const per = +inst > 0 ? +inst : 0, months = per ? Math.ceil(total / per) : 0, p0 = d ? nwIsoPer(d) : "", pStart = p0 ? pFrom(pNum(p0) + 1) : "", pEnd = pStart ? pFrom(pNum(pStart) + months - 1) : "";
+  const who = `${esc(m.name)} (สมาชิกเลขที่ ${m.no})`;
+  const tbl = `<table class="kt"><thead><tr><th class="l">งวด</th><th>ยอดที่ต้องชำระ</th><th>รับชำระจริง</th><th>คงค้าง</th><th>ค้างมาแล้ว (วัน)</th><th>ค่าทวงถาม</th><th>ดอกเบี้ยผิดนัด</th></tr></thead><tbody>
+    ${rx.map(w => `<tr><td class="l">${thPer(w.p)}</td><td class="n">${B(w.exp)}</td><td class="n">${B(w.got)}</td><td class="n"><b>${B(w.short)}</b></td><td class="n">${w.dl}</td><td class="n">${w.fee ? B(w.fee) : "—"}</td><td class="n">${w.pen ? B(w.pen) : "—"}</td></tr>`).join("")}
+    <tr class="hl"><td class="l"><b>รวม</b></td><td class="n">—</td><td class="n">—</td><td class="n"><b>${B(o.short)}</b></td><td class="n">—</td><td class="n"><b>${B(fee)}</b></td><td class="n"><b>${B(pen)}</b></td></tr></tbody></table>`;
+  const money = `<table class="kt sum"><tbody>
+    <tr><td>ยอดค้างชำระสะสม (เงินต้น + ดอกเบี้ย + เงินฝากหุ้นค้างงวด)</td><td class="n">${B(o.short)}</td></tr>
+    <tr><td>ค่าทวงถาม (ข้อตกลง หมวด 5/1 ข้อ 2.4)</td><td class="n">${B(fee)}</td></tr>
+    <tr><td>ดอกเบี้ยผิดนัด 1.20%/เดือน เฉพาะงวดที่ค้างเกิน 90 วัน (ข้อ 2.1)</td><td class="n">${B(pen)}</td></tr>
+    <tr class="hl"><td><b>รวมยอดหนี้ค้างชำระที่ผู้กู้รับสภาพ ณ วันที่ทำหนังสือ</b></td><td class="n"><b>${B(total)}</b></td></tr>
+    <tr><td>เงินต้นคงเหลือตามสัญญา (ยังไม่ถึงกำหนดชำระ ผู้กู้ยังคงต้องผ่อนชำระตามสัญญาเดิม)</td><td class="n">${B(o.debt)}</td></tr></tbody></table>`;
+  const sigG = gs.length ? gs.map((g, i) => sigOf(`ผู้ค้ำประกัน${gs.length > 1 ? "คนที่ " + (i + 1) : ""}`, g.name)).join("") : sigOf("ผู้ค้ำประกัน", "");
+  const page1 = pg(1, 2, `${logo()}<div class="kt1">หนังสือรับสภาพหนี้</div>
+    <div class="kt2">${ORG}<br>โรงเรียนมัธยมวัดหนองแขม (กบข.นข.)</div>
+    <div class="kmeta2"><span>เลขที่ <b>${esc(no) || "…………"}</b></span><span>ทำที่ โรงเรียนมัธยมวัดหนองแขม</span><span>วันที่ ${thDate(d)}</span></div>
+    <p class="i2">หนังสือฉบับนี้ทำขึ้นระหว่าง <b>กลุ่มบุคคลเพื่อบริหารจัดการเงินของข้าราชการครูและบุคลากรโรงเรียนมัธยมวัดหนองแขม (กบข.นข.)</b> โดย ${esc(CHAIR()) || "…………"} ประธานคณะกรรมการ ซึ่งต่อไปนี้เรียกว่า “ผู้ให้กู้” ฝ่ายหนึ่ง
+      กับ ผู้ที่ระบุข้างล่างนี้ ซึ่งต่อไปนี้เรียกว่า “ผู้กู้” อีกฝ่ายหนึ่ง</p>
+    ${party("ผู้กู้ (ผู้รับสภาพหนี้)", m.name, m.no, p)}
+    ${gs.map((g, i) => party(`ผู้ค้ำประกัน${gs.length > 1 ? "คนที่ " + (i + 1) : ""}`, g.name, g.no, prof(g.no))).join("")}
+    <p class="i2" style="margin-top:6px"><b>ข้อ 1 ที่มาแห่งหนี้</b> — ผู้กู้ได้ทำสัญญาเงินกู้สินเชื่อ${o.pk} เลขที่ <b>${esc(c0 && c0.code) || "…………"}</b> ลงวันที่ ${thDate(c0 && c0.d)}
+      ${c0 ? `วงเงิน <b>${B(c0.amt)}</b> บาท ผ่อนชำระ <b>${c0.terms}</b> งวด ` : ""}งวดละ <b>${B(o.inst)}</b> บาท กำหนดชำระภายในวันที่ 5 ของทุกเดือน ตาม${AGREE}</p>
+    <p class="i2"><b>ข้อ 2 ยอดหนี้ที่ค้างชำระ</b> — ผู้กู้ผิดนัดชำระหนี้รวม <b>${n}</b> งวด ปรากฏตามรายละเอียดและยอดหนี้ ณ วันที่ทำหนังสือนี้ ดังนี้</p>
+    ${tbl}${money}`, "ผู้กู้");
+  const page2 = pg(2, 2, `<div class="kt1" style="margin-top:2px">หนังสือรับสภาพหนี้ (ต่อ)</div>
+    <p class="i2" style="margin-top:6px"><b>ข้อ 3 การรับสภาพหนี้</b> — ผู้กู้ขอรับรองและยืนยันว่า ผู้กู้เป็นหนี้ผู้ให้กู้ตามสัญญาเงินกู้ที่ระบุไว้จริง และยอมรับว่ายอดหนี้ค้างชำระตามข้อ 2 จำนวน <b>${B(total)} บาท</b> ถูกต้องและยังมิได้ชำระ
+      และยอมรับสภาพหนี้ตามมาตรา 193/14 แห่งประมวลกฎหมายแพ่งและพาณิชย์ ซึ่งมีผลให้อายุความสะดุดหยุดลงและเริ่มนับใหม่ นับแต่วันที่ลงนามในหนังสือนี้</p>
+    <p class="i2"><b>ข้อ 4 การชำระหนี้</b> — ${per
+      ? `ผู้กู้ตกลงผ่อนชำระยอดหนี้ค้างตามข้อ 3 เพิ่มเติมเดือนละ <b>${B(per)} บาท</b> (ประมาณ <b>${months}</b> เดือน ตั้งแต่งวด <b>${thPer(pStart)}</b> ถึงงวด <b>${thPer(pEnd)}</b> หรือจนกว่าจะครบถ้วน) พร้อมกับการชำระงวดปกติตามสัญญาเดิมภายในวันที่ 5 ของทุกเดือน
+         โดยค่าทวงถามและดอกเบี้ยผิดนัดยังคงคิดต่อไปตามข้อตกลงจนกว่าจะชำระครบ`
+      : `ผู้กู้ตกลงชำระยอดหนี้ค้างตามข้อ 3 ทั้งจำนวนภายในวันที่ <b>${dl}</b> และผ่อนชำระงวดปกติตามสัญญาเดิมต่อไปภายในวันที่ 5 ของทุกเดือน`}
+      การชำระให้ชำระที่กรรมการฝ่ายการเงินของกลุ่มบุคคลหรือผ่านบัญชีของกลุ่มบุคคล และให้ออกใบเสร็จรับเงินทุกครั้ง</p>
+    <p class="i2"><b>ข้อ 5 ผลของการผิดนัดตามหนังสือนี้</b> — หากผู้กู้ผิดนัดชำระงวดใดตามข้อ 4 ผู้ให้กู้มีสิทธิดำเนินการตามหมวดที่ 7 ของข้อตกลง รวมถึงเรียกให้ผู้ค้ำประกันร่วมรับผิดตามสัญญาค้ำประกัน
+      และผู้กู้ต้องรับผิดชอบค่าใช้จ่ายในการดำเนินคดีทั้งหมด</p>
+    <p class="i2"><b>ข้อ 6 ไม่กระทบสิทธิของผู้ให้กู้</b> — หนังสือนี้ไม่ใช่การแปลงหนี้ใหม่ ไม่ทำให้สัญญาเงินกู้เดิม สัญญาค้ำประกัน และข้อตกลงสิ้นผลหรือเปลี่ยนแปลง และการที่ผู้ให้กู้รับชำระหรือผ่อนผันตามหนังสือนี้
+      ไม่ถือเป็นการสละสิทธิเรียกร้องหรือสิทธิฟ้องร้องแต่อย่างใด (ข้อตกลง หมวด 5/1 ข้อ 5) ทั้งนี้ ห้ามนำเงินฝากสะสมมาหักลบกับหนี้ที่ค้างชำระ เว้นแต่คณะกรรมการมีมติ</p>
+    <p class="i2"><b>ข้อ 7 ผู้ค้ำประกัน</b> — ${gs.length ? "ผู้ค้ำประกันที่ลงนามท้ายหนังสือนี้" : "ผู้ค้ำประกัน"}ได้ทราบและยินยอมตามหนังสือฉบับนี้ทุกประการ
+      และยืนยันว่ายังคงค้ำประกันหนี้ของผู้กู้ต่อไปตามสัญญาค้ำประกันเดิม${c0 ? ` ภายใต้วงเงินรับผิดสูงสุด <b>${B(capOf(c0))}</b> บาท` : ""}</p>
+    <p class="i2">ผู้กู้และผู้ค้ำประกันได้อ่านและเข้าใจข้อความในหนังสือนี้โดยตลอดแล้ว เห็นว่าถูกต้องตามความประสงค์ จึงลงลายมือชื่อไว้เป็นหลักฐานต่อหน้าพยาน</p>
+    <div class="ksigs" style="grid-template-columns:1fr 1fr;margin-top:14px">${sigOf("ผู้กู้ (ผู้รับสภาพหนี้)", m.name)}${sigG}</div>
+    <div class="ksigs" style="grid-template-columns:1fr 1fr;margin-top:10px">${sigOf("พยาน", c0 && c0.w1 || "")}${sigOf("พยาน", c0 && c0.w2 || "")}</div>
+    <div class="ksigs" style="grid-template-columns:1fr 1fr;margin-top:10px">${sigOf("ผู้ให้กู้ (ประธานคณะกรรมการ)", CHAIR())}${sigOf("กรรมการฝ่ายติดตามหนี้ (ผู้รับเอกสาร)", DEBT())}</div>
+    <p class="kh" style="margin-top:10px">เอกสารนี้ทำ ๒ ฉบับ มีข้อความตรงกัน — เก็บที่กลุ่มบุคคล ๑ ฉบับ มอบผู้กู้ ๑ ฉบับ · แฟ้มสัญญาเลขที่ ${esc(c0 && c0.code) || "…………"}</p>`, "ผู้กู้");
+  return page1 + page2;
 }
 
 /* ทะเบียนสัญญา: ข้อมูลสัญญาจากระบบเก่า (เลขที่ วันที่ วงเงิน ผู้ค้ำ) คู่กับยอดปัจจุบันจากทะเบียนใหม่ */
@@ -4013,12 +4071,14 @@ function drawNWLoanDash(){
       S.pick = id; all(); goTab(5); } });
   // ติดตามหนี้
   const T = S.ntk, byKey = {}; R.forEach(o => byKey[o.x.no + "|" + o.a.prod] = o);
-  const drawLetter = () => { const o = byKey[T.sel], d = $("nt_doc"); if(o && d) d.innerHTML = nwWarnDoc(o, T.kind, T.no, T.d, +T.days || 15, T.fee); };
-  el.querySelectorAll("[data-ntk]").forEach(i => i.addEventListener("change", () => { T[i.dataset.ntk] = i.value; drawLetter(); }));
+  const nwLetter = o => T.kind === "ack" ? nwAckDoc(o, T.no, T.d, +T.days || 15, T.fee, T.ack) : nwWarnDoc(o, T.kind, T.no, T.d, +T.days || 15, T.fee);
+  const drawLetter = () => { const o = byKey[T.sel], d = $("nt_doc"); if(o && d) d.innerHTML = nwLetter(o); };
+  el.querySelectorAll("[data-ntk]").forEach(i => i.addEventListener("change", () => { T[i.dataset.ntk] = i.value; if(["kind", "sel", "d", "fee"].includes(i.dataset.ntk)) redraw(); else drawLetter(); }));
   el.querySelectorAll("[data-ngu]").forEach(i => i.addEventListener("change", () => { const [no, pk, k] = i.dataset.ngu.split("|"); nwSetGuar(no, pk, +k, i.value); save(); redraw(); }));
   el.querySelectorAll("[data-nlg2]").forEach(b => b.onclick = () => { T.sel = b.dataset.nlg2; T.kind = "guar"; redraw(); const t = $("nt_letter"); if(t) t.scrollIntoView({behavior:"smooth", block:"start"}); });
+  el.querySelectorAll("[data-nla]").forEach(b => b.onclick = () => { T.sel = b.dataset.nla; T.kind = "ack"; redraw(); const t = $("nt_letter"); if(t) t.scrollIntoView({behavior:"smooth", block:"start"}); });
   el.querySelectorAll("[data-nlt]").forEach(b => b.onclick = () => { T.sel = b.dataset.nlt; redraw(); const t = $("nt_letter"); if(t) t.scrollIntoView({behavior:"smooth", block:"start"}); });
-  if($("nt_print")) $("nt_print").onclick = () => { const o = byKey[T.sel]; if(o) nwPrint(nwWarnDoc(o, T.kind, T.no, T.d, +T.days || 15, T.fee)); };
+  if($("nt_print")) $("nt_print").onclick = () => { const o = byKey[T.sel]; if(o) nwPrint(nwLetter(o)); };
   if($("nt_csv")) $("nt_csv").onclick = () => csvOut("kbk-ค้างชำระ-เว็บใหม่.csv", [["ติดตามหนี้ค้าง", ["เลขสมาชิก", "ชื่อ", "สัญญา", "งวดละ", "จำนวนงวดที่ขาด", "ค้างติดต่อกัน", "ยอดค้าง", "หนี้คงเหลือ", "งวดที่ขาด"],
     R.map(o => [o.x.no, o.x.name, o.pk, f2(o.inst), o.rows.length, o.missed, f2(o.short), f2(o.debt), o.rows.map(w => thPer(w.p)).join(" ")])]]);
   drawLetter();
