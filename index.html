@@ -330,6 +330,31 @@ th.svcol{background:#FFF4D6!important}
 .ksig .sp{height:34px}
 .kpage .ul{margin:2px 0 4px 30px}
 
+/* ---------- ตัวอย่างบนจอให้อ่านง่าย (เฉพาะจอ — การพิมพ์ใช้มาตรฐานเอกสารพิมพ์ด้านล่าง) ---------- */
+@media screen{
+  .kpage{font-family:"Sarabun","IBM Plex Sans Thai",sans-serif;font-size:15px;line-height:1.7;color:#111827}
+  .kpage p{text-align:left;margin:7px 0}
+  .kpage .i2{color:#111827;margin-left:0;text-indent:9mm}
+  .kpage .kt1{font-size:19px;margin-top:6px}
+  .kpage .kt2{font-size:14px;color:#374151;line-height:1.5}
+  .kpage .kmeta2{font-size:14px;color:#374151;padding:8px 0;margin-bottom:10px}
+  .kpage .h,.kpage .ksec{font-size:16px}
+  .kpage .kt{font-size:14px;margin:8px 0}
+  .kpage .kt td,.kpage .kt th{padding:6px 9px;border-color:#9CA3AF;line-height:1.35}
+  .kpage .kt th{font-size:13.5px;font-weight:700;background:#E4DDCB;color:#111827;text-align:center;vertical-align:middle}
+  .kpage .kt th.l{text-align:left}
+  .kpage .kt .n,.kpage .kt .c{font-family:"Sarabun","IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-size:14.5px}
+  .kpage .kt.sum td:first-child{font-size:14px}
+  .kpage .kt .kk{font-size:13.5px;color:#374151}
+  .kpage .kt tr.hl td{background:#FFF1C9}
+  .kpage .warnbox2{font-size:14px;line-height:1.65;padding:10px 14px;color:#111827}
+  .kpage .warnbox2 .ul li{margin-bottom:4px}
+  .kpage .ackbox,.kpage .ack{font-size:14px;line-height:1.7}
+  .kpage .ksigs{font-size:14px}
+  .kpage .kh,.kpage .sub,.kpage .rt{font-size:13.5px;color:#374151}
+  .kpage .pt,.kpage .dtl,.kpage .calcbox,.kpage .keybox{font-size:14.5px;line-height:1.7}
+}
+
 /* ---------- การพิมพ์ ---------- */
 /* ---------- สมุดรับชำระ + แดชบอร์ด ---------- */
 nav .ngrp{align-self:center;font-size:11px;font-weight:600;color:var(--soft);letter-spacing:.05em;
@@ -638,7 +663,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-110</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-111</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
