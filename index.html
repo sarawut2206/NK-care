@@ -508,6 +508,9 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
 .ovp .ov-leg>div{display:grid;grid-template-columns:12px 1fr auto 52px;gap:6px;align-items:center;font-size:13pt;padding:0;border-top:1px dotted #888}
 .ovp .ov-leg i{display:block;width:10px;height:10px}.ovp .ov-leg b{text-align:right;font-weight:600}.ovp .ov-leg em{font-style:normal;text-align:right}
 .ovp .ov-foot{font-size:12.5pt;margin:4px 0 4px}
+.ovp .sg{border:1px solid #000;border-left:6px solid #1F3A68;padding:9px 14px 10px;margin-bottom:14px;display:grid;grid-template-columns:1fr auto;gap:2px 16px;align-items:center}
+.ovp .sg-l{min-width:0}.ovp .sg-t{font-size:16pt;font-weight:700;margin-bottom:2px}.ovp .sg-c{font-size:14pt;line-height:1.25}
+.ovp .sg-v{font-size:32pt;font-weight:700;line-height:1.05;text-align:right;white-space:nowrap}.ovp .sg-v small{font-size:14pt;font-weight:600}
 .ovp .ov-sig{display:grid;grid-template-columns:1fr 1fr;gap:20px;text-align:center;font-size:14pt}
 .ovp .ov-sig .ln{border-bottom:1px dotted #000;margin:22px 10px 2px}.ovp .ov-dt{grid-column:1/-1;text-align:left;font-size:12pt}
 .nwrc,.nwrg{font-family:"TH Sarabun New","Sarabun",sans-serif;font-size:16pt;line-height:1.25;color:#000}
@@ -612,7 +615,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-90</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-91</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -4653,16 +4656,58 @@ function nwMonthlyDoc(p){
     <div class="ov-sig"><div><div class="ln"></div><div>( ${esc(FIN())} )</div><div>กรรมการฝ่ายการเงิน</div></div><div><div class="ln"></div><div>( ${esc(CHAIR())} )</div><div>ประธานกลุ่มบุคคล</div></div>
       <div class="ov-dt">จัดทำเมื่อ ${thDay(today)}</div></div></div>`;
 }
+/* ---------- สรุปสถานะกองทุน ๑ หน้า A4 — ฟอร์ม ๕ ตัวเลข อ่านได้ใน ๑๐ วินาที (ตัวเลขทั้งหมดดึงจากทะเบียน ไม่ต้องกรอกมือ) ---------- */
+function nwStatusData(){
+  const O = ovData(), D = O.D, yr = +O.yr, m = +D.end.split("-")[1], pad = n => String(n).padStart(2, "0");
+  const at = (sr, q, k) => { let v = 0; for(const e of sr){ if(pNum(e.p) <= pNum(q)) v = e[k]; else break; } return v; };
+  const outs = NW.everyone().filter(x => x.out);
+  const outNow = r2(outs.reduce((u, x) => u + nwState(x).shares, 0)), outOpen = r2(outs.reduce((u, x) => u + at(nwSeries(x), "2568-12", "shares"), 0));
+  const sumInt = (a, b) => r2(D.tot.filter(t => pNum(t.p) >= pNum(a) && pNum(t.p) <= pNum(b)).reduce((u, t) => u + t.int, 0));
+  const lfl = yr >= 2569 && m >= 5 ? {a:sumInt(`${yr - 1}-05`, `${yr - 1}-${pad(m)}`), b:sumInt(`${yr}-05`, `${yr}-${pad(m)}`), from:`${yr - 1}-05`, to:`${yr}-${pad(m)}`} : null;
+  const tot0 = r2(D.open.sh + outOpen), dTot = r2(D.shNow - tot0);
+  return {O, D, yr, outs, outNow, outOpen, lfl, tot0, dTot, pTot:tot0 > 0 ? dTot / tot0 * 100 : 0};
+}
+function nwStatusDoc(){
+  const Z = nwStatusData(), {O, D, yr, outs, outNow, outOpen, lfl, dTot, pTot} = Z, today = nwToday(), pl = nwPFull(D.end).split(" ")[0];
+  const sg = (clr, t, val, caps) => `<div class="sg" style="border-left-color:${clr}"><div class="sg-l"><div class="sg-t">${t}</div>${caps.filter(Boolean).map(c => `<div class="sg-c">${c}</div>`).join("")}</div><div class="sg-v">${val}</div></div>`;
+  const sgn = v => (v >= 0 ? "+" : "−") + tM(Math.abs(v)), dir = v => v >= 0 ? "เพิ่มขึ้น" : "ลดลง";
+  const avg68 = O.n68 ? O.int68 / O.n68 : 0, avg69 = O.n69 ? O.int69 / O.n69 : 0, pAvg = avg68 > 0 ? (avg69 - avg68) / avg68 * 100 : 0;
+  const per = O.n69 ? `${thMS(O.f69)}–${thMS(O.l69)}` : "";
+  const rows = [
+    sg("#1F3A68", "ทุนเรือนหุ้นสมาชิก (ผู้ที่ยังเป็นสมาชิก)", `${tM(D.shNow)} <small>บาท</small>`,
+      [`เทียบสิ้นปี 2568: ${dir(O.chgS)} ${tM(Math.abs(O.chgS))} บาท (ร้อยละ ${Math.abs(O.pctS).toFixed(1)})`,
+       outs.length ? `ไม่รวมสมาชิกที่ลาออก ${outs.length} ราย (ยอดหุ้นของผู้ลาออก ${tM(outNow)} บาท)` : ""]),
+    outs.length ? sg("#6B4FA0", "ทุนรวมของกองทุน เทียบสิ้นปี 2568 (รวมผู้ที่ลาออก)", `${sgn(dTot)} <small>บาท</small>`,
+      [`สะสมเพิ่มของสมาชิกที่ยังอยู่ ${sgn(O.chgS)} บาท · คืนทุนผู้ลาออก ${outs.length} ราย −${tM(outOpen)} บาท`,
+       `${dir(dTot)}ร้อยละ ${Math.abs(pTot).toFixed(1)} จากทุนรวมสิ้นปี 2568 ${tM(Z.tot0)} บาท`]) : "",
+    sg("#C4570F", "เงินกู้คงเหลือรวม", `${tM(D.dbNow)} <small>บาท</small>`, [`สมาชิกผู้กู้ ${O.nLoan} คน · ตรงกับทะเบียนผู้กู้`]),
+    sg("#1B7F5A", `ดอกเบี้ยรับสะสม ปี ${yr}`, `${tM(O.int69)} <small>บาท</small>`,
+      [per ? `${per} (${O.n69} เดือน) · เฉลี่ยเดือนละ ${tM(avg69)} บาท` : "",
+       O.n68 && +O.yr > 2568 ? `เฉลี่ยรายเดือน เทียบปี 2568 (${tM(avg68)} บาท): ${dir(avg69 - avg68)}ร้อยละ ${Math.abs(pAvg).toFixed(1)}` : "",
+       lfl ? `เทียบช่วงเดียวกัน ${thMS(lfl.from).slice(0, -2)}–${thMS(lfl.to).slice(0, -2)}: ปี ${yr - 1} ${tM(lfl.a)} → ปี ${yr} ${tM(lfl.b)} บาท (${dir(lfl.b - lfl.a)}ร้อยละ ${lfl.a > 0 ? Math.abs((lfl.b - lfl.a) / lfl.a * 100).toFixed(1) : "—"})` : ""]),
+    sg("#6B4FA0", "สถานะสมาชิกและการชำระเงิน", `${O.n} <small>คน</small>`,
+      [`ผู้กู้ชำระปกติ ${O.okP} คน · อยู่ระหว่างติดตาม ${O.arrP} คน · ผู้ฝาก ${O.nSave} คน`])
+  ].filter(Boolean).join("");
+  return `<div class="ovp">
+    <div class="ov-top"><img src="${NW_LOGO}" alt="กบข.นข."><div class="ov-hd"><div class="ov-org">${ORGF} (กบข.นข.)</div>
+      <div class="ov-title">สรุปสถานะกองทุน ประจำเดือน${pl} ${yr}</div><div class="ov-sub">ข้อมูลจากทะเบียน ณ สิ้นเดือน${pl} ${yr} · สมาชิก ${O.n} คน</div></div></div>
+    ${rows}
+    <div class="ov-foot">ยอดหุ้นของผู้ลาออก = ยอดล่าสุดที่บันทึกในทะเบียน (ถือเป็นยอดที่คืนทุนแล้ว) · ดอกเบี้ยรับ = ดอกเบี้ยที่รับชำระตามทะเบียน (ข้อมูลเริ่ม พ.ค. 2568 จึงเทียบช่วงเดียวกันได้ตั้งแต่ พ.ค.) · «อยู่ระหว่างติดตาม» = ผู้กู้ที่มีงวดค้างชำระ</div>
+    <div class="ov-sig"><div><div class="ln"></div><div>( ${esc(FIN())} )</div><div>กรรมการฝ่ายการเงิน</div></div><div><div class="ln"></div><div>( ${esc(CHAIR())} )</div><div>ประธานกลุ่มบุคคล</div></div>
+      <div class="ov-dt">จัดทำเมื่อ ${thDay(today)}</div></div></div>`;
+}
 function drawNWOverview(){
   const el = $("tab26"); if(!el) return;
   if(tab !== 26){ el.innerHTML = ""; return; }
   ["tab20", "tab21", "tab22", "tab23", "tab24", "tab25"].forEach(id => { const e = $(id); if(e) e.innerHTML = ""; });
   if(!NW.on()){ el.innerHTML = nwStartHTML("สรุปภาพรวม"); bindNwImport(); return; }
-  const C = nwDashCfg(), D = nwDashData(), mode = S.ovmode === "month" ? "month" : "cum", mths = D.months.filter(p => pNum(p) >= pNum("2568-05")), p = (S.ovm && mths.includes(S.ovm)) ? S.ovm : D.end;
+  const C = nwDashCfg(), D = nwDashData(), mode = S.ovmode === "month" ? "month" : S.ovmode === "status" ? "status" : "cum", mths = D.months.filter(p => pNum(p) >= pNum("2568-05")), p = (S.ovm && mths.includes(S.ovm)) ? S.ovm : D.end;
   const yrM = mths.filter(q => q.startsWith(D.end.split("-")[0]));
   el.innerHTML = `<div class="nwscreen"><div class="card"><div class="eyebrow">สรุป กบข.นข. — ๑ หน้า A4 สำหรับสมาชิก</div>
-      <div class="bar" style="margin:0 0 8px"><button class="${mode === "cum" ? "" : "ghost"}" id="ov_mc">ภาพรวมสะสม</button><button class="${mode === "month" ? "" : "ghost"}" id="ov_mm">สรุปรายเดือน</button></div>
-      <div class="pf">${mode === "month"
+      <div class="bar" style="margin:0 0 8px"><button class="${mode === "cum" ? "" : "ghost"}" id="ov_mc">ภาพรวมสะสม</button><button class="${mode === "month" ? "" : "ghost"}" id="ov_mm">สรุปรายเดือน</button><button class="${mode === "status" ? "" : "ghost"}" id="ov_ms">สถานะกองทุน (๕ ตัวเลข)</button></div>
+      <div class="pf">${mode === "status"
+        ? `<div style="align-self:end;display:flex;gap:6px;flex-wrap:wrap"><button id="ov_print">🖨 พิมพ์ ๑ หน้า A4</button>${nwxBtns("ov")}</div><span class="hint" style="align-self:end">ประจำเดือนล่าสุดที่กรอกในทะเบียน (${nwPFull(D.end)}) · ไม่ต้องกรอกตัวเลขเอง</span>`
+        : mode === "month"
         ? `<div><label>เดือนที่ต้องการพิมพ์</label><div style="display:flex;gap:6px"><button class="ghost sm" id="ov_pm">◀</button><select id="ov_m">${mths.map(q => `<option value="${q}" ${q === p ? "selected" : ""}>${nwPFull(q)}</option>`).join("")}</select><button class="ghost sm" id="ov_nm">▶</button></div></div>
            <div style="align-self:end;display:flex;gap:6px;flex-wrap:wrap"><button id="ov_print">🖨 พิมพ์เดือนนี้ ๑ หน้า A4</button>${nwxBtns("ov")}</div><div style="align-self:end"><button class="ghost" id="ov_pall">พิมพ์ทุกเดือนปี ${D.end.split("-")[0]} (${yrM.length} หน้า)</button></div>`
         : `<div><label>ปันผลหุ้น (% ต่อปี)</label><input type="number" step="0.01" min="0" id="ov_rs" value="${C.rs}"></div>
@@ -4670,14 +4715,18 @@ function drawNWOverview(){
            <div style="align-self:end;display:flex;gap:6px;flex-wrap:wrap"><button id="ov_print">🖨 พิมพ์ ๑ หน้า A4</button>${nwxBtns("ov")}</div>`}</div>
       <p class="hint" style="margin:8px 0 0">ตัวเลขทั้งหมดมาจากทะเบียน (รวมสมาชิกที่ยังไม่ลาออก ไม่มีชื่อรายบุคคล) · ตัวอักษร TH Sarabun New ขอบซ้าย ๓ ซม. ขวา ๒ ซม. · ในหน้าต่างพิมพ์ให้ปิด «หัวกระดาษและท้ายกระดาษ»
         ${mode === "cum" ? " · อัตราและช่วงเดือนใช้ค่าเดียวกับแท็บ แดชบอร์ด" : " · รายเดือนเทียบกับเดือนก่อนหน้า (ข้อมูลเริ่ม พ.ค.68)"}</p></div>
-    <div class="ov-wrap"><div class="ov-paper">${mode === "month" ? nwMonthlyDoc(p) : nwOverviewDoc()}</div></div></div>
+    <div class="ov-wrap"><div class="ov-paper">${mode === "month" ? nwMonthlyDoc(p) : mode === "status" ? nwStatusDoc() : nwOverviewDoc()}</div></div></div>
     <div class="nwdoc" id="nwdoc"></div>`;
   const fit = () => { const w = el.querySelector(".ov-wrap"), pp = el.querySelector(".ov-paper"); if(!w || !pp) return;
     const k = Math.min(1, (w.clientWidth - 4) / pp.offsetWidth); pp.style.transform = `scale(${k})`; pp.style.transformOrigin = "0 0"; w.style.height = Math.ceil(pp.offsetHeight * k + 24) + "px"; };
   fit(); window.onresize = () => { if(tab === 26) fit(); };
   const set = patch => { S.nw.dash = Object.assign({}, S.nw.dash || {}, patch); save(); drawNWOverview(); };
-  $("ov_mc").onclick = () => { S.ovmode = "cum"; drawNWOverview(); }; $("ov_mm").onclick = () => { S.ovmode = "month"; drawNWOverview(); };
-  if(mode === "cum"){ $("ov_rs").onchange = e => set({rs:Math.max(0, +e.target.value || 0)}); $("ov_ri").onchange = e => set({ri:Math.max(0, +e.target.value || 0)});
+  $("ov_mc").onclick = () => { S.ovmode = "cum"; drawNWOverview(); }; $("ov_mm").onclick = () => { S.ovmode = "month"; drawNWOverview(); }; $("ov_ms").onclick = () => { S.ovmode = "status"; drawNWOverview(); };
+  if(mode === "status"){
+    $("ov_print").onclick = () => nwPrint(nwStatusDoc());
+    $("ov_w").onclick = () => nwxRun("สถานะกองทุน → Word", () => nwxDocx(nwStatusDoc(), `สถานะกองทุน-${D.end}`, NWX_FIT));
+    $("ov_i").onclick = () => nwxRun("สถานะกองทุน → รูป", () => nwxPng(nwStatusDoc(), `สถานะกองทุน-${D.end}`)); }
+  else if(mode === "cum"){ $("ov_rs").onchange = e => set({rs:Math.max(0, +e.target.value || 0)}); $("ov_ri").onchange = e => set({ri:Math.max(0, +e.target.value || 0)});
     $("ov_print").onclick = () => nwPrint(nwOverviewDoc());
     $("ov_w").onclick = () => nwxRun("สรุปภาพรวม → Word", () => nwxDocx(nwOverviewDoc(), `สรุปภาพรวม-${D.end}`, NWX_FIT));
     $("ov_i").onclick = () => nwxRun("สรุปภาพรวม → รูป", () => nwxPng(nwOverviewDoc(), `สรุปภาพรวม-${D.end}`)); }
