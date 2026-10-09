@@ -494,6 +494,9 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
 .ovp{font-family:"TH Sarabun New","Sarabun",sans-serif;font-size:16pt;line-height:1.2;color:#000;text-align:left}
 .ovp .ov-top{display:flex;align-items:center;gap:14px;border-bottom:1.5px solid #000;padding-bottom:7px;margin-bottom:12px}
 .ovp .ov-top img{height:20mm;width:auto;display:block}.ovp .ov-hd{flex:1}
+.ovp .ov-kpis.ov-k2{grid-template-columns:repeat(2,1fr)}
+.ovp .ov-k2 .ov-kpi{padding:5px 12px 7px}.ovp .ov-k2 .ov-kl{font-size:15pt}.ovp .ov-k2 .ov-kv{font-size:34pt;line-height:1.05}.ovp .ov-k2 .ov-kv small{font-size:15pt;font-weight:600}
+.ovp .ov-k2 .ov-kc{font-size:14pt;line-height:1.2}.ovp .ov-k2 .ov-kc b{font-size:15pt}.ovp .ov-k2 .ov-kn{font-size:11.5pt;margin-top:1px}
 .ovp .ov-t2{font-size:17pt;font-weight:700;line-height:1.1}
 .ovp .ov-org{font-size:14pt;font-weight:600}.ovp .ov-title{font-size:21pt;font-weight:700;line-height:1.1}.ovp .ov-sub{font-size:14pt}
 .ovp .ov-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
@@ -616,7 +619,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-98</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-99</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -4604,7 +4607,7 @@ function ovBarsV(list, hiP){
 function nwMonthlyDoc(p){
   const D = nwDashData(), A = ovMonthAgg(D, p), first = pNum(p) <= pNum("2568-05"), pp = pFrom(pNum(p) - 1), Pv = first ? null : ovMonthAgg(D, pp), today = nwToday();
   const pl = nwPFull(p).split(" ")[0], yr = p.split("-")[0], LC = D.LC, cum = nwCumAt(LC, p, D.end), cumPrev = first ? 0 : nwCumAt(LC, pp, D.end);
-  const cmp = (a, b) => { if(!Pv) return "เดือนแรกของข้อมูล"; const d = r2(a - b); return `เดือนก่อน ${B0(b)} · ${d >= 0 ? "เพิ่มขึ้น" : "ลดลง"} ${b > 0 ? "ร้อยละ " + Math.abs(d / b * 100).toFixed(1) : B0(Math.abs(d)) + " บาท"}`; };
+  const cmp = (a, b) => { if(!Pv) return "เดือนแรกของข้อมูล"; const d = r2(a - b); return `${d >= 0 ? "▲" : "▼"} ${b > 0 ? Math.abs(d / b * 100).toFixed(1) + "%" : B0(Math.abs(d)) + " บาท"} จากเดือนก่อน`; };
   const kpi = (l, val, cap, clr) => `<div class="ov-kpi" style="border-top:3px solid ${clr}"><div class="ov-kl">${l}</div><div class="ov-kv">${val}</div><div class="ov-kc">${cap}</div></div>`;
   const nAll = D.n, nPay = A.loanPay + A.savDep, nBor = A.loanPay + A.loanNone;
   const compP = [{l:"ดอกเบี้ย", v:A.int, c:"#1B7F5A"}, {l:"เงินต้น", v:A.pri, c:"#1F3A68"}, {l:"ฝากหุ้น", v:A.sh, c:"#C4570F"}];
@@ -4617,9 +4620,9 @@ function nwMonthlyDoc(p){
       ${kpi("รับชำระรวมเดือนนี้", tM(A.pay), `บาท · ${cmp(A.pay, Pv ? Pv.pay : 0)}`, "#1F3A68")}
       ${kpi("ดอกเบี้ยรับเดือนนี้", tM(A.int), `บาท · ${cmp(A.int, Pv ? Pv.int : 0)}`, "#1B7F5A")}
       ${kpi("ฝากหุ้นเดือนนี้", tM(A.sh), `บาท · ${cmp(A.sh, Pv ? Pv.sh : 0)}`, "#C4570F")}
-      ${kpi("ทุนเรือนหุ้นสะสม ณ สิ้นเดือน", tM(A.sharesEnd), Pv ? `บาท · ${A.sharesEnd >= Pv.sharesEnd ? "เพิ่มขึ้น" : "ลดลง"} ${tM(Math.abs(A.sharesEnd - Pv.sharesEnd))} บาท จากเดือนก่อน` : "บาท", "#1F3A68")}
-      ${kpi("หนี้คงเหลือรวม ณ สิ้นเดือน", tM(A.debtEnd), (Pv ? `บาท · ${A.debtEnd <= Pv.debtEnd ? "ลดลง" : "เพิ่มขึ้น"} ${tM(Math.abs(A.debtEnd - Pv.debtEnd))} บาท จากเดือนก่อน${A.loan > 0 ? ` · ปล่อยกู้ใหม่/กู้ทับ ${tM(A.loan)}` : ""}` : "บาท") + `<div style="font-size:11.5pt;margin-top:1px">(เงินทุนหมุนเวียนจากเงินสะสมและรายได้ของกลุ่มบุคคล)</div>`, "#C4570F")}
-      ${kpi("สมาชิกที่มีรายการเดือนนี้", `${nPay} <span style="font-size:15pt;font-weight:600">คน</span>`, `จากสมาชิก ${nAll} คน · ผู้กู้ชำระแล้ว ${A.loanPay} จาก ${nBor} คน`, "#6B4FA0")}</div>
+      ${kpi("ทุนเรือนหุ้นสะสม ณ สิ้นเดือน", tM(A.sharesEnd), Pv ? `บาท · ${A.sharesEnd >= Pv.sharesEnd ? "▲" : "▼"} ${tM(Math.abs(A.sharesEnd - Pv.sharesEnd))} จากเดือนก่อน` : "บาท", "#1F3A68")}
+      ${kpi("หนี้คงเหลือรวม ณ สิ้นเดือน", tM(A.debtEnd), (Pv ? `บาท · ${A.debtEnd <= Pv.debtEnd ? "▼" : "▲"} ${tM(Math.abs(A.debtEnd - Pv.debtEnd))} จากเดือนก่อน${A.loan > 0 ? ` · กู้ใหม่ ${tM(A.loan)}` : ""}` : "บาท") + `<div style="font-size:11.5pt;margin-top:1px">(เงินทุนหมุนเวียนจากเงินสะสมและรายได้ของกลุ่มบุคคล)</div>`, "#C4570F")}
+      ${kpi("สมาชิกที่มีรายการเดือนนี้", `${nPay} <span style="font-size:15pt;font-weight:600">คน</span>`, `จาก ${nAll} คน · ผู้กู้ชำระแล้ว ${A.loanPay}/${nBor}`, "#6B4FA0")}</div>
     <div class="ov-row">
       <div class="ov-box"><div class="ov-h">เงินรับชำระเดือนนี้ แยกตามรายการ</div><div class="ov-pie">${ovDonut(compP, (A.pay / 1000).toFixed(1), "พันบาท")}</div>${ovLeg(compP, tM)}</div>
       <div class="ov-box"><div class="ov-h">สมาชิกเดือนนี้</div><div class="ov-pie">${ovDonut(stP, nAll, "สมาชิก")}</div>${ovLeg(stP, v => v + " คน")}</div></div>
@@ -4643,44 +4646,34 @@ function nwStatusData(){
 }
 function nwStatusDoc(){
   const Z = nwStatusData(), {O, D, yr, outs, ret, retOpen, lfl, dTot} = Z, today = nwToday(), pl = nwPFull(D.end).split(" ")[0];
-  const sg = (clr, t, val, caps) => `<div class="sg" style="border-left-color:${clr}"><div class="sg-l"><div class="sg-t">${t}</div>${caps.filter(Boolean).map(c => `<div class="sg-c">${c}</div>`).join("")}</div><div class="sg-v">${val}</div></div>`;
-  const kpi = (l, val, cap, clr) => `<div class="ov-kpi" style="border-top:3px solid ${clr}"><div class="ov-kl">${l}</div><div class="ov-kv">${val}</div><div class="ov-kc">${cap}</div></div>`;
-  const mm = q => thMS(q).slice(0, -2), ar = v => v >= 0 ? "↑ +" : "↓ −", pc = v => Math.abs(v).toFixed(1);
-  const avg69 = O.n69 ? O.int69 / O.n69 : 0, per = O.n69 ? `${thMS(O.f69)}–${thMS(O.l69)} (${O.n69} เดือน)` : "";
-  const grow = O.chgS >= 0, netUp = dTot >= 0, lflPct = lfl && lfl.a > 0 ? (lfl.b - lfl.a) / lfl.a * 100 : null;
-  const rows = [
-    sg("#1F3A68", grow ? "ทุนสมาชิกเติบโตต่อเนื่อง" : "ทุนสมาชิก", `${tM(D.shNow)} <small>บาท</small>`,
-      [`${ar(O.chgS)}${tM(Math.abs(O.chgS))} บาท (${O.chgS >= 0 ? "+" : "−"}${pc(O.pctS)}%) จากต้นปี`,
-       ret > 0 ? (grow && dTot > 0 ? `แม้มีการคืนทุนสมาชิกประมาณ ${tM(ret)} บาท แต่ทุนรวมยังเพิ่มขึ้น` : `มีการคืนทุนสมาชิกประมาณ ${tM(ret)} บาท`) : ""]),
-    sg("#6B4FA0", netUp ? "การเติบโตของทุนสุทธิหลังคืนทุน" : "การเปลี่ยนแปลงของทุนสุทธิหลังคืนทุน", `${netUp ? "+" : "−"}${tM(Math.abs(dTot))} <small>บาท</small>`,
-      [netUp ? "สะท้อนการสะสมทุนของสมาชิกอย่างต่อเนื่อง" : "ทุนรวมลดลง เพราะคืนทุนมากกว่าการสะสมเพิ่ม"]),
-    sg("#C4570F", "เงินให้สมาชิกกู้หมุนเวียน", `${tM(D.dbNow)} <small>บาท</small>`, [`สมาชิกผู้กู้ ${O.nLoan} คน`]),
-    sg("#1B7F5A", "รายได้ดอกเบี้ยสะสม", `${tM(O.int69)} <small>บาท</small>`,
-      [lflPct === null ? "ยังไม่มีข้อมูลช่วงเดียวกันของปีก่อนให้เทียบ" : `${ar(lflPct)}${pc(lflPct)}% จากช่วงเดียวกันของปีก่อน (${mm(lfl.from)}–${mm(lfl.to)})`,
-       per ? `${per} · เฉลี่ยเดือนละ ${tM(avg69)} บาท` : ""]),
-    sg("#1F3A68", "สถานะสมาชิกและการชำระเงิน", `${O.n} <small>คน</small>`,
-      [`สมาชิกทั้งหมด ${O.n} คน`, `ผู้กู้ชำระปกติ ${O.okP} คน`, `อยู่ระหว่างติดตาม ${O.arrP} คน`])
-  ].join("");
+  const kpi = (l, val, cap, clr) => `<div class="ov-kpi" style="border-top:4px solid ${clr}"><div class="ov-kl">${l}</div><div class="ov-kv">${val}</div><div class="ov-kc">${cap}</div></div>`;
+  const mm = q => thMS(q).slice(0, -2), tri = v => v >= 0 ? "▲" : "▼", pc = v => Math.abs(v).toFixed(1), sgn = v => (v >= 0 ? "+" : "−") + tM(Math.abs(v)), U = t => `<small>${t}</small>`;
+  const avg69 = O.n69 ? O.int69 / O.n69 : 0, grow = O.chgS >= 0, lflPct = lfl && lfl.a > 0 ? (lfl.b - lfl.a) / lfl.a * 100 : null;
+  const bars = D.tot.filter(t => t.p.startsWith(yr)).slice(-12);
+  const stP = [{l:"ผู้กู้ ชำระปกติ", v:O.okP, c:"#1F3A68"}, {l:"ผู้กู้ อยู่ระหว่างติดตาม", v:O.arrP, c:"#C4570F"}, {l:"ผู้ฝาก", v:O.nSave, c:"#1B7F5A"}];
+  const tiles = [
+    kpi(grow ? "ทุนสมาชิกเติบโตต่อเนื่อง" : "ทุนสมาชิก", `${tM(D.shNow)} ${U("บาท")}`,
+      `${tri(O.chgS)} ${sgn(O.chgS)} บาท (${O.chgS >= 0 ? "+" : "−"}${pc(O.pctS)}%) จากต้นปี${ret > 0 ? `<div class="ov-kn">${grow && dTot > 0 ? `แม้มีการคืนทุนสมาชิกประมาณ ${tM(ret)} บาท แต่ทุนรวมยังเพิ่มขึ้น` : `มีการคืนทุนสมาชิกประมาณ ${tM(ret)} บาท`} · ทุนสุทธิหลังคืนทุน ${sgn(dTot)} บาท</div>` : ""}`, "#1F3A68"),
+    kpi("เงินให้สมาชิกกู้หมุนเวียน", `${tM(D.dbNow)} ${U("บาท")}`, `ผู้กู้ ${O.nLoan} คน<div class="ov-kn">(เงินทุนหมุนเวียนจากเงินสะสมและรายได้ของกลุ่มบุคคล)</div>`, "#C4570F"),
+    kpi("รายได้ดอกเบี้ยสะสม", `${tM(O.int69)} ${U("บาท")}`, lflPct === null ? `เฉลี่ยเดือนละ ${tM(avg69)} บาท` : `${tri(lflPct)} ${lflPct >= 0 ? "+" : "−"}${pc(lflPct)}% จากช่วงเดียวกันของปีก่อน<div class="ov-kn">เฉลี่ยเดือนละ ${tM(avg69)} บาท</div>`, "#1B7F5A"),
+    kpi("สถานะสมาชิกและการชำระเงิน", `${O.n} ${U("คน")}`, `ผู้กู้ชำระปกติ <b>${O.okP}</b> · อยู่ระหว่างติดตาม <b>${O.arrP}</b> · ผู้ฝาก <b>${O.nSave}</b>`, "#6B4FA0")].join("");
   const intBox = lfl
-    ? `<div class="ov-box"><div class="ov-h">รายได้ดอกเบี้ย เทียบช่วงเดียวกันของปีก่อน (${mm(lfl.from)}–${mm(lfl.to)})</div>${ovCmp(lfl.a, lfl.b, ["ปี " + (yr - 1), `${mm(lfl.from)}–${mm(lfl.to)}`], ["ปี " + yr, `${mm(lfl.from)}–${mm(lfl.to)}`], "#8CC9AE", "#1B7F5A")}
+    ? `<div class="ov-box"><div class="ov-h">รายได้ดอกเบี้ย เทียบช่วงเดียวกันของปีก่อน</div>${ovCmp(lfl.a, lfl.b, ["ปี " + (yr - 1), `${mm(lfl.from)}–${mm(lfl.to)}`], ["ปี " + yr, `${mm(lfl.from)}–${mm(lfl.to)}`], "#8CC9AE", "#1B7F5A")}
         <div class="ov-dl">${ovDelta(r2(lfl.b - lfl.a), lflPct || 0)}</div></div>`
     : `<div class="ov-box"><div class="ov-h">รายได้ดอกเบี้ยสะสม เทียบปี</div>${ovCmp(O.int68, O.int69, ["ปี 2568", O.n68 ? `${mm(O.f68)}–${mm(O.l68)}` : "—"], ["ปี " + yr, O.n69 ? `${mm(O.f69)}–${mm(O.l69)}` : "—"], "#8CC9AE", "#1B7F5A")}
         <div class="ov-dl">${ovDelta(O.chgI, O.pctI)}</div></div>`;
   return `<div class="ovp">
     <div class="ov-top"><img src="${NW_LOGO}" alt="กบข.นข."><div class="ov-hd"><div class="ov-org">${ORGF} (กบข.นข.)</div>
-      <div class="ov-title">สรุปสถานะความมั่นคง กบข.นข.</div><div class="ov-t2">ประจำเดือน${pl} พ.ศ. ${yr}</div><div class="ov-sub">ข้อมูลจากทะเบียน ณ สิ้นเดือน${pl} ${yr} · สมาชิก ${O.n} คน</div></div></div>
-    <div class="ov-h" style="margin-bottom:5px">ภาพรวม</div>
-    ${rows}
-    <div class="ov-h" style="margin:2px 0 5px">ภาพรวมเดือนนี้</div>
-    <div class="ov-kpis">
-      ${kpi(grow ? "ทุนสมาชิกเพิ่มขึ้น" : "ทุนสมาชิกลดลง", `<span style="font-size:16pt">${grow ? "▲" : "▼"}</span> ${pc(O.pctS)} <span style="font-size:15pt;font-weight:600">%</span>`, "จากต้นปี", "#1F3A68")}
-      ${kpi("เงินทุนหมุนเวียนสร้างรายได้", tM(D.dbNow), `บาท<div style="font-size:11.5pt;margin-top:1px">(เงินทุนหมุนเวียนจากเงินสะสมและรายได้ของกลุ่มบุคคล)</div>`, "#C4570F")}
-      ${kpi("รายได้ดอกเบี้ยสะสม", tM(O.int69), "บาท", "#1B7F5A")}</div>
+      <div class="ov-title">สรุปสถานะความมั่นคง กบข.นข.</div><div class="ov-t2">ประจำเดือน${pl} พ.ศ. ${yr} · สมาชิก ${O.n} คน</div></div></div>
+    <div class="ov-kpis ov-k2">${tiles}</div>
     <div class="ov-row">
       <div class="ov-box"><div class="ov-h">ทุนสมาชิก เทียบต้นปี</div>${ovCmp(D.open.sh, D.shNow, ["ปี 2568", "ณ 31 ธ.ค."], ["ปี " + yr, "ณ " + pl], "#8FA3C7", "#1F3A68")}
         <div class="ov-dl">${ovDelta(O.chgS, O.pctS)}</div></div>
       ${intBox}</div>
-    <div class="ov-foot">${ret > 0 ? `ทุนสุทธิหลังคืนทุน = ทุนปัจจุบัน − (ทุนต้นปีของสมาชิกที่ยังอยู่ + ทุนต้นปีของผู้ที่คืนทุน ${tM(retOpen)} บาท) · ` : ""}รายได้ดอกเบี้ย = ดอกเบี้ยที่รับชำระตามทะเบียน (ข้อมูลเริ่ม พ.ค. 2568 จึงเทียบช่วงเดียวกันได้ตั้งแต่ พ.ค.) · «อยู่ระหว่างติดตาม» = ผู้กู้ที่มีงวดค้างชำระ · เงินให้สมาชิกกู้หมุนเวียน = เงินต้นคงเหลือ</div>
+    <div class="ov-row3">
+      <div class="ov-box"><div class="ov-h">สถานะสมาชิก</div><div class="ov-pie">${ovDonut(stP, O.n, "สมาชิก")}</div>${ovLeg(stP, v => v + " คน")}</div>
+      <div class="ov-box"><div class="ov-h">รายได้ดอกเบี้ยรายเดือน ปี ${yr} (พันบาท)</div>${ovBars(bars)}</div></div>
+    <div class="ov-foot">ตัวเลขจากทะเบียน · รายได้ดอกเบี้ยเทียบช่วงเดียวกันได้ตั้งแต่ พ.ค. (ข้อมูลเริ่ม พ.ค. 2568)${ret > 0 ? ` · ทุนสุทธิหลังคืนทุน = ทุนปัจจุบัน − (ทุนต้นปีของสมาชิกที่ยังอยู่ + ทุนต้นปีของผู้ที่คืนทุน ${tM(retOpen)} บาท)` : ""}</div>
     <div class="ov-sig"><div><div class="ln"></div><div>( ${esc(FIN())} )</div><div>กรรมการฝ่ายการเงิน</div></div><div><div class="ln"></div><div>( ${esc(CHAIR())} )</div><div>ประธานกลุ่มบุคคล</div></div>
       <div class="ov-dt">จัดทำเมื่อ ${thDay(today)}</div></div></div>`;
 }
