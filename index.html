@@ -616,7 +616,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-97</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-98</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -4674,7 +4674,7 @@ function nwStatusDoc(){
     <div class="ov-h" style="margin:2px 0 5px">ภาพรวมเดือนนี้</div>
     <div class="ov-kpis">
       ${kpi(grow ? "ทุนสมาชิกเพิ่มขึ้น" : "ทุนสมาชิกลดลง", `<span style="font-size:16pt">${grow ? "▲" : "▼"}</span> ${pc(O.pctS)} <span style="font-size:15pt;font-weight:600">%</span>`, "จากต้นปี", "#1F3A68")}
-      ${kpi("เงินทุนหมุนเวียนสร้างรายได้", tM(D.dbNow), "บาท", "#C4570F")}
+      ${kpi("เงินทุนหมุนเวียนสร้างรายได้", tM(D.dbNow), `บาท<div style="font-size:11.5pt;margin-top:1px">(เงินทุนหมุนเวียนจากเงินสะสมและรายได้ของกลุ่มบุคคล)</div>`, "#C4570F")}
       ${kpi("รายได้ดอกเบี้ยสะสม", tM(O.int69), "บาท", "#1B7F5A")}</div>
     <div class="ov-row">
       <div class="ov-box"><div class="ov-h">ทุนสมาชิก เทียบต้นปี</div>${ovCmp(D.open.sh, D.shNow, ["ปี 2568", "ณ 31 ธ.ค."], ["ปี " + yr, "ณ " + pl], "#8FA3C7", "#1F3A68")}
@@ -4711,7 +4711,7 @@ function drawNWOverview(){
   if(mode === "status"){
     $("ov_ret").onchange = e => setDash({ret:Math.max(0, +e.target.value || 0)}); $("ov_reto").onchange = e => setDash({retOpen:Math.max(0, +e.target.value || 0)});
     $("ov_print").onclick = () => nwPrint(nwStatusDoc());
-    $("ov_w").onclick = () => nwxRun("สรุปสถานะ → Word", () => nwxDocx(nwStatusDoc(), `สรุปสถานะ-${D.end}`, Object.assign({}, NWX_FIT, {K:0.56, SC:0.62, mt:5, mb:5})));
+    $("ov_w").onclick = () => nwxRun("สรุปสถานะ → Word", () => nwxDocx(nwStatusDoc(), `สรุปสถานะ-${D.end}`, Object.assign({}, NWX_FIT, {K:0.52, SC:0.58, mt:5, mb:5})));
     $("ov_i").onclick = () => nwxRun("สรุปสถานะ → รูป", () => nwxPng(nwStatusDoc(), `สรุปสถานะ-${D.end}`)); }
   else { const i = mths.indexOf(p);
     $("ov_m").onchange = e => { S.ovm = e.target.value; drawNWOverview(); };
