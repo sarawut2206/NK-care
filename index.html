@@ -619,7 +619,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-102</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-103</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -4654,7 +4654,7 @@ function nwStatusDoc(){
   const stP = [{l:"ผู้กู้ ชำระปกติ", v:O.okP, c:"#1F3A68"}, {l:"ผู้กู้ อยู่ระหว่างติดตาม", v:O.arrP, c:"#C4570F"}, {l:"ผู้ฝาก", v:O.nSave, c:"#1B7F5A"}];
   const tiles = [
     kpi(grow ? "ทุนสมาชิกเติบโตต่อเนื่อง" : "ทุนสมาชิก", `${tM(D.shNow)} ${U("บาท")}`,
-      `${tri(O.chgS)} ${sgn(O.chgS)} บาท (${O.chgS >= 0 ? "+" : "−"}${pc(O.pctS)}%) จากต้นปี${ret > 0 ? `<div class="ov-kn">หลังคืนทุนสมาชิก${retN > 0 ? ` จำนวน ${retN} ราย ` : ""}ประมาณ ${tM(ret)} บาท${showNet ? ` · ทุนสุทธิหลังคืนทุน ${sgn(dTot)} บาท` : ""}</div>` : ""}`, "#1F3A68"),
+      `${tri(O.chgS)} ${sgn(O.chgS)} บาท (${O.chgS >= 0 ? "+" : "−"}${pc(O.pctS)}%) จากสิ้นปี 2568${ret > 0 ? `<div class="ov-kn">หลังคืนทุนสมาชิก${retN > 0 ? ` จำนวน ${retN} ราย ` : ""}ประมาณ ${tM(ret)} บาท${showNet ? ` · ทุนสุทธิหลังคืนทุน ${sgn(dTot)} บาท` : ""}</div>` : ""}`, "#1F3A68"),
     kpi("เงินให้สมาชิกกู้หมุนเวียน", `${tM(D.dbNow)} ${U("บาท")}`, `ผู้กู้ ${O.nLoan} คน<div class="ov-kn">(เงินทุนหมุนเวียนจากเงินสะสมและรายได้ของกลุ่มบุคคล)</div>`, "#C4570F"),
     kpi("รายได้ดอกเบี้ยสะสม", `${tM(O.int69)} ${U("บาท")}`, lflPct === null ? `เฉลี่ยเดือนละ ${tM(avg69)} บาท` : `${tri(lflPct)} ${lflPct >= 0 ? "+" : "−"}${pc(lflPct)}% จากช่วงเดียวกันของปีก่อน<div class="ov-kn">เฉลี่ยเดือนละ ${tM(avg69)} บาท</div>`, "#1B7F5A"),
     kpi("สถานะสมาชิกและการชำระเงิน", `${O.n} ${U("คน")}`, `ผู้กู้ชำระปกติ <b>${O.okP}</b> · อยู่ระหว่างติดตาม <b>${O.arrP}</b> · ผู้ฝาก <b>${O.nSave}</b>`, "#6B4FA0")].join("");
