@@ -616,7 +616,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-95</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-96</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -3023,7 +3023,7 @@ function nwPrint(html){
 }
 
 /* ============ ส่งออกเอกสาร: Word (.docx) และรูปภาพ (PNG) ============
-   ใช้เอกสารชุดเดียวกับที่พิมพ์ (html จาก nwConDocs / nwOverviewDoc / ใบเสร็จ ฯลฯ) — วางในเวทีซ่อน แล้วแปลงจากหน้าที่แสดงจริง
+   ใช้เอกสารชุดเดียวกับที่พิมพ์ (html จาก nwConDocs / nwStatusDoc / ใบเสร็จ ฯลฯ) — วางในเวทีซ่อน แล้วแปลงจากหน้าที่แสดงจริง
    · Word: แปลง DOM → HTML ที่ Word อ่านได้ (flex/grid → ตาราง, SVG → รูป) แล้วห่อเป็น .docx ด้วย html-docx-js · แก้ไขข้อความต่อใน Word ได้
    · รูปภาพ: html2canvas ต่อหน้า · หลายหน้า = ZIP
    ไลบรารีโหลดจาก CDN เฉพาะตอนกดใช้ (ต้องมีอินเทอร์เน็ต) */
@@ -4575,35 +4575,6 @@ function ovCmp(v1, v2, l1, l2, c1, c2){
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img"><line x1="14" x2="${W - 14}" y1="${H - Bt}" y2="${H - Bt}" stroke="#000" stroke-width="1"/>${bar(v1, 36, c1, l1)}${bar(v2, 172, c2, l2)}</svg>`;
 }
 const ovDelta = (d, p) => `${d >= 0 ? "เพิ่มขึ้น" : "ลดลง"} ${B0(Math.abs(d))} บาท (ร้อยละ ${Math.abs(p).toFixed(1)})`;
-function nwOverviewDoc(){
-  const O = ovData(), D = O.D, today = nwToday(), yr = O.yr, pl = nwPFull(D.end).split(" ")[0], up = O.chgS >= 0, LN = O.loan;
-  const bars = D.tot.filter(t => t.p.startsWith(yr)).slice(-12), lbl = p => thMS(p);
-  const kpi = (l, val, cap, clr) => `<div class="ov-kpi" style="border-top:3px solid ${clr}"><div class="ov-kl">${l}</div><div class="ov-kv">${val}</div><div class="ov-kc">${cap}</div></div>`;
-  const stP = [{l:"ผู้ฝาก", v:O.nSave, c:"#1B7F5A"}, {l:"ผู้กู้ ชำระปกติ", v:O.okP, c:"#1F3A68"}, {l:"ผู้กู้ มีงวดค้าง", v:O.arrP, c:"#C4570F"}];
-  const per68 = O.n68 ? `${lbl(O.f68)}–${lbl(O.l68)} (${O.n68} เดือน)` : "—", per69 = O.n69 ? `${lbl(O.f69)}–${lbl(O.l69)} (${O.n69} เดือน)` : "—";
-  return `<div class="ovp">
-    <div class="ov-top"><img src="${NW_LOGO}" alt="กบข.นข."><div class="ov-hd"><div class="ov-org">${ORGF} (กบข.นข.)</div>
-      <div class="ov-title">สรุปสถานะความมั่นคง กบข.นข.</div><div class="ov-t2">สรุปภาพรวม ประจำเดือน${pl} ${yr}</div><div class="ov-sub">ข้อมูลจากทะเบียน ณ สิ้นเดือน${pl} ${yr} · สมาชิก ${O.n} คน</div></div></div>
-    <div class="ov-kpis">
-      ${kpi("ทุนเรือนหุ้นสะสมรวม", tM(D.shNow), `บาท · ${up ? "เพิ่มขึ้น" : "ลดลง"} ${tM(Math.abs(O.chgS))} บาท (ร้อยละ ${Math.abs(O.pctS).toFixed(1)}) จากสิ้นปี 2568`, "#1F3A68")}
-      ${kpi("หนี้คงเหลือรวม", tM(D.dbNow), `บาท · ผู้กู้ ${O.nLoan} คน · ตรงกับทะเบียนผู้กู้`, "#C4570F")}
-      ${kpi("ดอกเบี้ยรับสะสม ปี " + yr, tM(O.int69), `บาท · เทียบปี 2568 (${tM(O.int68)} บาท) ${O.int68 > 0 ? (O.chgI >= 0 ? "เพิ่มขึ้น" : "ลดลง") + " ร้อยละ " + Math.abs(O.pctI).toFixed(1) : ""}`, "#1B7F5A")}
-      ${kpi("ทุนเรือนหุ้นเฉลี่ยต่อคน", tM(O.avgSh), `บาท ต่อสมาชิก ${O.n} คน`, "#1F3A68")}
-      ${kpi("ทุนเรือนหุ้นสะสมสูงสุด", tM(O.maxSh), "บาท ต่อคน (สูงสุดในกลุ่ม)", "#6B4FA0")}
-      ${kpi("เงินคืนสมาชิก (ประมาณการ)", tM(O.totDiv), `บาท · เฉลี่ยคนละ ${tM(O.n ? O.totDiv / O.n : 0)} บาท`, "#6B4FA0")}</div>
-    <div class="ov-row">
-      <div class="ov-box"><div class="ov-h">ทุนเรือนหุ้นสะสมรวม เทียบปี</div>${ovCmp(D.open.sh, D.shNow, ["ปี 2568", "ณ 31 ธ.ค."], ["ปี " + yr, "ณ " + pl], "#8FA3C7", "#1F3A68")}
-        <div class="ov-dl">${ovDelta(O.chgS, O.pctS)}</div></div>
-      <div class="ov-box"><div class="ov-h">ดอกเบี้ยรับสะสม เทียบปี</div>${ovCmp(O.int68, O.int69, ["ปี 2568", per68.split(" (")[0]], ["ปี " + yr, per69.split(" (")[0]], "#8CC9AE", "#1B7F5A")}
-        <div class="ov-dl">${ovDelta(O.chgI, O.pctI)}</div></div></div>
-    <div class="ov-row3">
-      <div class="ov-box"><div class="ov-h">สถานะสมาชิก</div><div class="ov-pie">${ovDonut(stP, O.n, "สมาชิก")}</div>${ovLeg(stP, v => v + " คน")}</div>
-      <div class="ov-box"><div class="ov-h">ดอกเบี้ยรับรายเดือน ปี ${yr} (พันบาท)</div>${ovBars(bars)}
-        <div class="ov-dl">เทียบดอกเบี้ย: ปี 2568 ${O.n68} เดือน · ปี ${yr} ${O.n69} เดือน</div></div></div>
-    <div class="ov-foot">เงินคืนสมาชิกเป็นประมาณการ (ปันผลหุ้นร้อยละ ${D.C.rs} + เฉลี่ยคืนดอกเบี้ยร้อยละ ${D.C.ri}) ยังไม่ใช่มติที่ประชุมใหญ่</div>
-    <div class="ov-sig"><div><div class="ln"></div><div>( ${esc(FIN())} )</div><div>กรรมการฝ่ายการเงิน</div></div><div><div class="ln"></div><div>( ${esc(CHAIR())} )</div><div>ประธานกลุ่มบุคคล</div></div>
-      <div class="ov-dt">จัดทำเมื่อ ${thDay(today)}</div></div></div>`;
-}
 /* ---------- สรุปรายเดือน ๑ หน้า A4 — เลือกเดือนแล้วพิมพ์ ---------- */
 function ovMonthAgg(D, p){
   const A = {pay:0, int:0, sh:0, pri:0, loan:0, loanPay:0, loanNone:0, savDep:0, savNone:0, sharesEnd:0, debtEnd:0}, pn = pNum(p);
@@ -4716,35 +4687,26 @@ function drawNWOverview(){
   if(tab !== 26){ el.innerHTML = ""; return; }
   ["tab20", "tab21", "tab22", "tab23", "tab24", "tab25"].forEach(id => { const e = $(id); if(e) e.innerHTML = ""; });
   if(!NW.on()){ el.innerHTML = nwStartHTML("สรุปภาพรวม"); bindNwImport(); return; }
-  const C = nwDashCfg(), D = nwDashData(), mode = S.ovmode === "month" ? "month" : S.ovmode === "status" ? "status" : "cum", mths = D.months.filter(p => pNum(p) >= pNum("2568-05")), p = (S.ovm && mths.includes(S.ovm)) ? S.ovm : D.end;
+  const D = nwDashData(), mode = S.ovmode === "month" ? "month" : "status", mths = D.months.filter(p => pNum(p) >= pNum("2568-05")), p = (S.ovm && mths.includes(S.ovm)) ? S.ovm : D.end;
   const yrM = mths.filter(q => q.startsWith(D.end.split("-")[0]));
   el.innerHTML = `<div class="nwscreen"><div class="card"><div class="eyebrow">สรุป กบข.นข. — ๑ หน้า A4 สำหรับสมาชิก</div>
-      <div class="bar" style="margin:0 0 8px"><button class="${mode === "cum" ? "" : "ghost"}" id="ov_mc">ภาพรวมสะสม</button><button class="${mode === "month" ? "" : "ghost"}" id="ov_mm">สรุปรายเดือน</button><button class="${mode === "status" ? "" : "ghost"}" id="ov_ms">สรุปสถานะ (๕ ตัวเลข)</button></div>
+      <div class="bar" style="margin:0 0 8px"><button class="${mode === "status" ? "" : "ghost"}" id="ov_ms">สรุปสถานะความมั่นคง</button><button class="${mode === "month" ? "" : "ghost"}" id="ov_mm">สรุปรายเดือน</button></div>
       <div class="pf">${mode === "status"
         ? `<div style="align-self:end;display:flex;gap:6px;flex-wrap:wrap"><button id="ov_print">🖨 พิมพ์ ๑ หน้า A4</button>${nwxBtns("ov")}</div><span class="hint" style="align-self:end">ประจำเดือนล่าสุดที่กรอกในทะเบียน (${nwPFull(D.end)}) · ไม่ต้องกรอกตัวเลขเอง</span>`
-        : mode === "month"
-        ? `<div><label>เดือนที่ต้องการพิมพ์</label><div style="display:flex;gap:6px"><button class="ghost sm" id="ov_pm">◀</button><select id="ov_m">${mths.map(q => `<option value="${q}" ${q === p ? "selected" : ""}>${nwPFull(q)}</option>`).join("")}</select><button class="ghost sm" id="ov_nm">▶</button></div></div>
-           <div style="align-self:end;display:flex;gap:6px;flex-wrap:wrap"><button id="ov_print">🖨 พิมพ์เดือนนี้ ๑ หน้า A4</button>${nwxBtns("ov")}</div><div style="align-self:end"><button class="ghost" id="ov_pall">พิมพ์ทุกเดือนปี ${D.end.split("-")[0]} (${yrM.length} หน้า)</button></div>`
-        : `<div><label>ปันผลหุ้น (% ต่อปี)</label><input type="number" step="0.01" min="0" id="ov_rs" value="${C.rs}"></div>
-           <div><label>เฉลี่ยคืนดอกเบี้ย (% ต่อปี)</label><input type="number" step="0.01" min="0" id="ov_ri" value="${C.ri}"></div>
-           <div style="align-self:end;display:flex;gap:6px;flex-wrap:wrap"><button id="ov_print">🖨 พิมพ์ ๑ หน้า A4</button>${nwxBtns("ov")}</div>`}</div>
+        : `<div><label>เดือนที่ต้องการพิมพ์</label><div style="display:flex;gap:6px"><button class="ghost sm" id="ov_pm">◀</button><select id="ov_m">${mths.map(q => `<option value="${q}" ${q === p ? "selected" : ""}>${nwPFull(q)}</option>`).join("")}</select><button class="ghost sm" id="ov_nm">▶</button></div></div>
+           <div style="align-self:end;display:flex;gap:6px;flex-wrap:wrap"><button id="ov_print">🖨 พิมพ์เดือนนี้ ๑ หน้า A4</button>${nwxBtns("ov")}</div><div style="align-self:end"><button class="ghost" id="ov_pall">พิมพ์ทุกเดือนปี ${D.end.split("-")[0]} (${yrM.length} หน้า)</button></div>`}</div>
       <p class="hint" style="margin:8px 0 0">ตัวเลขทั้งหมดมาจากทะเบียน (รวมสมาชิกที่ยังไม่ลาออก ไม่มีชื่อรายบุคคล) · ตัวอักษร TH Sarabun New ขอบซ้าย ๓ ซม. ขวา ๒ ซม. · ในหน้าต่างพิมพ์ให้ปิด «หัวกระดาษและท้ายกระดาษ»
-        ${mode === "cum" ? " · อัตราและช่วงเดือนใช้ค่าเดียวกับแท็บ แดชบอร์ด" : " · รายเดือนเทียบกับเดือนก่อนหน้า (ข้อมูลเริ่ม พ.ค.68)"}</p></div>
-    <div class="ov-wrap"><div class="ov-paper">${mode === "month" ? nwMonthlyDoc(p) : mode === "status" ? nwStatusDoc() : nwOverviewDoc()}</div></div></div>
+        ${mode === "status" ? " · เทียบกับสิ้นปี 2568 และช่วงเดียวกันของปีก่อน" : " · รายเดือนเทียบกับเดือนก่อนหน้า (ข้อมูลเริ่ม พ.ค.68)"}</p></div>
+    <div class="ov-wrap"><div class="ov-paper">${mode === "month" ? nwMonthlyDoc(p) : nwStatusDoc()}</div></div></div>
     <div class="nwdoc" id="nwdoc"></div>`;
   const fit = () => { const w = el.querySelector(".ov-wrap"), pp = el.querySelector(".ov-paper"); if(!w || !pp) return;
     const k = Math.min(1, (w.clientWidth - 4) / pp.offsetWidth); pp.style.transform = `scale(${k})`; pp.style.transformOrigin = "0 0"; w.style.height = Math.ceil(pp.offsetHeight * k + 24) + "px"; };
   fit(); window.onresize = () => { if(tab === 26) fit(); };
-  const set = patch => { S.nw.dash = Object.assign({}, S.nw.dash || {}, patch); save(); drawNWOverview(); };
-  $("ov_mc").onclick = () => { S.ovmode = "cum"; drawNWOverview(); }; $("ov_mm").onclick = () => { S.ovmode = "month"; drawNWOverview(); }; $("ov_ms").onclick = () => { S.ovmode = "status"; drawNWOverview(); };
+  $("ov_mm").onclick = () => { S.ovmode = "month"; drawNWOverview(); }; $("ov_ms").onclick = () => { S.ovmode = "status"; drawNWOverview(); };
   if(mode === "status"){
     $("ov_print").onclick = () => nwPrint(nwStatusDoc());
     $("ov_w").onclick = () => nwxRun("สรุปสถานะ → Word", () => nwxDocx(nwStatusDoc(), `สรุปสถานะ-${D.end}`, Object.assign({}, NWX_FIT, {K:0.56, SC:0.62, mt:5, mb:5})));
     $("ov_i").onclick = () => nwxRun("สรุปสถานะ → รูป", () => nwxPng(nwStatusDoc(), `สรุปสถานะ-${D.end}`)); }
-  else if(mode === "cum"){ $("ov_rs").onchange = e => set({rs:Math.max(0, +e.target.value || 0)}); $("ov_ri").onchange = e => set({ri:Math.max(0, +e.target.value || 0)});
-    $("ov_print").onclick = () => nwPrint(nwOverviewDoc());
-    $("ov_w").onclick = () => nwxRun("สรุปภาพรวม → Word", () => nwxDocx(nwOverviewDoc(), `สรุปภาพรวม-${D.end}`, NWX_FIT));
-    $("ov_i").onclick = () => nwxRun("สรุปภาพรวม → รูป", () => nwxPng(nwOverviewDoc(), `สรุปภาพรวม-${D.end}`)); }
   else { const i = mths.indexOf(p);
     $("ov_m").onchange = e => { S.ovm = e.target.value; drawNWOverview(); };
     $("ov_pm").onclick = () => { if(mths[i - 1]){ S.ovm = mths[i - 1]; drawNWOverview(); } }; $("ov_nm").onclick = () => { if(mths[i + 1]){ S.ovm = mths[i + 1]; drawNWOverview(); } };
