@@ -614,9 +614,9 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
 <div class="wrap">
   <div class="flag"><i></i><i></i><i></i></div>
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
-    <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
+    <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-93</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-94</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -1515,7 +1515,7 @@ function drawGrid(){
 }
 
 /* ======================================================================
-   แดชบอร์ด 1 — ภาพรวมกองทุน
+   แดชบอร์ด 1 — ภาพรวม
    ====================================================================== */
 const SERIES = [{k:"pri", n:"เงินต้น", c:"#2a78d6"}, {k:"int", n:"ดอกเบี้ย", c:"#eb6834"}, {k:"sh", n:"หุ้น (ประจำ + เพิ่ม)", c:"#1baf7a"}];
 function niceStep(x){ const p = Math.pow(10, Math.floor(Math.log10(x||1))), f = x/p; return (f<=1?1 : f<=2?2 : f<=5?5 : 10)*p; }
@@ -3500,7 +3500,7 @@ function drawNWDash(){
   const divTot = r2(D.divS + D.divI), divY = r2(D.divSY + D.divIY), mx = Math.max(1, divTot, divY);
   el.innerHTML = `<div class="ds">
   <div class="ds-head"><div><div class="eyebrow" style="margin:0">แดชบอร์ดสรุป กบข.นข.</div>
-    <div class="hint">ตัวเลขที่กรอกไว้ในทะเบียนถึง <b>${thPer(D.end)}</b> · สมาชิก ${D.n} คน (ไม่รวมคนที่ลาออก) · เหมือนดูพอร์ตของกองทุน</div></div>
+    <div class="hint">ตัวเลขที่กรอกไว้ในทะเบียนถึง <b>${thPer(D.end)}</b> · สมาชิก ${D.n} คน (ไม่รวมคนที่ลาออก) · เหมือนดูพอร์ตของกลุ่มบุคคล</div></div>
     <div class="ds-ctl"><label>ช่วงดอกเบี้ย/ปันผล จาก <select id="ds_from">${opts(D.from)}</select></label><label>ถึง <select id="ds_to">${opts(D.to)}</select></label></div></div>
 
   <div class="ds-kpis">
@@ -3514,7 +3514,7 @@ function drawNWDash(){
       <div class="s">ปันผลหุ้น ${B0(D.divS)} + เฉลี่ยคืน ${B0(D.divI)}</div></div>
   </div>
 
-  <div class="card"><div class="ds-ttl">พอร์ตกองทุนรายเดือน <span class="hint">หุ้นสะสม เทียบ หนี้คงเหลือ (รวมทุกคน)</span>
+  <div class="card"><div class="ds-ttl">ภาพรวมรายเดือน <span class="hint">หุ้นสะสม เทียบ หนี้คงเหลือ (รวมทุกคน)</span>
       <span class="ds-lg"><i style="background:${DSH.sh}"></i>ทุนเรือนหุ้นสะสม <i style="background:${DSH.dbt}"></i>หนี้คงเหลือ</span></div>${dashLine(D.tot)}</div>
 
   <div class="ds-g2">
@@ -3522,7 +3522,7 @@ function drawNWDash(){
     <div class="card"><div class="ds-ttl">② เงินกู้คงเหลือแยกตามประเภท</div>${dashDonut([{l:NW_ACCS.sam, v:D.dbBy.sam, c:DSH.sam}, {l:NW_ACCS.dk, v:D.dbBy.dk, c:DSH.dk}], "เงินกู้รวม")}</div>
   </div>
 
-  <div class="card"><div class="ds-ttl">③ ดอกเบี้ยรับรายเดือน <span class="hint">รวมทั้งกองทุน · ${thPer(D.from)} – ${thPer(D.to)} · รวม ${B0(D.intY)} บาท</span></div>${dashBars(D.rng)}</div>
+  <div class="card"><div class="ds-ttl">③ ดอกเบี้ยรับรายเดือน <span class="hint">รวมทั้งกลุ่ม · ${thPer(D.from)} – ${thPer(D.to)} · รวม ${B0(D.intY)} บาท</span></div>${dashBars(D.rng)}</div>
 
   <div class="card"><div class="ds-ttl">④ ประมาณการปันผลหุ้น และเฉลี่ยคืนดอกเบี้ย <span class="hint">เติม % เองได้ — คิดจากตัวเลข ① และ ③ ด้านบน</span></div>
     <div class="ds-pct">
@@ -4583,7 +4583,7 @@ function nwOverviewDoc(){
   const per68 = O.n68 ? `${lbl(O.f68)}–${lbl(O.l68)} (${O.n68} เดือน)` : "—", per69 = O.n69 ? `${lbl(O.f69)}–${lbl(O.l69)} (${O.n69} เดือน)` : "—";
   return `<div class="ovp">
     <div class="ov-top"><img src="${NW_LOGO}" alt="กบข.นข."><div class="ov-hd"><div class="ov-org">${ORGF} (กบข.นข.)</div>
-      <div class="ov-title">สรุปสถานะความมั่นคง กบข.นข.</div><div class="ov-t2">สรุปภาพรวมกองทุน ประจำเดือน${pl} ${yr}</div><div class="ov-sub">ข้อมูลจากทะเบียน ณ สิ้นเดือน${pl} ${yr} · สมาชิก ${O.n} คน</div></div></div>
+      <div class="ov-title">สรุปสถานะความมั่นคง กบข.นข.</div><div class="ov-t2">สรุปภาพรวม ประจำเดือน${pl} ${yr}</div><div class="ov-sub">ข้อมูลจากทะเบียน ณ สิ้นเดือน${pl} ${yr} · สมาชิก ${O.n} คน</div></div></div>
     <div class="ov-kpis">
       ${kpi("ทุนเรือนหุ้นสะสมรวม", tM(D.shNow), `บาท · ${up ? "เพิ่มขึ้น" : "ลดลง"} ${tM(Math.abs(O.chgS))} บาท (ร้อยละ ${Math.abs(O.pctS).toFixed(1)}) จากสิ้นปี 2568`, "#1F3A68")}
       ${kpi("หนี้คงเหลือรวม", tM(D.dbNow), `บาท · ผู้กู้ ${O.nLoan} คน · ตรงกับทะเบียนผู้กู้`, "#C4570F")}
@@ -4657,7 +4657,7 @@ function nwMonthlyDoc(p){
     <div class="ov-sig"><div><div class="ln"></div><div>( ${esc(FIN())} )</div><div>กรรมการฝ่ายการเงิน</div></div><div><div class="ln"></div><div>( ${esc(CHAIR())} )</div><div>ประธานกลุ่มบุคคล</div></div>
       <div class="ov-dt">จัดทำเมื่อ ${thDay(today)}</div></div></div>`;
 }
-/* ---------- สรุปสถานะกองทุน ๑ หน้า A4 — ฟอร์ม ๕ ตัวเลข อ่านได้ใน ๑๐ วินาที (ตัวเลขทั้งหมดดึงจากทะเบียน ไม่ต้องกรอกมือ) ---------- */
+/* ---------- สรุปสถานะ ๑ หน้า A4 — ฟอร์ม ๕ ตัวเลข อ่านได้ใน ๑๐ วินาที (ตัวเลขทั้งหมดดึงจากทะเบียน ไม่ต้องกรอกมือ) ---------- */
 function nwStatusData(){
   const O = ovData(), D = O.D, yr = +O.yr, m = +D.end.split("-")[1], pad = n => String(n).padStart(2, "0");
   const at = (sr, q, k) => { let v = 0; for(const e of sr){ if(pNum(e.p) <= pNum(q)) v = e[k]; else break; } return v; };
@@ -4683,7 +4683,7 @@ function nwStatusDoc(){
         <div class="ov-dl">${ovDelta(O.chgI, O.pctI)}</div></div>`;
   return `<div class="ovp">
     <div class="ov-top"><img src="${NW_LOGO}" alt="กบข.นข."><div class="ov-hd"><div class="ov-org">${ORGF} (กบข.นข.)</div>
-      <div class="ov-title">สรุปสถานะความมั่นคง กบข.นข.</div><div class="ov-t2">สถานะกองทุน ประจำเดือน${pl} ${yr}</div><div class="ov-sub">ข้อมูลจากทะเบียน ณ สิ้นเดือน${pl} ${yr} · สมาชิก ${O.n} คน</div></div></div>
+      <div class="ov-title">สรุปสถานะความมั่นคง กบข.นข.</div><div class="ov-t2">สรุปสถานะ ประจำเดือน${pl} ${yr}</div><div class="ov-sub">ข้อมูลจากทะเบียน ณ สิ้นเดือน${pl} ${yr} · สมาชิก ${O.n} คน</div></div></div>
     <div class="ov-kpis">
       ${kpi("ทุนเรือนหุ้นสมาชิก", tM(D.shNow), `บาท · ${dir(O.chgS)} ${tM(Math.abs(O.chgS))} บาท (ร้อยละ ${Math.abs(O.pctS).toFixed(1)}) จากสิ้นปี 2568${outs.length ? ` · ไม่รวมผู้ลาออก ${outs.length} ราย` : ""}`, "#1F3A68")}
       ${kpi("เงินกู้คงเหลือรวม", tM(D.dbNow), `บาท · ผู้กู้ ${O.nLoan} คน · ตรงกับทะเบียนผู้กู้`, "#C4570F")}
@@ -4694,7 +4694,7 @@ function nwStatusDoc(){
     <div class="ov-row">
       <div class="ov-box"><div class="ov-h">ทุนเรือนหุ้นสมาชิก เทียบสิ้นปี</div>${ovCmp(D.open.sh, D.shNow, ["ปี 2568", "ณ 31 ธ.ค."], ["ปี " + yr, "ณ " + pl], "#8FA3C7", "#1F3A68")}
         <div class="ov-dl">${ovDelta(O.chgS, O.pctS)}</div>
-        ${outs.length ? `<div class="ov-dl">รวมผู้ลาออก ${outs.length} ราย (คืนทุน −${tM(outOpen)} บาท): ทุนรวมกองทุน ${sgn(dTot)} บาท (${dir(dTot)}ร้อยละ ${Math.abs(pTot).toFixed(1)}) จากสิ้นปี 2568</div>` : ""}</div>
+        ${outs.length ? `<div class="ov-dl">รวมผู้ลาออก ${outs.length} ราย (คืนทุน −${tM(outOpen)} บาท): ทุนรวมของกลุ่ม ${sgn(dTot)} บาท (${dir(dTot)}ร้อยละ ${Math.abs(pTot).toFixed(1)}) จากสิ้นปี 2568</div>` : ""}</div>
       ${intBox}</div>
     <div class="ov-row3">
       <div class="ov-box"><div class="ov-h">สถานะสมาชิก</div><div class="ov-pie">${ovDonut(stP, O.n, "สมาชิก")}</div>${ovLeg(stP, v => v + " คน")}</div>
@@ -4712,7 +4712,7 @@ function drawNWOverview(){
   const C = nwDashCfg(), D = nwDashData(), mode = S.ovmode === "month" ? "month" : S.ovmode === "status" ? "status" : "cum", mths = D.months.filter(p => pNum(p) >= pNum("2568-05")), p = (S.ovm && mths.includes(S.ovm)) ? S.ovm : D.end;
   const yrM = mths.filter(q => q.startsWith(D.end.split("-")[0]));
   el.innerHTML = `<div class="nwscreen"><div class="card"><div class="eyebrow">สรุป กบข.นข. — ๑ หน้า A4 สำหรับสมาชิก</div>
-      <div class="bar" style="margin:0 0 8px"><button class="${mode === "cum" ? "" : "ghost"}" id="ov_mc">ภาพรวมสะสม</button><button class="${mode === "month" ? "" : "ghost"}" id="ov_mm">สรุปรายเดือน</button><button class="${mode === "status" ? "" : "ghost"}" id="ov_ms">สถานะกองทุน (๕ ตัวเลข)</button></div>
+      <div class="bar" style="margin:0 0 8px"><button class="${mode === "cum" ? "" : "ghost"}" id="ov_mc">ภาพรวมสะสม</button><button class="${mode === "month" ? "" : "ghost"}" id="ov_mm">สรุปรายเดือน</button><button class="${mode === "status" ? "" : "ghost"}" id="ov_ms">สรุปสถานะ (๕ ตัวเลข)</button></div>
       <div class="pf">${mode === "status"
         ? `<div style="align-self:end;display:flex;gap:6px;flex-wrap:wrap"><button id="ov_print">🖨 พิมพ์ ๑ หน้า A4</button>${nwxBtns("ov")}</div><span class="hint" style="align-self:end">ประจำเดือนล่าสุดที่กรอกในทะเบียน (${nwPFull(D.end)}) · ไม่ต้องกรอกตัวเลขเอง</span>`
         : mode === "month"
@@ -4732,8 +4732,8 @@ function drawNWOverview(){
   $("ov_mc").onclick = () => { S.ovmode = "cum"; drawNWOverview(); }; $("ov_mm").onclick = () => { S.ovmode = "month"; drawNWOverview(); }; $("ov_ms").onclick = () => { S.ovmode = "status"; drawNWOverview(); };
   if(mode === "status"){
     $("ov_print").onclick = () => nwPrint(nwStatusDoc());
-    $("ov_w").onclick = () => nwxRun("สถานะกองทุน → Word", () => nwxDocx(nwStatusDoc(), `สถานะกองทุน-${D.end}`, Object.assign({}, NWX_FIT, {K:0.68, SC:0.72})));
-    $("ov_i").onclick = () => nwxRun("สถานะกองทุน → รูป", () => nwxPng(nwStatusDoc(), `สถานะกองทุน-${D.end}`)); }
+    $("ov_w").onclick = () => nwxRun("สรุปสถานะ → Word", () => nwxDocx(nwStatusDoc(), `สรุปสถานะ-${D.end}`, Object.assign({}, NWX_FIT, {K:0.68, SC:0.72})));
+    $("ov_i").onclick = () => nwxRun("สรุปสถานะ → รูป", () => nwxPng(nwStatusDoc(), `สรุปสถานะ-${D.end}`)); }
   else if(mode === "cum"){ $("ov_rs").onchange = e => set({rs:Math.max(0, +e.target.value || 0)}); $("ov_ri").onchange = e => set({ri:Math.max(0, +e.target.value || 0)});
     $("ov_print").onclick = () => nwPrint(nwOverviewDoc());
     $("ov_w").onclick = () => nwxRun("สรุปภาพรวม → Word", () => nwxDocx(nwOverviewDoc(), `สรุปภาพรวม-${D.end}`, NWX_FIT));
@@ -6316,7 +6316,7 @@ function drawT2(){
     <p class="hint" style="margin-top:8px">ใช้เมื่อ<b>สลิปเป็นรูปถ่าย/จอแคป</b> หรือ PDF ที่ระบบอ่านแล้วเพี้ยน ·
       AI จะอ่านทุกบรรทัดพร้อม<b>จับคู่ชื่อผู้โอนกับสมาชิกให้</b> ·
       <b style="color:var(--brand)">ผลลัพธ์ให้คุณตรวจก่อนเสมอ ยังไม่บันทึกทันที</b> ·
-      ไฟล์ถูกส่งผ่าน Apps Script ของกองทุนเอง กุญแจไม่โผล่ในหน้าเว็บ</p>
+      ไฟล์ถูกส่งผ่าน Apps Script ของกลุ่มบุคคลเอง กุญแจไม่โผล่ในหน้าเว็บ</p>
     <div id="aibox"></div>
   </div>
 
@@ -7377,7 +7377,7 @@ function drawT4(){
   $("ndot").textContent = nfail;
   $("ndot").style.background = nfail ? "var(--red)" : "var(--green)";
   $("tab4").innerHTML = `
-    <p class="hint" style="margin-bottom:14px;max-width:70ch">ทุกข้อคือปัญหาที่<b>เคยเกิดขึ้นจริง</b>กับกองทุน
+    <p class="hint" style="margin-bottom:14px;max-width:70ch">ทุกข้อคือปัญหาที่<b>เคยเกิดขึ้นจริง</b>กับกลุ่มบุคคล
     ระบบจะตรวจให้ทุกครั้งที่ข้อมูลเปลี่ยน — ไม่ต้องรอสิ้นปีถึงจะรู้ว่าอะไรพัง</p>
     ${C.map(c=>`<div class="chk ${c.ok?'pass':(c.warn?'warn':'fail')}">
       <h4><span class="mk">${c.ok?'✓ ผ่าน':(c.warn?'⚠ เฝ้าระวัง':'✗ ยังไม่ผ่าน')}</span> ${c.t}</h4>
@@ -7897,7 +7897,7 @@ function docLoan(c){
       <div>เลขประจำตัวประชาชน: ${CID(ben.cid)}</div>
       <div>ความสัมพันธ์กับผู้กู้: ${V(ben.rel,180)} &nbsp; เบอร์ติดต่อ: ${V(ben.tel,140)}</div></div>
     <p class="i2">โดยถือว่าเป็นผู้รับผลประโยชน์ตามเจตนารมณ์ของผู้กู้ และมีสิทธิได้รับเงินฝากดังกล่าวหลังจากหักหนี้คงค้างทั้งหมดเรียบร้อยแล้ว ทั้งนี้ ผู้กู้รับรองว่าได้แจ้งบุคคลดังกล่าวให้ทราบแล้ว และการแต่งตั้งนี้จะมีผลตามกฎหมาย</p>
-    <p class="i2 star">*** หากผู้กู้ไม่ได้ระบุชื่อผู้รับผลประโยชน์ไว้ในช่องข้างต้น ให้ถือว่าผู้กู้มีเจตนาประสงค์มอบเงินฝากสะสมทั้งหมดหลังหักหนี้คงค้างให้แก่ “${ORGF} (กบข.นข.)” เพื่อใช้เป็นประโยชน์แก่กองทุนตามระเบียบของกลุ่ม และให้ถือว่าผู้กู้ยินยอมโดยสมัครใจแล้ว</p>
+    <p class="i2 star">*** หากผู้กู้ไม่ได้ระบุชื่อผู้รับผลประโยชน์ไว้ในช่องข้างต้น ให้ถือว่าผู้กู้มีเจตนาประสงค์มอบเงินฝากสะสมทั้งหมดหลังหักหนี้คงค้างให้แก่ “${ORGF} (กบข.นข.)” เพื่อใช้เป็นประโยชน์แก่กลุ่มบุคคลตามระเบียบของกลุ่ม และให้ถือว่าผู้กู้ยินยอมโดยสมัครใจแล้ว</p>
     <p class="i">6.6 <b>(การสื่อสารอิเล็กทรอนิกส์)</b> การแจ้ง/ทวงถาม/บอกกล่าว/ส่งเอกสาร อาจทำโดยไปรษณีย์ลงทะเบียน, อีเมล, LINE Official หรือระบบดิจิทัลของผู้ให้กู้ เอกสารอิเล็กทรอนิกส์ที่มีหลักฐานยืนยัน (เช่น e-Sign, OTP, Log ระบบ) ให้ถือเป็นพยานเอกสารได้เสมือนต้นฉบับ</p>
     <p class="i">6.7 <b>(ลำดับเอกสารควบคุม)</b> หากมีความขัดแย้งระหว่างสัญญานี้/สัญญาค้ำประกัน/ตารางผ่อน/ระเบียบเฉพาะกิจ/ข้อตกลงของกลุ่มบุคคล ให้ยึดสัญญาเงินกู้และสัญญาค้ำประกันเป็นหลักสำหรับสิทธิเรียกร้องทางหนี้ และยึดข้อตกลงของกลุ่มบุคคลเป็นหลักสำหรับอำนาจคณะกรรมการและกระบวนการบริหาร โดยวิธีคำนวณและลำดับจัดสรรเงินชำระให้เป็นไปตามสัญญานี้และข้อตกลงหมวด 4 ข้อ 1.1 และหมวด 5/1</p>
     <div class="h">ข้อ 7. การถอนทุนคืนของผู้กู้</div>
@@ -8195,23 +8195,23 @@ function docOrder(){
     <p class="i">การลงมติในที่ประชุมเป็นไปตามข้อกำหนดของข้อตกลงกลุ่มบุคคล และสมาชิกทุกคนยินยอมให้คำสั่งนี้มีผลผูกพันตามกฎหมาย</p>
 
     <div class="h">ข้อกำหนดการดำเนินการ</div>
-    <p class="i"><b>1. อำนาจของคณะกรรมการ</b> — คณะกรรมการบริหารกลุ่มบุคคลมีอำนาจเต็มในการบริหารจัดการกองทุนและดำเนินการตามข้อตกลงที่ได้กำหนดไว้
+    <p class="i"><b>1. อำนาจของคณะกรรมการ</b> — คณะกรรมการบริหารกลุ่มบุคคลมีอำนาจเต็มในการบริหารจัดการกลุ่มบุคคลและดำเนินการตามข้อตกลงที่ได้กำหนดไว้
       รวมถึงการพิจารณาอนุมัติหรือปฏิเสธคำร้องขอกู้ยืมเงินจากสมาชิก และการใช้มาตรการทางกฎหมายในกรณีที่สมาชิกผิดข้อตกลง</p>
-    <p class="i"><b>2. บทบาทหน้าที่ของคณะกรรมการในการบริหารกองทุน</b> — คณะกรรมการบริหารมีหน้าที่ในการดำเนินการและจัดการเงินกองทุน
+    <p class="i"><b>2. บทบาทหน้าที่ของคณะกรรมการในการบริหารกลุ่มบุคคล</b> — คณะกรรมการบริหารมีหน้าที่ในการดำเนินการและจัดการเงินกลุ่มบุคคล
       เพื่อให้กลุ่มบุคคลสามารถดำเนินการตามวัตถุประสงค์ของกลุ่ม ได้แก่</p>
     <p class="i2">2.1 การดูแลและกำหนดนโยบายการให้กู้ยืมและการถอนทุนคืนของสมาชิก</p>
-    <p class="i2">2.2 การควบคุมและตรวจสอบการใช้เงินกองทุนให้เกิดประโยชน์สูงสุด</p>
+    <p class="i2">2.2 การควบคุมและตรวจสอบการใช้เงินของกลุ่มบุคคลให้เกิดประโยชน์สูงสุด</p>
     <p class="i2">2.3 การจัดทำรายงานการเงินที่โปร่งใสและตรวจสอบได้</p>
-    <p class="i2">2.4 การประเมินผลการดำเนินงานทางการเงินและปรับปรุงการบริหารกองทุนตามความเหมาะสม</p>
-    <p class="i2">2.5 การดำเนินการเพื่อป้องกันการทุจริตในทุกขั้นตอนที่เกี่ยวข้องกับการบริหารกองทุน</p>
-    <p class="i2">2.6 การรักษาสภาพคล่องของกองทุนเพื่อให้สามารถตอบสนองความต้องการของสมาชิกได้ตามที่กำหนด</p>
+    <p class="i2">2.4 การประเมินผลการดำเนินงานทางการเงินและปรับปรุงการบริหารกลุ่มบุคคลตามความเหมาะสม</p>
+    <p class="i2">2.5 การดำเนินการเพื่อป้องกันการทุจริตในทุกขั้นตอนที่เกี่ยวข้องกับการบริหารกลุ่มบุคคล</p>
+    <p class="i2">2.6 การรักษาสภาพคล่องของกลุ่มบุคคลเพื่อให้สามารถตอบสนองความต้องการของสมาชิกได้ตามที่กำหนด</p>
     <p class="i"><b>3. การฟ้องร้องทางกฎหมาย</b> — คณะกรรมการบริหารมีอำนาจในการดำเนินการฟ้องร้องทางกฎหมายในกรณีที่ผู้กู้หรือผู้ค้ำประกัน
       ไม่ปฏิบัติตามข้อตกลงในการชำระหนี้ โดยใช้สัญญากู้ยืมเงินและสัญญาค้ำประกันเป็นหลักฐานในการดำเนินการตามกฎหมาย
       คณะกรรมการสามารถมอบอำนาจให้ทนายความหรือบุคคลที่ได้รับมอบหมายดำเนินการแทนได้</p>
     <p class="i"><b>4. การบังคับใช้คำพิพากษา</b> — หากศาลมีคำพิพากษาให้ผู้กู้ชำระหนี้ แต่ไม่ปฏิบัติตาม คณะกรรมการบริหารสามารถขอให้ศาลบังคับคดี
       เพื่อยึดทรัพย์ หรืออายัดเงินเดือนของลูกหนี้ได้ทันที โดยอ้างอิงจากข้อตกลงที่ผู้กู้และผู้ค้ำประกันได้ลงนาม</p>
     <p class="i"><b>5. การกำหนดบทลงโทษสำหรับการผิดสัญญา</b> — คณะกรรมการมีอำนาจในการกำหนดบทลงโทษและมาตรการที่เหมาะสมกับผู้ที่ละเมิดสัญญา
-      รวมถึงการจำกัดสิทธิ์ในการกู้ยืม หรือการขอถอนทุนคืนจากกองทุน</p>`;
+      รวมถึงการจำกัดสิทธิ์ในการกู้ยืม หรือการขอถอนทุนคืนจากกลุ่มบุคคล</p>`;
 
   const p2 = `<div class="h">การลงชื่อเพื่อรับรองคำสั่งแต่งตั้ง</div>
     <p class="i">ลงชื่อรับรองโดยคณะกรรมการบริหารกลุ่มบุคคลทุกคน</p>
@@ -8303,7 +8303,7 @@ function drawT5(){
       <div><label>ความสัมพันธ์</label><input data-bn="rel" value="${esc(b.rel||"")}"></div>
       <div><label>เบอร์ติดต่อ</label><input data-bn="tel" value="${esc(b.tel||"")}"></div>
     </div>
-    <p class="hint" style="margin-top:8px">หากไม่ระบุ สัญญาข้อ 6.5 กำหนดให้เงินฝากสะสมคงเหลือหลังหักหนี้ตกเป็นของกองทุน</p>
+    <p class="hint" style="margin-top:8px">หากไม่ระบุ สัญญาข้อ 6.5 กำหนดให้เงินฝากสะสมคงเหลือหลังหักหนี้ตกเป็นของกลุ่มบุคคล</p>
   </div>` : ""}
   <div id="kdoc"></div>`;
 
@@ -8434,7 +8434,7 @@ function docApply(o){
         <span>ลงชื่อยินยอมเบื้องต้น ..............................</span></div>`;}).join("")}
     <p class="kh">การลงชื่อในส่วนนี้เป็นเพียงการยืนยันความสมัครใจเบื้องต้น ผู้ค้ำจะผูกพันต่อเมื่อลงนามใน “หนังสือยินยอมเป็นผู้ค้ำประกัน” และ “สัญญาค้ำประกัน” แล้วเท่านั้น</p>
 
-    <div class="ksec">ส่วนที่ 5 · ผู้รับผลประโยชน์ <span class="kh">(ตามสัญญาข้อ 6.5 — หากไม่ระบุ เงินฝากสะสมหลังหักหนี้จะตกเป็นของกองทุน)</span></div>
+    <div class="ksec">ส่วนที่ 5 · ผู้รับผลประโยชน์ <span class="kh">(ตามสัญญาข้อ 6.5 — หากไม่ระบุ เงินฝากสะสมหลังหักหนี้จะตกเป็นของกลุ่มบุคคล)</span></div>
     <div class="kf"><span>ชื่อ–สกุล <span class="dt" style="min-width:230px"></span></span>
       <span>ความสัมพันธ์ <span class="dt" style="min-width:110px"></span></span>
       <span>โทร <span class="dt" style="min-width:100px"></span></span></div>
@@ -8981,7 +8981,7 @@ const inGAS = typeof google !== "undefined" && google.script && google.script.ru
 
 /* ต่อระยะไกล — สำหรับกรณีเปิดจากที่อื่น (เช่น GitHub Pages) ไม่ใช่จาก Apps Script โดยตรง
    ต้องตั้งค่า URL + รหัส ก่อนถึงจะใช้ได้ · เก็บไว้ในเบราว์เซอร์เครื่องนี้เท่านั้น */
-/* ★ ที่อยู่ Apps Script ของกองทุน — ฝังไว้ในโปรแกรม จะได้ไม่ต้องพิมพ์ URL เองทุกเครื่อง
+/* ★ ที่อยู่ Apps Script ของกลุ่มบุคคล — ฝังไว้ในโปรแกรม จะได้ไม่ต้องพิมพ์ URL เองทุกเครื่อง
       แก้ตรงนี้ที่เดียวเมื่อ Deploy ใหม่แล้วได้ลิงก์ใหม่
       หมายเหตุ: ใส่แค่ «ที่อยู่» เท่านั้น รหัสเชื่อมต่อไม่ฝังไว้ เพราะไฟล์นี้เปิดสาธารณะบน GitHub */
 const GAS_URL = "https:\/\/script.google.com/macros/s/AKfycbznwpyTNOCbL1srUObf_8_HMHNYxSpKpF0ZvUQ6ShmhvGda-GeD-ithjJHFshcdX9hB2A/exec";
