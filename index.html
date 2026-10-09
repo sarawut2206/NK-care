@@ -252,20 +252,17 @@ th.svcol{background:#FFF4D6!important}
 .ktfull td,.ktfull th{padding:1.8px 6px;font-size:9.5px}
 .ktot{border-top:1.5px solid var(--ink);margin-top:6px;padding-top:5px;text-align:right;font-size:11px}
 @media print{
-  body.kprint .kpage{page-break-after:always;border:0;border-radius:0;padding:0;margin:0}
-  body.kprint .kpage:last-child{page-break-after:auto}
+  body.kprint .kpage{border:0;border-radius:0;padding:0;margin:0}
   body.kprint section:not(#tab5){display:none!important}
   body.kprint #tab5>.card{display:none!important}
   .kpage{width:auto!important;min-height:auto!important;margin:0!important;padding:0!important;
     box-shadow:none!important;border:0!important}
   body.wprint section:not(#tab7){display:none!important}
   body.wprint #tab7>.card,body.wprint #tab7>.stats{display:none!important}
-  body.wprint .kpage,body.aprint .kpage{page-break-after:always}
-  body.wprint .kpage:last-child,body.aprint .kpage:last-child{page-break-after:auto}
   body.aprint section:not(#tab6){display:none!important}
   body.aprint #tab6>.card,body.aprint #tab6>.stats,body.aprint #tab6 .tbl{display:none!important}
   body.aprint #a_doc>.eyebrow{display:none!important}
-  .kpage,.ksigs,.ack,.keybox,.capbox{page-break-inside:avoid}
+  .ksigs,.ack,.keybox,.capbox{page-break-inside:avoid}
 }
 
 
@@ -554,11 +551,34 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   body.nwprint .nwdoc .ovp{padding-left:16mm;padding-right:6mm;page-break-inside:avoid;page-break-after:always}
   body.nwprint .nwdoc .ovp:last-child{page-break-after:auto}
   body.nwprint .nwdoc .ovp .ov-stack span{color:#fff!important}
-  body.nwprint .nwdoc .kpage{page-break-after:always}
-  body.nwprint .nwdoc .kpage:last-child{page-break-after:auto}
 }
 
 @page{size:A4 portrait;margin:15mm 14mm 18mm}
+/* ============ มาตรฐานเอกสารพิมพ์ (ตามสกิล thai-official-doc) ============
+   A4 · ขอบ ซ้าย ๓ / ขวา ๒ / บน ๑.๕ / ล่าง ๒ ซม. · TH Sarabun New · จัดชิดซ้าย · เลขหน้าตรงกลางด้านบนตั้งแต่หน้า ๒ (เลขต่อเนื่องทั้งชุดที่พิมพ์)
+   หนังสือ/แบบฟอร์ม ๑๖ pt · สัญญา ๑๔ pt + «ลงชื่อกำกับ» มุมล่างขวาทุกหน้า · ใบเสร็จ/สรุป ๑ หน้า ใช้ขอบเฉพาะ (ซ้ายรวมแล้ว ๓ ซม. ขวา ๒ ซม.) */
+@page doc{size:A4 portrait;margin:15mm 20mm 20mm 30mm;@top-center{content:counter(page);font-family:"TH Sarabun New","Sarabun",sans-serif;font-size:16pt;color:#000}}
+@page doc:first{@top-center{content:none}}
+@page contract{size:A4 portrait;margin:15mm 20mm 20mm 30mm;@top-center{content:counter(page);font-family:"TH Sarabun New","Sarabun",sans-serif;font-size:16pt;color:#000}
+  @bottom-right{content:"ลงชื่อกำกับ ..............................";font-family:"TH Sarabun New","Sarabun",sans-serif;font-size:14pt;color:#000}}
+@page contract:first{@top-center{content:none}}
+@page single{size:A4 portrait;margin:15mm 20mm 20mm 30mm}
+@page one{size:A4 portrait;margin:15mm 14mm 18mm}
+@media print{
+  .receipt,.ovp{page:one}
+  .kpage{page:doc;zoom:1.85;font-size:11.8px;line-height:1.3;text-align:left;break-after:auto}
+  .kpage.ks:not(.kc){page:single}
+  .kpage.kc{page:contract;zoom:1.6}
+  .kpage.kend,.kpage.kb{break-after:page}
+  .kpage.k1{break-before:page}
+  .kpage,.kpage *{font-family:"TH Sarabun New","Sarabun",sans-serif!important}
+  .kpage .pgno,.kpage .pgsig{display:none!important}
+  .kpage .kt1,.kpage .ksec,.kpage .h,.kpage .kh2{break-after:avoid}
+  .kpage:not(.kc) p.i2{margin-left:0;text-indent:13.5mm}
+  .kpage table{page-break-inside:auto;break-inside:auto}
+  .kpage tr{page-break-inside:avoid;break-inside:avoid}
+}
+
 @media print{
   html,body{background:#fff!important;padding:0;margin:0;font-size:11px;
     -webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -603,8 +623,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   body.bprint #tab8 .tbl,body.bprint #tab8 .bar{display:none!important}
   /* กระดาษ */
   .kpage{width:auto!important;min-height:auto!important;margin:0!important;padding:0!important;
-    box-shadow:none!important;border:0!important;page-break-after:always}
-  .kpage:last-child{page-break-after:auto}
+    box-shadow:none!important;border:0!important}
   table,tr,td,th{page-break-inside:avoid}
   thead{display:table-header-group}
   .ksigs,.sigs,.ack,.keybox,.capbox,.warnbox,.warnbox2,.ackbox{page-break-inside:avoid}
@@ -619,7 +638,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-107</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-110</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -4002,8 +4021,7 @@ function nwAckDoc(o, no, d, days, feeIn, inst){
       ${c0 ? `วงเงิน <b>${B(c0.amt)}</b> บาท ผ่อนชำระ <b>${c0.terms}</b> งวด ` : ""}งวดละ <b>${B(o.inst)}</b> บาท กำหนดชำระภายในวันที่ 5 ของทุกเดือน ตาม${AGREE}</p>
     <p class="i2"><b>ข้อ 2 ยอดหนี้ที่ค้างชำระ</b> — ผู้กู้ผิดนัดชำระหนี้รวม <b>${n}</b> งวด ปรากฏตามรายละเอียดและยอดหนี้ ณ วันที่ทำหนังสือนี้ ดังนี้</p>
     ${tbl}${money}`, "ผู้กู้");
-  const page2 = pg(2, 2, `<div class="kt1" style="margin-top:2px">หนังสือรับสภาพหนี้ (ต่อ)</div>
-    <p class="i2" style="margin-top:6px"><b>ข้อ 3 การรับสภาพหนี้</b> — ผู้กู้ขอรับรองและยืนยันว่า ผู้กู้เป็นหนี้ผู้ให้กู้ตามสัญญาเงินกู้ที่ระบุไว้จริง และยอมรับว่ายอดหนี้ค้างชำระตามข้อ 2 จำนวน <b>${B(total)} บาท</b> ถูกต้องและยังมิได้ชำระ
+  const page2 = pg(2, 2, `<p class="i2" style="margin-top:6px"><b>ข้อ 3 การรับสภาพหนี้</b> — ผู้กู้ขอรับรองและยืนยันว่า ผู้กู้เป็นหนี้ผู้ให้กู้ตามสัญญาเงินกู้ที่ระบุไว้จริง และยอมรับว่ายอดหนี้ค้างชำระตามข้อ 2 จำนวน <b>${B(total)} บาท</b> ถูกต้องและยังมิได้ชำระ
       และยอมรับสภาพหนี้ตามมาตรา 193/14 แห่งประมวลกฎหมายแพ่งและพาณิชย์ ซึ่งมีผลให้อายุความสะดุดหยุดลงและเริ่มนับใหม่ นับแต่วันที่ลงนามในหนังสือนี้</p>
     <p class="i2"><b>ข้อ 4 การชำระหนี้</b> — ${per
       ? `ผู้กู้ตกลงผ่อนชำระยอดหนี้ค้างตามข้อ 3 เพิ่มเติมเดือนละ <b>${B(per)} บาท</b> (ประมาณ <b>${months}</b> เดือน ตั้งแต่งวด <b>${thPer(pStart)}</b> ถึงงวด <b>${thPer(pEnd)}</b> หรือจนกว่าจะครบถ้วน) พร้อมกับการชำระงวดปกติตามสัญญาเดิมภายในวันที่ 5 ของทุกเดือน
@@ -4080,7 +4098,7 @@ function nwConHTML(){
 }
 /* เอกสารทะเบียนสัญญา (พิมพ์) — ๒๒ แถวต่อหน้า */
 function nwConRegDoc(){
-  const R = nwConRows(), per = 22, pages = Math.max(1, Math.ceil(R.length / per)), today = nwToday();
+  const R = nwConRows(), per = 999, pages = Math.max(1, Math.ceil(R.length / per)), today = nwToday();
   return Array.from({length:pages}, (_, i) => { const part = R.slice(i * per, (i + 1) * per);
     return pg(i + 1, pages, `${logo()}<div class="kt1">ทะเบียนสัญญาเงินกู้</div>
       <div class="kt2">${ORG}<br>โรงเรียนมัธยมวัดหนองแขม (กบข.นข.)</div>
@@ -4495,17 +4513,17 @@ function nwGuarAssign(no, pk, i, v){ if(!nwGuarCheck(no, pk, i, v)) return false
 
 /* ---------- เอกสารพิมพ์ ---------- */
 function nwGuarRegDoc(){
-  const G = nwGuarData(), today = nwToday(), per = 20, pages1 = Math.max(1, Math.ceil(G.rows.length / per)), per2 = 22, pages2 = Math.max(1, Math.ceil(G.guars.length / per2)), tot = pages1 + pages2;
+  const G = nwGuarData(), today = nwToday(), per = 999, pages1 = Math.max(1, Math.ceil(G.rows.length / per)), per2 = 999, pages2 = Math.max(1, Math.ceil(G.guars.length / per2)), tot = pages1 + pages2;
   const head = (t, n) => `${logo()}<div class="kt1">${t}</div><div class="kt2">${ORG}<br>โรงเรียนมัธยมวัดหนองแขม (กบข.นข.)</div>
     <div class="kmeta2"><span>สัญญาที่กำลังผ่อน ${G.st.n} ฉบับ (สามัญ ${G.st.sam} · ดูแลกัน ${G.st.dk}) · เพดานค้ำ ${G.gmax} สัญญา/คน</span><span>วันที่ ${thDate(today)}</span></div>`;
   const nm = no => no ? `${esc(no)} ${esc(nwNmOf(no))}` : "—";
   const p1 = Array.from({length:pages1}, (_, i) => { const part = G.rows.slice(i * per, (i + 1) * per);
-    return pg(i + 1, tot, `${head("ทะเบียนคุมสัญญาเงินกู้และผู้ค้ำประกัน")}
+    return pg(i + 1, pages1, `${head("ทะเบียนคุมสัญญาเงินกู้และผู้ค้ำประกัน")}
       <table class="kt"><thead><tr><th>ที่</th><th class="l">เลขที่สัญญากู้</th><th class="l">ผู้กู้</th><th class="l">ประเภท</th><th class="l">ผู้ค้ำที่ 1</th><th class="l">เลขที่สัญญาค้ำ 1</th><th class="l">ผู้ค้ำที่ 2</th><th class="l">เลขที่สัญญาค้ำ 2</th></tr></thead><tbody>
       ${part.map(w => `<tr><td class="n">${w.n}</td><td class="l">${esc(w.code) || "—"}</td><td class="l">${esc(w.r.x.no)} ${esc(w.r.x.name)}</td><td class="l">${w.pk}</td>
         <td class="l">${nm(w.raw[0])}</td><td class="l">${w.raw[0] ? esc(nwGCode(w.r.c, 0)) || "—" : "—"}</td><td class="l">${w.P.guar >= 2 ? nm(w.raw[1]) : "ไม่ต้องมี"}</td><td class="l">${w.P.guar >= 2 && w.raw[1] ? esc(nwGCode(w.r.c, 1)) || "—" : "—"}</td></tr>`).join("")}</tbody></table>`, "ผู้จัดทำ"); }).join("");
   const p2 = Array.from({length:pages2}, (_, i) => { const part = G.guars.slice(i * per2, (i + 1) * per2);
-    return pg(pages1 + i + 1, tot, `${head("ทะเบียนคุมผู้ค้ำประกัน")}
+    return pg(i + 1, pages2, `${head("ทะเบียนคุมผู้ค้ำประกัน")}
       <table class="kt"><thead><tr><th class="l">ผู้ค้ำประกัน</th><th>ค้ำอยู่ / เพดาน</th><th class="l">สัญญาที่ค้ำ (เลขที่สัญญากู้ · ผู้กู้)</th><th>หนี้คงเหลือรวม</th><th class="l">สถานะ</th></tr></thead><tbody>
       ${part.map(g => `<tr><td class="l">${nm(g.no)}</td><td class="n">${g.n} / ${G.gmax}</td><td class="l">${g.list.map(e => `${esc(e.r.c && e.r.c.code || "—")} · ${esc(e.r.x.name)}`).join("<br>")}</td><td class="n">${B(g.debt)}</td>
         <td class="l">${g.over ? "<b>ค้ำเกินเพดาน</b>" : g.full ? "ครบเพดาน" : `ค้ำเพิ่มได้อีก ${G.gmax - g.n}`}${g.arrears ? " · มีงวดค้างเอง" : ""}</td></tr>`).join("")}
@@ -7803,7 +7821,7 @@ function contractHTML(c, cap, withSch){
     </ol></div>`;
 
   /* ---------- หน้า 1 : ใบคำขอกู้และสัญญาเงินกู้ ---------- */
-  const p1 = `<div class="kpage">
+  const p1 = `<div class="kpage kc kb">
     ${head(`ใบคำขอกู้และสัญญาเงินกู้ — สินเชื่อ${c.prod}`)}
     <div class="kmeta"><span>เลขที่สัญญา ${F(c.code,150)}</span><span>วันที่ ${thd}</span>
       <span>ทำที่ โรงเรียนมัธยมวัดหนองแขม</span></div>
@@ -7868,7 +7886,7 @@ function contractHTML(c, cap, withSch){
   </div>`;
 
   /* ---------- หน้า 2 : สัญญาค้ำประกัน ---------- */
-  const p2 = `<div class="kpage">
+  const p2 = `<div class="kpage kc kb">
     ${head(`สัญญาค้ำประกันเงินกู้ — สินเชื่อ${c.prod}`)}
     <div class="kmeta"><span>เลขที่ ผู้ค้ำ–${c.code?esc(c.code):"…………"}</span><span>วันที่ ${thd}</span>
       <span>ทำที่ โรงเรียนมัธยมวัดหนองแขม</span></div>
@@ -7923,7 +7941,7 @@ function contractHTML(c, cap, withSch){
     ${rs.map(r=>`<tr><td class="c">${r.k}</td><td class="n">${B(r.pay)}</td><td class="n">${B(r.int)}</td>
       <td class="n">${B(r.sh)}</td><td class="n">${B(r.pri)}</td><td class="n">${B(r.bal)}</td></tr>`).join("")}
     </tbody></table>`;
-  const p3 = !withSch ? "" : `<div class="kpage">
+  const p3 = !withSch ? "" : `<div class="kpage kc kb">
     ${head("ภาคผนวก ก · ตารางการชำระหนี้รายเดือน")}
     <div class="kmeta"><span>สัญญาเลขที่ ${esc(c.code)}</span><span>ผู้กู้ ${esc(m.name)}</span>
       <span>วงเงิน ${B(c.amt)} บาท · ${c.terms} งวด · ${P.method==="flat"?"Flat":"ลดต้นลดดอก"} 1%/เดือน</span></div>
@@ -7983,7 +8001,7 @@ function thDate(d){ if(!d) return `………….. เดือน …………�
   const MN=["","มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
   return `<b class="f">${dd}</b> เดือน <b class="f">${MN[mo]}</b> พ.ศ. <b class="f">${y+543}</b>`; }
 
-function pg(n,tot,body,sig){ return `<div class="kpage">
+function pg(n,tot,body,sig){ return `<div class="kpage${n === 1 ? " k1" : ""}${n >= tot ? " kend" : ""}${tot === 1 ? " ks" : ""}${/^(ผู้กู้|ผู้ค้ำประกัน)$/.test(sig || "") ? " kc" : ""}">
   <div class="pgno">หน้า ${n} จาก ${tot}</div>${body}
   <div class="pgsig">ลายเซ็น ${sig} .............................</div></div>`; }
 function logo(){ return `<div class="klogo"><img class="lgi" src="${NW_LOGO}" alt="กบข.นข."></div>`; }
@@ -8313,7 +8331,7 @@ function docSched(c){
   /* ---- แบ่งหน้ากระดาษ A4 ----
      ตารางกินความสูงราว 5 มม./แถว · หน้าที่มีคำอธิบายหรือยอดรวมกับช่องเซ็นจะเหลือที่น้อยกว่า
      จึงจำกัดแถวต่อหน้าไว้แล้วกระจายให้ทุกหน้าเท่า ๆ กัน ไม่ให้มีหน้าสุดท้ายเหลือแค่ 2–3 แถว */
-  const PER = hasSv ? 20 : 30;      // มีคอลัมน์ «สะสมเพิ่ม» ท้ายเอกสารจะยาวขึ้น จึงเผื่อที่ไว้
+  const PER = 999;      // มีคอลัมน์ «สะสมเพิ่ม» ท้ายเอกสารจะยาวขึ้น จึงเผื่อที่ไว้
   const np  = Math.max(1, Math.ceil(s.rows.length / PER));
   const per = Math.ceil(s.rows.length / np) || 1;
   const chunks = [];
