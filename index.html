@@ -301,6 +301,7 @@ th.svcol{background:#FFF4D6!important}
 .kt.sum td{width:auto} .kt.sum tr.hl td{background:#FDF6E3}
 .kt.sg td{height:24px} .kt.sg tr.hl td{background:#FDF6E3}
 .kt .c{text-align:center}
+.kt.kw td,.kt.kw th{white-space:normal;vertical-align:top}
 .hr{border:0;border-top:1px dashed var(--rule);margin:10px 0}
 .kmeta2{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:10.5px;color:var(--soft);
   border-bottom:1px solid var(--rule);padding:6px 0;margin-bottom:6px}
@@ -594,6 +595,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   .kpage{page:doc;zoom:1.85;font-size:11.8px;line-height:1.3;text-align:left;break-after:auto}
   .kpage.ks:not(.kc){page:single}
   .kpage.kc{page:contract;zoom:1.6}
+  .kpage.kd{zoom:1.6}                                       /* แฟ้ม/ใบปะหน้าที่มีตารางมาก (ชุดฟ้องร้อง) ใช้ 14 pt เหมือนสัญญา */
   .kpage.kend,.kpage.kb{break-after:page}
   .kpage.k1{break-before:page}
   .kpage,.kpage *{font-family:"TH Sarabun New","Sarabun",sans-serif!important}
@@ -663,7 +665,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-111</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-114</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -688,6 +690,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <b data-t="26"><span class="grp-ic">📄</span>สรุปภาพรวม ๑ หน้า</b>
   <b data-t="27"><span class="grp-ic">👥</span>ฐานข้อมูลสมาชิก</b>
   <b data-t="28"><span class="grp-ic">🛡️</span>ทะเบียนคุมผู้ค้ำ</b>
+  <b data-t="29"><span class="grp-ic">⚖️</span>ชุดฟ้องร้อง</b>
   <b id="oldbtn" class="oldbtn" title="เมนูทั้งหมดของระบบเดิม"><span class="grp-ic">🗂️</span>ระบบเก่า <span id="oldar">▾</span></b>
   <div class="oldnav" id="oldnav" hidden>
     <span class="ngrp">ระบบเก่า</span>
@@ -716,6 +719,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
 <section id="tab26"></section>
 <section id="tab27"></section>
 <section id="tab28"></section>
+<section id="tab29"></section>
 <section id="tab10"></section>
 <section id="tab11"></section>
 <section id="tab12"></section>
@@ -4625,6 +4629,220 @@ function drawNWGuar(){
   el.querySelectorAll("[data-gcg]").forEach(i => i.addEventListener("change", () => { const [no, k, j] = i.dataset.gcg.split("|"), c = conOf(no + "|" + k); if(!c) return; c.gc = c.gc || ["", ""]; c.gc[+j] = i.value.trim(); save(); redraw(); }));
   el.querySelectorAll("[data-gmk]").forEach(b => b.onclick = () => { const c = conOf(b.dataset.gmk); if(c){ save(); redraw(); toast("สร้างร่างสัญญาแล้ว — ใส่เลขที่สัญญาได้ในช่อง หรือกดออกเลขที่แท็บ กู้ยืม + ติดตามหนี้"); } });
   el.querySelectorAll("[data-gj]").forEach(b => b.onclick = () => { const t = $("gr_" + b.dataset.gj); if(t){ t.scrollIntoView({behavior:"smooth", block:"center"}); t.style.outline = "2px solid #C0202E"; setTimeout(() => { t.style.outline = ""; }, 2500); } });
+}
+
+/* ============ ชุดฟ้องร้อง (แท็บ 29) — แดชบอร์ดเตรียมเอกสาร/ติดตามคดีของลูกหนี้ที่ค้างชำระ ============
+   ดึงข้อมูลจากทะเบียนเดิม: ยอดค้าง/ค้างกี่งวด-กี่วัน (nwArrears) · สัญญา/เลขที่ (nwCon) · ผู้ค้ำ (nwGuarOf) · ข้อมูลบุคคล (ฐานข้อมูลสมาชิก)
+   สิ่งที่โปรแกรมรู้เองติ๊กให้เอง · สิ่งที่ต้องมีตัวจริง (สัญญาลงนาม สลิปโอน ฯลฯ) ผู้ใช้ติ๊กเอง · บันทึกการส่งหนังสือ → คำนวณกำหนดบอกกล่าวผู้ค้ำ 90 วัน (ป.พ.พ. ม.686)
+   เก็บที่ S.nw.lit = {cases:{"เลขสมาชิก|บัญชี":{ck, log, ...}}, legal:{}} */
+const LIT_STAGES = ["กำลังเตรียมเอกสาร", "บอกกล่าว/ทวงถามแล้ว", "พร้อมฟ้อง", "ส่งทนาย/ยื่นฟ้องแล้ว", "ศาล/บังคับคดี", "ปิดคดี"];
+const LIT_KINDS = {warn:"หนังสือแจ้งเตือนผู้กู้", guar:"หนังสือแจ้งผู้ค้ำประกัน", final:"หนังสือบอกกล่าวทวงถามครั้งสุดท้าย", ack:"หนังสือรับสภาพหนี้", other:"อื่น ๆ"};
+const LIT_HOW = ["ไปรษณีย์ลงทะเบียนตอบรับ", "EMS", "มอบด้วยตนเอง (ลงชื่อรับทราบ)", "LINE / อีเมล", "อื่น ๆ"];
+const LIT_LEGAL = [
+  {id:"plaintiff", t:"ใครเป็นโจทก์ — ข้อตกลงระบุว่ากลุ่มไม่เป็นนิติบุคคล แต่ให้ฟ้องในนามคณะกรรมการ (ตกลงรูปแบบกับทนายก่อนฟ้อง)"},
+  {id:"sect", t:"ข้อตกลงอ้างมาตรา 1074–1088 แห่ง ป.พ.พ. เป็นฐานของกลุ่ม — ให้ทนายตรวจว่าถูกต้องหรือไม่"},
+  {id:"cap15", t:"ดอกเบี้ยรวมค่าธรรมเนียมทุกอย่างต้องไม่เกิน 15% ต่อปี (ม.654) — ค่าทวงถาม 5% และเงินหุ้นเพิ่มอาจถูกมองเป็นดอกเบี้ยแฝง"},
+  {id:"compound", t:"ห้ามทบต้นดอกเบี้ย (ม.655–656) — ดอกเบี้ยผิดนัดควรคิดจากเงินต้นค้างเท่านั้น (โปรแกรมคิดจากยอดค้างทั้งงวด)"},
+  {id:"guarpct", t:"ผู้ค้ำรับผิด 20% / 50% / 80% ตามข้อตกลง ต่างจากหลักค้ำประกัน (ม.680–681) — เลือกฟ้องเต็มจำนวนหรือตามสัดส่วน"},
+  {id:"notice", t:"ข้อความ «ดำเนินคดีทันทีโดยไม่ต้องแจ้งล่วงหน้า» — ปฏิบัติจริงต้องมีหนังสือทวงถามก่อนเสมอ"},
+  {id:"limit", t:"อายุความ: เงินต้น 10 ปี · ดอกเบี้ยค้างชำระ 5 ปี (ม.193/33) — ไม่ควรปล่อยค้างนาน"},
+  {id:"public", t:"ยืนยันว่ากลุ่มปิดของสมาชิกไม่เข้าข่ายกฎหมายรับเงินจากประชาชน (หนังสือยืนยันสถานะข้อ 44)"}];
+const nwLit = () => (S.nw.lit || (S.nw.lit = {cases:{}, legal:{}}));
+const nwLitR = key => nwLit().cases[key] || {ck:{}, log:[]};
+const nwLitC = key => { const L = nwLit(); if(!L.cases[key]) L.cases[key] = {ck:{}, log:[]}; const c = L.cases[key]; c.ck = c.ck || {}; c.log = c.log || []; return c; };
+const litYmd = t => `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+const litAdd = (d, n) => { const t = new Date(d + "T00:00:00"); t.setDate(t.getDate() + n); return litYmd(t); };
+const litShort = d => d ? thDay(d) : "—";
+function litShare(missed, debt){
+  if(missed >= 12) return `สูงสุด 80% ของหนี้คงเหลือ = ${B(r2(debt * 0.8))} บาท`;
+  if(missed >= 6) return "50% ของยอดรายเดือน (เดือนที่ 4–6)";
+  if(missed >= 3) return "20% ของยอดรายเดือน (เดือนที่ 2–3)";
+  return "ยังไม่ถึงเกณฑ์ร่วมรับผิด (ค้างไม่ถึง 3 งวด)";
+}
+
+/* รายการเอกสาร/เงื่อนไขของคดี — auto = โปรแกรมตรวจเอง · ไม่ใช่ auto = ผู้ใช้ติ๊กเอง */
+function nwLitItems(cs){
+  const L = cs.L, P = cs.P, ck = id => !!L.ck[id], people = [[cs.o.x.no, "ผู้กู้"]].concat(cs.gs.map((g, i) => [g, "ผู้ค้ำ " + (i + 1)])).filter(q => q[0]);
+  const lack = people.filter(q => { const p = prof(q[0]); return !(p.cid && p.addr); }).map(q => `${q[1]} ${nwNmOf(q[0])}`);
+  const mine = (cs.logTo("ผู้กู้")), withProof = mine.filter(e => e.ref || e.got).length;
+  const gi = cs.gw ? cs.gw.issues : [], need = P.guar, have = cs.gs.filter(Boolean).length;
+  return [
+    {id:"con", g:"สัญญาและหลักฐานการกู้ยืม", t:"สัญญาเงินกู้ในทะเบียนมีเลขที่สัญญา", auto:true, ok:!!(cs.c && cs.c.code), d:cs.c && cs.c.code ? cs.c.code : "ยังไม่มีสัญญา/เลขที่สัญญา — ไปแท็บ กู้ยืม + ติดตามหนี้ › ทะเบียนสัญญา"},
+    {id:"sign", g:"สัญญาและหลักฐานการกู้ยืม", t:"สัญญาเงินกู้ตัวจริง ลงลายมือชื่อผู้กู้ (+ ผู้ให้กู้ / พยาน) ครบ", law:"ม.653 — กู้เกิน 2,000 บาทต้องมีหลักฐานเป็นหนังสือลงชื่อผู้ยืม", crit:true},
+    {id:"gsign", g:"สัญญาและหลักฐานการกู้ยืม", t:`สัญญาค้ำประกันตัวจริง ลงลายมือชื่อผู้ค้ำ ${need} ฉบับ`, law:"ม.680 — ค้ำประกันต้องเป็นหนังสือลงชื่อผู้ค้ำ", crit:true},
+    {id:"gok", g:"สัญญาและหลักฐานการกู้ยืม", t:"ผู้ค้ำระบุครบ ไม่ซ้ำ ไม่ค้ำเกินเพดาน (ตามทะเบียนคุมผู้ค้ำ)", auto:true, ok:have >= need && !gi.length, d:have < need ? `ผู้ค้ำยังไม่ครบ (${have}/${need})` : gi.length ? gi.map(q => q.t).join(" · ") : "ผู้ค้ำครบและผ่านเงื่อนไข"},
+    {id:"paid", g:"สัญญาและหลักฐานการกู้ยืม", t:"หลักฐานส่งมอบเงินกู้จริง (สลิปโอน / สมุดบัญชี / ใบเบิกจ่าย)", law:"ม.650 — กู้ยืมสมบูรณ์เมื่อส่งมอบเงิน · ศาลจะขอดูเสมอ", crit:true},
+    {id:"app", g:"สัญญาและหลักฐานการกู้ยืม", t:"ใบสมัครสมาชิกที่ลงนามแล้ว + แบบลงชื่อรับทราบข้อตกลง/ระเบียบ"},
+    {id:"pdata", g:"บุคคลและที่อยู่", t:"ข้อมูลบุคคลในฐานข้อมูลสมาชิกครบ (เลขบัตร + ที่อยู่) ทั้งผู้กู้และผู้ค้ำ", auto:true, ok:!lack.length && people.length > 0, d:lack.length ? "ยังไม่ครบ: " + lack.join(", ") : "ครบทุกคน"},
+    {id:"pcopy", g:"บุคคลและที่อยู่", t:"สำเนาบัตรประชาชน / ทะเบียนบ้าน / ที่ทำงาน ของผู้กู้และผู้ค้ำ (ใช้ส่งหมายและอายัดเงินเดือน)"},
+    {id:"stmt", g:"ยอดหนี้และการบอกกล่าว", t:"มีบันทึกรับชำระ/ยอดหนี้ในทะเบียน", auto:true, ok:cs.o.st.rows.length > 0, d:`บันทึก ${cs.o.st.rows.length} เดือน · ชำระแล้วรวม ${B(cs.o.st.paid)} บาท`},
+    {id:"stmtp", g:"ยอดหนี้และการบอกกล่าว", t:"พิมพ์ตารางยอดหนี้ ณ วันฟ้อง (ปุ่ม «พิมพ์ใบปะหน้า + ตารางยอดหนี้») และแนบใบเสร็จรับชำระทุกงวด"},
+    {id:"nb", g:"ยอดหนี้และการบอกกล่าว", t:"ส่งหนังสือแจ้ง/ทวงถามผู้กู้ พร้อมหลักฐานการส่ง (แนะนำครบ 3 ครั้ง)", auto:true, ok:mine.length > 0 && withProof > 0, d:`ส่งแล้ว ${mine.length} ครั้ง · มีเลขอ้างอิง/วันรับ ${withProof} ครั้ง`},
+    {id:"n686", g:"ยอดหนี้และการบอกกล่าว", t:"บอกกล่าวผู้ค้ำภายใน 90 วันนับแต่หนี้ถึงกำหนด ครบทุกงวดที่ค้าง", law:"ม.686 — ถ้าไม่ทำ ผู้ค้ำพ้นความรับผิดเท่าที่เสียหายจากการไม่บอกกล่าว", auto:true, crit:true,
+      ok:need === 0 || (cs.nLate === 0 && cs.nUnc === 0), d:need === 0 ? "สัญญานี้ไม่ต้องมีผู้ค้ำ" : cs.nLate ? `เลยกำหนด 90 วันแล้ว ${cs.nLate} งวด` : cs.nUnc ? `ยังไม่ได้บอกกล่าว ${cs.nUnc} งวด — ใกล้สุดอีก ${cs.nextLeft} วัน` : "บอกกล่าวครบทุกงวด"},
+    {id:"resol", g:"อำนาจฟ้อง", t:"มติคณะกรรมการให้ฟ้องรายนี้ (กรอกวันที่มติด้านล่าง)", auto:true, ok:!!L.resD, d:L.resD ? `มติเมื่อ ${litShort(L.resD)}${L.resNo ? " · " + L.resNo : ""}` : "ยังไม่มีมติ"},
+    {id:"poa", g:"อำนาจฟ้อง", t:"หนังสือมอบอำนาจทนายความ (กรอกชื่อทนายและวันที่ด้านล่าง)", auto:true, ok:!!(L.poaD && L.lawyer), d:L.poaD && L.lawyer ? `${L.lawyer} · ${litShort(L.poaD)}` : "ยังไม่ได้มอบอำนาจ"},
+    {id:"board", g:"อำนาจฟ้อง", t:"สำเนาบัตรประชาชนกรรมการผู้ลงนาม + เอกสารแต่งตั้งกรรมการวาระปัจจุบัน"}
+  ].map(q => { if(!q.auto) q.ok = ck(q.id); return q; });
+}
+
+function nwLitData(){
+  const R = nwArrears(), today = nwToday(), G = nwGuarData(), gBy = {}; G.rows.forEach(w => gBy[w.key] = w);
+  return R.map(o => {
+    const key = o.x.no + "|" + o.a.prod, pk = o.pk, P = PROD[pk], c = nwCon(o.x.no, pk), L = nwLitR(key), gs = nwGuarOf(o.x.no, pk), D = nwDunCalc(o, today, "");
+    const logTo = who => L.log.filter(e => who === "ผู้กู้" ? e.to === "ผู้กู้" : (e.to === who || e.to === "ผู้ค้ำทุกคน"));
+    const rows = D.rx.map(w => { const due = nwDate5(w.p), dl90 = litAdd(due, 90);
+      const cov = P.guar === 0 ? true : Array.from({length:P.guar}, (_, i) => !!gs[i] && L.log.some(e => e.d >= due && e.d <= dl90 && (e.to === "ผู้ค้ำทุกคน" || e.to === "ผู้ค้ำ" + (i + 1)))).every(Boolean);
+      return Object.assign({}, w, {due, dl90, cov, late:!cov && dl90 < today, left:nwDays(today, dl90)}); });
+    const unc = rows.filter(w => !w.cov && !w.late), nextLeft = unc.length ? Math.min(...unc.map(w => w.left)) : null;
+    const cs = {key, o, pk, P, c, L, gs, D, rows, today, logTo, gw:gBy[o.x.no + "_" + o.a.prod], nLate:rows.filter(w => w.late).length, nUnc:unc.length, nextLeft,
+      maxDl:D.maxDl, claim:r2(o.short + D.pen + (L.feeIn ? D.fee : 0))};
+    cs.items = nwLitItems(cs); cs.done = cs.items.filter(q => q.ok).length; cs.pct = Math.round(100 * cs.done / cs.items.length);
+    cs.auto = L.filedD ? 3 : cs.pct === 100 ? 2 : L.log.length ? 1 : 0;
+    cs.stage = has(L.stage) && L.stage !== "" ? +L.stage : cs.auto;
+    return cs; }).sort((a, b) => b.maxDl - a.maxDl || b.claim - a.claim);
+}
+
+/* ใบปะหน้าชุดเอกสารฟ้องร้อง + ตารางยอดหนี้ + ประวัติการบอกกล่าว (2 หน้า) */
+function nwLitDoc(cs){
+  const o = cs.o, m = o.x, p = prof(m.no), today = cs.today, c = cs.c, L = cs.L, tot = 2;
+  const head = t => `${logo()}<div class="kt1">${t}</div><div class="kt2">${ORG}<br>โรงเรียนมัธยมวัดหนองแขม (กบข.นข.)</div>
+    <div class="kmeta2"><span>ลูกหนี้ ${esc(m.no)} ${esc(m.name)} · สินเชื่อ${cs.pk}${c && c.code ? " · เลขที่สัญญา " + esc(c.code) : ""}</span><span>ข้อมูล ณ วันที่ ${thDate(today)}</span></div>`;
+  const per = (no, role) => { const q = prof(no); return `<tr><td class="kk">${role}</td><td>${esc(nwNmOf(no)) || "—"} ${no ? `(สมาชิกเลขที่ ${esc(no)})` : ""}</td><td>${q.cid ? esc(q.cid) : "—"}</td><td>${q.addr ? esc(q.addr) : "—"}</td><td>${q.pos ? esc(q.pos) : "—"}</td></tr>`; };
+  const items = cs.items;
+  const p1 = pg(1, tot, `${head("ใบปะหน้าชุดเอกสารฟ้องร้อง")}
+    <div class="ksec">๑ คู่สัญญา</div>
+    <table class="kt kw"><thead><tr><th class="l">บทบาท</th><th class="l">ชื่อ</th><th class="l">เลขบัตรประชาชน</th><th class="l">ที่อยู่</th><th class="l">ตำแหน่ง/ที่ทำงาน</th></tr></thead><tbody>
+      ${per(m.no, "ผู้กู้")}${cs.gs.map((g, i) => per(g, "ผู้ค้ำที่ " + (i + 1))).join("") || '<tr><td class="kk">ผู้ค้ำ</td><td colspan="4">ยังไม่ระบุผู้ค้ำ</td></tr>'}</tbody></table>
+    <div class="ksec">๒ สัญญาและยอดเรียกร้อง</div>
+    <table class="kt sum kw"><tbody>
+      <tr><td>สัญญาเงินกู้ เลขที่ ${esc(c && c.code) || "…………"} ลงวันที่ ${c && c.d ? litShort(c.d) : "…………"} · วงเงิน ${c ? B(c.amt) : "…………"} บาท · ${c ? c.terms : "…"} งวด · งวดละ ${B(o.inst)} บาท</td><td class="n">—</td></tr>
+      <tr><td>ค้างชำระ ${o.rows.length} งวด (เงินต้น + ดอกเบี้ย + เงินฝากหุ้นค้างงวด) · ค้างนานสุด ${cs.maxDl} วัน</td><td class="n">${B(o.short)}</td></tr>
+      <tr><td>ดอกเบี้ยผิดนัด 1.20%/เดือน (เฉพาะงวดที่ค้างเกิน 90 วัน)</td><td class="n">${B(cs.D.pen)}</td></tr>
+      ${L.feeIn ? `<tr><td>ค่าทวงถาม (เลือกรวมในยอดเรียกร้อง)</td><td class="n">${B(cs.D.fee)}</td></tr>` : ""}
+      <tr class="hl"><td><b>ยอดเรียกร้อง ณ วันที่ทำใบปะหน้า</b>${L.feeIn ? "" : " (ไม่รวมค่าทวงถาม)"}</td><td class="n"><b>${B(cs.claim)}</b></td></tr>
+      <tr><td>เงินต้นคงเหลือตามสัญญา ณ วันนี้ · ผู้ค้ำร่วมรับผิดตามข้อตกลง: ${litShare(o.missed, o.debt)}</td><td class="n">${B(o.debt)}</td></tr></tbody></table>
+    <div class="ksec">๓ รายการเอกสาร (${cs.done} / ${items.length} · ${cs.pct}%)</div>
+    <table class="kt kw"><thead><tr><th style="width:34px">มี</th><th class="l">รายการ</th><th class="l">สถานะ / หมายเหตุ</th></tr></thead><tbody>
+      ${items.map(q => `<tr><td class="c">${q.ok ? "☑" : "☐"}</td><td>${esc(q.t)}${q.crit ? " <b>*</b>" : ""}</td><td>${q.auto ? esc(q.d) : q.law ? esc(q.law) : ""}</td></tr>`).join("")}</tbody></table>
+    <p class="kh">* รายการสำคัญที่ศาลต้องการ · ทนายความ: ${esc(L.lawyer) || "…………"} · มติให้ฟ้องเมื่อ ${litShort(L.resD)} · มอบอำนาจเมื่อ ${litShort(L.poaD)}</p>`, "");
+  const p2 = pg(2, tot, `${head("ตารางยอดหนี้ค้างชำระและประวัติการบอกกล่าว")}
+    <table class="kt kw"><thead><tr><th class="l">งวด</th><th class="l">ครบกำหนด</th><th>ยอดที่ต้องชำระ</th><th>รับชำระจริง</th><th>คงค้าง</th><th>ค้างมาแล้ว (วัน)</th><th class="l">กำหนดบอกกล่าวผู้ค้ำ (90 วัน)</th><th>ดอกเบี้ยผิดนัด</th></tr></thead><tbody>
+      ${cs.rows.map(w => `<tr><td>${thPer(w.p)}</td><td>${litShort(w.due)}</td><td class="n">${B(w.exp)}</td><td class="n">${B(w.got)}</td><td class="n"><b>${B(w.short)}</b></td><td class="n">${w.dl}</td>
+        <td>${cs.P.guar === 0 ? "ไม่มีผู้ค้ำ" : litShort(w.dl90) + (w.cov ? " ✓ แจ้งแล้ว" : w.late ? " ✗ เลยกำหนด" : ` · เหลือ ${w.left} วัน`)}</td><td class="n">${w.pen ? B(w.pen) : "—"}</td></tr>`).join("")}
+      <tr class="hl"><td colspan="4"><b>รวม ${cs.rows.length} งวด</b></td><td class="n"><b>${B(o.short)}</b></td><td></td><td></td><td class="n"><b>${B(cs.D.pen)}</b></td></tr></tbody></table>
+    <div class="ksec">ประวัติการส่งหนังสือแจ้ง/ทวงถาม</div>
+    <table class="kt kw"><thead><tr><th class="l">วันที่ส่ง</th><th class="l">ถึง</th><th class="l">หนังสือ</th><th class="l">วิธีส่ง</th><th class="l">เลขอ้างอิง</th><th class="l">วันที่ได้รับ</th></tr></thead><tbody>
+      ${L.log.slice().sort((a, b) => a.d.localeCompare(b.d)).map(e => `<tr><td>${litShort(e.d)}</td><td>${esc(e.to)}</td><td>${esc(LIT_KINDS[e.kind] || e.kind)}</td><td>${esc(e.how || "—")}</td><td>${esc(e.ref || "—")}</td><td>${litShort(e.got)}</td></tr>`).join("") || '<tr><td colspan="6">ยังไม่มีการบันทึกการส่งหนังสือ</td></tr>'}</tbody></table>
+    <div class="ksigs" style="grid-template-columns:1fr 1fr;max-width:420px;margin:14px auto 0">${sigOf("กรรมการฝ่ายติดตามหนี้", DEBT())}${sigOf("ประธานคณะกรรมการ", CHAIR())}</div>`, "");
+  return (p1 + p2).split('class="kpage').join('class="kpage kd');
+}
+
+/* ---------- หน้าจอ ---------- */
+function drawNWLit(){
+  const el = $("tab29"); if(!el) return;
+  if(tab !== 29){ el.innerHTML = ""; return; }
+  if(!NW.on()){ el.innerHTML = nwStartHTML("ชุดฟ้องร้อง"); bindNwImport(); return; }
+  const C = nwLitData(), LG = nwLit().legal, today = nwToday();
+  if(!C.some(q => q.key === S.litSel)) S.litSel = C[0] ? C[0].key : "";
+  const sel = C.find(q => q.key === S.litSel);
+  const n90 = C.filter(q => q.maxDl > 90).length, n1y = C.filter(q => q.o.missed >= 12).length, nLate = C.filter(q => q.nLate > 0).length, nReady = C.filter(q => q.pct === 100).length;
+  const sumClaim = r2(C.reduce((u, q) => u + q.claim, 0)), feeAll = r2(C.reduce((u, q) => u + q.D.fee, 0)), feeN = C.filter(q => q.D.fee > 0).length;
+  const alerts = [];
+  C.forEach(q => { const nm = `${q.o.x.no} ${q.o.x.name} (${q.pk})`;
+    if(q.nLate) alerts.push({lvl:"red", key:q.key, t:`${nm}: เลยกำหนดบอกกล่าวผู้ค้ำ 90 วันแล้ว ${q.nLate} งวด — ผู้ค้ำอาจพ้นความรับผิดเท่าที่เสียหาย (ม.686) · ส่งหนังสือแจ้งผู้ค้ำทันทีและบันทึกในแฟ้ม`});
+    else if(q.nextLeft !== null && q.nextLeft <= 30) alerts.push({lvl:"amb", key:q.key, t:`${nm}: ต้องส่งหนังสือแจ้งผู้ค้ำภายใน ${q.nextLeft} วัน (ครบ 90 วันของงวดที่ค้าง)`});
+    if(q.o.missed >= 12 && q.stage < 3) alerts.push({lvl:"red", key:q.key, t:`${nm}: ค้างติดต่อกัน ${q.o.missed} งวด เข้าเกณฑ์ข้อ 3.3 (ยกระดับเป็นคดี) — ควรประชุมลงมติและส่งชุดเอกสารให้ทนาย`});
+    if(q.P.guar && q.gs.filter(Boolean).length < q.P.guar) alerts.push({lvl:"amb", key:q.key, t:`${nm}: ผู้ค้ำยังไม่ครบ ${q.P.guar} คน — กำหนดที่ทะเบียนคุมผู้ค้ำก่อนส่งหนังสือ`}); });
+  alerts.sort((a, b) => (a.lvl === "red" ? 0 : 1) - (b.lvl === "red" ? 0 : 1));
+  const age = [{l:"≤30 วัน", f:d => d <= 30, c:"#9AA6BC"}, {l:"31–90", f:d => d > 30 && d <= 90, c:"#1F3A68"}, {l:"91–180", f:d => d > 90 && d <= 180, c:"#C4570F"}, {l:"181–365", f:d => d > 180 && d <= 365, c:"#C0202E"}, {l:">1 ปี", f:d => d > 365, c:"#7A0E1A"}]
+    .map(b => ({l:b.l, v:C.filter(q => b.f(q.maxDl)).length, c:b.c}));
+  const donut = [{l:"พร้อมฟ้อง (ครบ 100%)", v:nReady, c:"#1B7F5A"}, {l:"กำลังเตรียม (40–99%)", v:C.filter(q => q.pct >= 40 && q.pct < 100).length, c:"#C4570F"}, {l:"เพิ่งเริ่ม (<40%)", v:C.filter(q => q.pct < 40).length, c:"#C0202E"}];
+  const bar = p => `<div style="display:flex;align-items:center;gap:6px;min-width:110px"><div style="flex:1;height:8px;background:#E6EBF5;border-radius:4px;overflow:hidden"><div style="width:${p}%;height:100%;background:${p === 100 ? "#1B7F5A" : p >= 40 ? "#C4570F" : "#C0202E"}"></div></div><b style="font-size:12px">${p}%</b></div>`;
+  const pill686 = q => q.P.guar === 0 ? '<span class="pill">ไม่มีผู้ค้ำ</span>' : q.nLate ? `<span class="pill red">เลย 90 วัน ${q.nLate} งวด</span>` : q.nUnc ? `<span class="pill amb">แจ้งภายใน ${q.nextLeft} วัน</span>` : '<span class="pill grn">แจ้งครบ</span>';
+  const caseRow = q => `<tr data-lsel="${esc(q.key)}" style="cursor:pointer;${q.key === S.litSel ? "background:#FFF8E8" : ""}"><td class="l"><span class="no">${esc(q.o.x.no)}</span><b>${esc(q.o.x.name)}</b></td><td class="l">${q.pk}<div class="hint">${esc((q.c && q.c.code) || "ไม่มีเลขที่")}</div></td>
+    <td class="amt">${q.o.missed} งวด<div class="hint">${q.maxDl} วัน</div></td><td class="amt"><b>${B(q.claim)}</b></td>
+    <td class="l" style="white-space:normal">${q.gs.filter(Boolean).map(g => esc(nwNmOf(g))).join(", ") || '<span class="hint">ยังไม่ระบุ</span>'}<div>${pill686(q)}</div></td><td>${bar(q.pct)}</td><td class="l"><span class="pill ${q.stage >= 3 ? "grn" : q.stage >= 1 ? "amb" : ""}">${LIT_STAGES[q.stage]}</span></td></tr>`;
+  const grp = sel ? [...new Set(sel.items.map(q => q.g))] : [];
+  const casePanel = !sel ? "" : (() => { const L = sel.L, k = esc(sel.key), o = sel.o;
+    const fi = (f, l, t, w) => `<div><label>${l}</label><input ${t === "d" ? 'type="date"' : 'type="text"'} data-lf="${k}|${f}" value="${esc(L[f] || "")}" ${w ? `style="width:${w}"` : ""}></div>`;
+    return `<div class="card" id="lt_case" style="border-left:4px solid var(--gold);margin-top:10px">
+      <div class="eyebrow">แฟ้มคดี · ${esc(o.x.no)} ${esc(o.x.name)} · สินเชื่อ${sel.pk}${sel.c && sel.c.code ? " · " + esc(sel.c.code) : ""}
+        <span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap"><button class="ghost sm" id="lt_print">🖨 พิมพ์ใบปะหน้า + ตารางยอดหนี้</button>${nwxBtns("lt")}<button class="ghost sm" data-lgo="track">ไปหนังสือแจ้ง/ทวงถาม</button><button class="ghost sm" data-lgo="guar">ทะเบียนคุมผู้ค้ำ</button></span></div>
+      <div class="stats" style="margin:8px 0">
+        <div class="stat"><div class="k">ยอดเรียกร้อง</div><div class="v">${B0(sel.claim)} <small>บาท</small></div><div class="hint">ค้าง ${B(o.short)} + ดอกผิดนัด ${B(sel.D.pen)}${L.feeIn ? " + ค่าทวง " + B(sel.D.fee) : ""}</div></div>
+        <div class="stat"><div class="k">ค้างชำระ</div><div class="v">${o.missed} <small>งวด</small></div><div class="hint">นานสุด ${sel.maxDl} วัน${o.missed >= 12 ? " · เข้าเกณฑ์ข้อ 3.3" : ""}</div></div>
+        <div class="stat"><div class="k">เงินต้นคงเหลือ</div><div class="v">${B0(o.debt)} <small>บาท</small></div><div class="hint">ผู้ค้ำร่วมรับผิด: ${litShare(o.missed, o.debt)}</div></div>
+        <div class="stat" style="border-top-color:${sel.pct === 100 ? "var(--green)" : "var(--gold)"}"><div class="k">ความพร้อมเอกสาร</div><div class="v">${sel.pct}%</div><div class="hint">${sel.done} / ${sel.items.length} รายการ</div></div></div>
+      <div class="keybox" style="margin:8px 0;font-size:13px"><b>ค่าทวงถาม ${B(sel.D.fee)} บาท</b> — โปรแกรมคำนวณตามข้อตกลง แต่แนะนำ <b>ไม่รวมในยอดเรียกร้อง</b> เพราะอาจถูกมองเป็นดอกเบี้ยแฝงเกิน 15% ต่อปี (ดู «ประเด็นถามทนาย»)
+        <label class="rlf" style="margin-left:10px"><input type="checkbox" data-lfc="${k}|feeIn" ${L.feeIn ? "checked" : ""}> รวมค่าทวงถามในยอดเรียกร้อง</label></div>
+      <div class="eyebrow" style="margin-top:6px">รายการเอกสาร/เงื่อนไข</div>
+      <div class="tbl"><table><thead><tr><th style="width:44px">ผ่าน</th><th class="l">รายการ</th><th class="l">สถานะ / กฎหมาย</th></tr></thead><tbody>
+        ${grp.map(g => `<tr><td colspan="3" class="l" style="background:#F4F1EA;font-weight:700">${esc(g)}</td></tr>` + sel.items.filter(q => q.g === g).map(q => `<tr><td class="c">${q.auto ? (q.ok ? '<span class="pill grn">✓</span>' : '<span class="pill amb">✗</span>') : `<input type="checkbox" data-lck="${k}|${q.id}" ${q.ok ? "checked" : ""}>`}</td>
+          <td class="l" style="white-space:normal">${esc(q.t)}${q.crit ? ' <span class="pill red">สำคัญ</span>' : ""}${q.auto ? ' <span class="hint">(โปรแกรมตรวจเอง)</span>' : ""}</td>
+          <td class="l" style="white-space:normal">${q.auto ? esc(q.d) : '<span class="hint">' + esc(q.law || "ผู้ใช้ติ๊กเมื่อมีตัวจริงแล้ว") + "</span>"}</td></tr>`).join("")).join("")}</tbody></table></div>
+      <div class="eyebrow" style="margin-top:12px">บันทึกการส่งหนังสือแจ้ง/ทวงถาม <span class="hint" style="font-weight:400">— ใช้คำนวณกำหนดบอกกล่าวผู้ค้ำ 90 วัน (ม.686) ถึงผู้ค้ำเลือก «ผู้ค้ำทุกคน» ได้</span></div>
+      <div class="pf" style="margin:6px 0">
+        <div><label>หนังสือ</label><select id="ln_kind">${Object.keys(LIT_KINDS).map(v => `<option value="${v}">${LIT_KINDS[v]}</option>`).join("")}</select></div>
+        <div><label>ส่งถึง</label><select id="ln_to"><option>ผู้กู้</option>${sel.P.guar >= 1 ? '<option>ผู้ค้ำทุกคน</option><option>ผู้ค้ำ1</option>' : ""}${sel.P.guar >= 2 ? "<option>ผู้ค้ำ2</option>" : ""}</select></div>
+        <div><label>วันที่ส่ง</label><input type="date" id="ln_d" value="${today}"></div>
+        <div><label>วิธีส่ง</label><select id="ln_how">${LIT_HOW.map(v => `<option>${v}</option>`).join("")}</select></div>
+        <div><label>เลขอ้างอิง (เช่น เลขพัสดุ)</label><input id="ln_ref"></div>
+        <div><label>วันที่ได้รับ/ลงชื่อรับทราบ</label><input type="date" id="ln_got"></div>
+        <div style="align-self:end"><button class="ghost sm" id="ln_add">+ บันทึกการส่ง</button></div></div>
+      <div class="tbl"><table><thead><tr><th class="l">วันที่ส่ง</th><th class="l">ถึง</th><th class="l">หนังสือ</th><th class="l">วิธีส่ง</th><th class="l">เลขอ้างอิง</th><th class="l">วันที่ได้รับ</th><th></th></tr></thead><tbody>
+        ${L.log.map((e, i) => ({e, i})).sort((a, b) => a.e.d.localeCompare(b.e.d)).map(({e, i}) => `<tr><td class="l">${litShort(e.d)}</td><td class="l">${esc(e.to)}</td><td class="l">${esc(LIT_KINDS[e.kind] || e.kind)}</td><td class="l">${esc(e.how || "—")}</td><td class="l">${esc(e.ref || "—")}</td><td class="l">${litShort(e.got)}</td><td><button class="ghost sm" data-ldel="${k}|${i}">ลบ</button></td></tr>`).join("") || '<tr><td colspan="7" class="hint" style="text-align:left">ยังไม่มีการบันทึกการส่งหนังสือ</td></tr>'}</tbody></table></div>
+      ${sel.P.guar ? `<div class="eyebrow" style="margin-top:12px">กำหนดบอกกล่าวผู้ค้ำรายงวด (นับ 90 วันจากวันที่ 5 ของงวดที่ค้าง)</div>
+      <div class="tbl"><table><thead><tr><th class="l">งวด</th><th>คงค้าง</th><th>ค้างมาแล้ว (วัน)</th><th class="l">ครบ 90 วัน</th><th class="l">สถานะการแจ้งผู้ค้ำ</th></tr></thead><tbody>
+        ${sel.rows.map(w => `<tr><td class="l">${thPer(w.p)}</td><td class="amt">${B(w.short)}</td><td class="amt">${w.dl}</td><td class="l">${litShort(w.dl90)}</td><td class="l">${w.cov ? '<span class="pill grn">แจ้งแล้ว</span>' : w.late ? '<span class="pill red">เลยกำหนด — ยังไม่ได้แจ้ง</span>' : `<span class="pill amb">ต้องแจ้งภายใน ${w.left} วัน</span>`}</td></tr>`).join("")}</tbody></table></div>` : ""}
+      <div class="eyebrow" style="margin-top:12px">อำนาจฟ้องและสถานะคดี</div>
+      <div class="pf">${fi("resD", "วันที่มติคณะกรรมการให้ฟ้อง", "d")}${fi("resNo", "เลขที่/ครั้งที่ประชุม", "t")}${fi("lawyer", "ทนายความ", "t")}${fi("poaD", "วันที่หนังสือมอบอำนาจ", "d")}${fi("filedD", "วันที่ยื่นฟ้อง", "d")}${fi("caseNo", "เลขคดี (ดำ/แดง)", "t")}
+        <div><label>ขั้นตอน (ว่าง = ให้โปรแกรมกำหนด)</label><select data-lfs="${k}"><option value="">อัตโนมัติ — ${LIT_STAGES[sel.auto]}</option>${LIT_STAGES.map((s, i) => `<option value="${i}" ${has(L.stage) && L.stage !== "" && +L.stage === i ? "selected" : ""}>${s}</option>`).join("")}</select></div>
+        <div style="grid-column:span 4"><label>หมายเหตุ</label><input data-lf="${k}|note" value="${esc(L.note || "")}"></div></div></div>`; })();
+  el.innerHTML = `<div class="nwscreen"><div class="ds-head"><div><div class="eyebrow" style="margin:0">ชุดฟ้องร้อง — เตรียมเอกสารและติดตามลูกหนี้ที่ค้างชำระ</div>
+      <div class="hint">ดึงยอดค้าง สัญญา ผู้ค้ำ และข้อมูลบุคคลจากทะเบียนเดิม · ติ๊กรายการเอกสารที่มีตัวจริง · บันทึกการส่งหนังสือเพื่อนับกำหนดบอกกล่าวผู้ค้ำ 90 วัน · พิมพ์ใบปะหน้าส่งทนาย · ชุดไฟล์ต้นแบบอยู่ในโฟลเดอร์ «09 ชุดเอกสารสำหรับฟ้องร้อง»</div></div></div>
+    <div class="ds-kpis">
+      <div class="ds-kpi" style="border-top-color:${C.length ? "#B4452B" : "#1baf7a"}"><div class="k">ลูกหนี้ที่ค้างชำระ</div><div class="v">${C.length} <small>สัญญา</small></div><div class="s">ยอดเรียกร้องรวม ${B0(sumClaim)} บาท</div></div>
+      <div class="ds-kpi" style="border-top-color:${n90 ? "#C4570F" : "#1baf7a"}"><div class="k">ค้างเกิน 90 วัน</div><div class="v">${n90} <small>สัญญา</small></div><div class="s">เริ่มคิดดอกเบี้ยผิดนัด · ค้างเกิน 1 ปี ${n1y} สัญญา</div></div>
+      <div class="ds-kpi" style="border-top-color:${nLate ? "#B4452B" : "#1baf7a"}"><div class="k">เลยกำหนดแจ้งผู้ค้ำ 90 วัน</div><div class="v" style="color:${nLate ? "#B4452B" : "#0F6B4A"}">${nLate} <small>สัญญา</small></div><div class="s">ม.686 — ผู้ค้ำอาจพ้นความรับผิดบางส่วน</div></div>
+      <div class="ds-kpi" style="border-top-color:#1baf7a"><div class="k">เอกสารพร้อมฟ้อง</div><div class="v">${nReady} <small>/ ${C.length} สัญญา</small></div><div class="s">ครบทุกรายการ 100%</div></div></div>
+    ${alerts.length ? `<div class="keybox" style="margin:0 0 10px;border-left:4px solid ${alerts.some(a => a.lvl === "red") ? "var(--red)" : "var(--gold)"}"><b>⚠ แจ้งเตือน ${alerts.length} รายการ</b>
+        <div style="max-height:220px;overflow:auto;margin-top:6px">${alerts.map(a => `<div style="margin:3px 0;display:flex;gap:8px;align-items:flex-start"><span class="pill ${a.lvl === "red" ? "red" : "amb"}" style="flex:none">${a.lvl === "red" ? "เร่งด่วน" : "ต้องทำ"}</span><span style="flex:1">${esc(a.t)}</span><button class="ghost sm" data-lopen="${esc(a.key)}" style="flex:none">เปิดแฟ้ม</button></div>`).join("")}</div></div>`
+      : `<div class="keybox" style="margin:0 0 10px;border-left:4px solid var(--green)"><b style="color:var(--green)">✓ ไม่มีรายการเร่งด่วน</b> <span class="hint">${C.length ? "— ไม่มีสัญญาที่เลยกำหนดแจ้งผู้ค้ำหรือเข้าเกณฑ์ฟ้อง" : "— ไม่มีลูกหนี้ค้างชำระ"}</span></div>`}
+    <div class="ds-row2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px">
+      <div class="card"><div class="eyebrow">ความพร้อมของเอกสาร</div><div style="display:flex;align-items:center;gap:14px"><div style="width:120px;flex:none">${ovDonut(donut, C.length, "สัญญา")}</div><div style="flex:1">${ovLeg(donut, v => v + " สัญญา")}</div></div></div>
+      <div class="card"><div class="eyebrow">ระยะเวลาที่ค้าง (นับจากงวดเก่าสุด)</div>${nwGuarBars(age, 0)}</div></div>
+    <div class="card"><div class="eyebrow">ลูกหนี้ที่ค้างชำระ — กดแถวเพื่อเปิดแฟ้มคดี<span class="hint" style="font-weight:400">เรียงจากค้างนานที่สุด</span></div>
+      <div class="tbl" style="max-height:420px"><table><thead><tr><th class="l">ผู้กู้</th><th class="l">สัญญา</th><th>ค้าง</th><th>ยอดเรียกร้อง</th><th class="l">ผู้ค้ำ / บอกกล่าว 90 วัน</th><th>ความพร้อม</th><th class="l">ขั้นตอน</th></tr></thead><tbody>
+        ${C.map(caseRow).join("") || '<tr><td colspan="7" class="hint" style="text-align:left">ไม่มีลูกหนี้ค้างชำระ</td></tr>'}</tbody></table></div></div>
+    ${casePanel}
+    <div class="card" style="margin-top:10px"><div class="eyebrow">ประเด็นที่ต้องถามทนายก่อนฟ้อง<span class="hint" style="font-weight:400">ติ๊กเมื่อปรึกษาทนายและได้ข้อสรุปแล้ว</span></div>
+      ${feeN ? `<div class="keybox" style="margin:6px 0;border-left:4px solid var(--red);font-size:13px"><b style="color:var(--red)">โปรแกรมคำนวณค่าทวงถามให้ ${feeN} สัญญา รวม ${B(feeAll)} บาท</b> — ยังไม่ควรเรียกจนกว่าทนายยืนยัน (ยอดเรียกร้องในแดชบอร์ดนี้ไม่รวมค่าทวงถามเป็นค่าเริ่มต้น)</div>` : ""}
+      <div class="tbl"><table><tbody>${LIT_LEGAL.map(q => `<tr><td style="width:44px" class="c"><input type="checkbox" data-lgl="${q.id}" ${LG[q.id] && LG[q.id].ok ? "checked" : ""}></td><td class="l" style="white-space:normal">${esc(q.t)}</td><td class="l"><input data-lgn="${q.id}" value="${esc((LG[q.id] && LG[q.id].note) || "")}" placeholder="ข้อสรุป/หมายเหตุ" style="width:100%"></td></tr>`).join("")}</tbody></table></div>
+      <p class="hint" style="margin:8px 0 0">ไม่ใช่คำปรึกษาทางกฎหมาย — ใช้เป็นรายการตรวจก่อนปรึกษาทนาย · รายละเอียดอยู่ในไฟล์ «_อ่านก่อน» ในโฟลเดอร์ 09</p></div></div>
+    <div class="nwdoc" id="nwdoc"></div>`;
+  const redraw = () => { const y = window.scrollY; drawNWLit(); window.scrollTo(0, y); };
+  const keyOf = s => s.split("|").slice(0, 2).join("|");
+  el.querySelectorAll("[data-lsel],[data-lopen]").forEach(b => b.onclick = ev => { if(ev.target.closest("input,select,button") && !b.dataset.lopen) return; S.litSel = b.dataset.lsel || b.dataset.lopen; redraw(); const t = $("lt_case"); if(t) t.scrollIntoView({behavior:"smooth", block:"start"}); });
+  el.querySelectorAll("[data-lck]").forEach(i => i.addEventListener("change", () => { const [no, a, id] = i.dataset.lck.split("|"), c = nwLitC(no + "|" + a); if(i.checked) c.ck[id] = true; else delete c.ck[id]; save(); redraw(); }));
+  el.querySelectorAll("[data-lf]").forEach(i => i.addEventListener("change", () => { const p = i.dataset.lf.split("|"), c = nwLitC(p[0] + "|" + p[1]); c[p[2]] = i.value.trim(); save(); redraw(); }));
+  el.querySelectorAll("[data-lfc]").forEach(i => i.addEventListener("change", () => { const p = i.dataset.lfc.split("|"), c = nwLitC(p[0] + "|" + p[1]); if(i.checked) c[p[2]] = true; else delete c[p[2]]; save(); redraw(); }));
+  el.querySelectorAll("[data-lfs]").forEach(i => i.addEventListener("change", () => { const c = nwLitC(keyOf(i.dataset.lfs)); if(i.value === "") delete c.stage; else c.stage = +i.value; save(); redraw(); }));
+  el.querySelectorAll("[data-ldel]").forEach(b => b.onclick = () => { const p = b.dataset.ldel.split("|"), c = nwLitC(p[0] + "|" + p[1]); if(!confirm("ลบรายการส่งหนังสือนี้?")) return; c.log.splice(+p[2], 1); save(); redraw(); });
+  el.querySelectorAll("[data-lgl]").forEach(i => i.addEventListener("change", () => { const L = nwLit(); L.legal[i.dataset.lgl] = Object.assign({}, L.legal[i.dataset.lgl], {ok:i.checked}); save(); redraw(); }));
+  el.querySelectorAll("[data-lgn]").forEach(i => i.addEventListener("change", () => { const L = nwLit(); L.legal[i.dataset.lgn] = Object.assign({}, L.legal[i.dataset.lgn], {note:i.value.trim()}); save(); }));
+  if(sel){
+    const k = sel.key;
+    $("ln_kind").onchange = e => { const ov = Array.from($("ln_to").options).map(x => x.value); $("ln_to").value = e.target.value === "guar" && ov.includes("ผู้ค้ำทุกคน") ? "ผู้ค้ำทุกคน" : "ผู้กู้"; };
+    $("ln_add").onclick = () => { const d = $("ln_d").value; if(!d){ alert("ใส่วันที่ส่งหนังสือ"); return; }
+      nwLitC(k).log.push({id:"N" + Math.random().toString(36).slice(2, 7), kind:$("ln_kind").value, to:$("ln_to").value, d, how:$("ln_how").value, ref:$("ln_ref").value.trim(), got:$("ln_got").value});
+      save(); redraw(); toast("บันทึกการส่งหนังสือแล้ว"); };
+    $("lt_print").onclick = () => nwPrint(nwLitDoc(sel));
+    $("lt_w").onclick = () => nwxRun("ใบปะหน้าชุดฟ้องร้อง → Word", () => nwxDocx(nwLitDoc(sel), "ใบปะหน้าชุดฟ้องร้อง-" + sel.o.x.name, {K:1.0}));
+    $("lt_i").onclick = () => nwxRun("ใบปะหน้าชุดฟ้องร้อง → รูป", () => nwxPng(nwLitDoc(sel), "ใบปะหน้าชุดฟ้องร้อง-" + sel.o.x.name));
+    el.querySelectorAll("[data-lgo]").forEach(b => b.onclick = () => { if(b.dataset.lgo === "guar"){ goTab(28); return; }
+      if(!S.ntk) S.ntk = {sel:"", kind:"warn", no:"", d:new Date().toISOString().slice(0, 10), days:15, fee:""}; S.ntk.sel = k; goTab(25); setTimeout(() => { const t = $("nt_letter"); if(t) t.scrollIntoView({behavior:"smooth", block:"start"}); }, 150); });
+  }
 }
 
 /* รายละเอียดสัญญา (กดแถวในตารางทำสัญญาย้อนหลัง) — ข้อมูลบุคคลของผู้กู้/ผู้ค้ำ + พยาน + ผู้รับผลประโยชน์ของสัญญานี้ */
@@ -9410,7 +9628,7 @@ async function boot(){
 function draw(){
   rebuildPeriods();                     // ★ ช่วงงวดเดินตามข้อมูลจริง — ย้อนดูได้ทุกปี
   // แท็บไหนพัง ให้พังแค่แท็บนั้น อย่าลากทั้งหน้าจอลงไปด้วย
-  [["tab23",drawNWDash],["tab20",drawNWLoan],["tab21",drawNWSave],["tab22",drawNWDiv],["tab24",drawNWRc],["tab25",drawNWLoanDash],["tab26",drawNWOverview],["tab27",drawNWMdb],["tab28",drawNWGuar],["tab10",drawEntry],["tab11",drawOverview],["tab12",drawPeriods],["tab1",drawT1],["tab3",drawT3],
+  [["tab23",drawNWDash],["tab20",drawNWLoan],["tab21",drawNWSave],["tab22",drawNWDiv],["tab24",drawNWRc],["tab25",drawNWLoanDash],["tab26",drawNWOverview],["tab27",drawNWMdb],["tab28",drawNWGuar],["tab29",drawNWLit],["tab10",drawEntry],["tab11",drawOverview],["tab12",drawPeriods],["tab1",drawT1],["tab3",drawT3],
    ["tab4",drawT4],["tab5",drawT5],["tab6",drawT6],["tab7",drawT7],["tab8",drawT8],["tab9",drawT9]].forEach(([id,fn])=>{
     try{ fn(); }
     catch(err){ const el=$(id); if(el) el.innerHTML =
@@ -9447,7 +9665,7 @@ if($("saveNow")) $("saveNow").onclick = () => saveClick($("saveNow"), null);
 
 /* ============ เดินระบบ ============ */
 function all(){ draw(); save(); banner(); }
-const TABFN = {23:"drawNWDash",20:"drawNWLoan",21:"drawNWSave",22:"drawNWDiv",24:"drawNWRc",25:"drawNWLoanDash",26:"drawNWOverview",27:"drawNWMdb",28:"drawNWGuar",1:"drawT1",3:"drawT3",4:"drawT4",5:"drawT5",6:"drawT6",7:"drawT7",8:"drawT8",9:"drawT9",
+const TABFN = {23:"drawNWDash",20:"drawNWLoan",21:"drawNWSave",22:"drawNWDiv",24:"drawNWRc",25:"drawNWLoanDash",26:"drawNWOverview",27:"drawNWMdb",28:"drawNWGuar",29:"drawNWLit",1:"drawT1",3:"drawT3",4:"drawT4",5:"drawT5",6:"drawT6",7:"drawT7",8:"drawT8",9:"drawT9",
                10:"drawEntry",11:"drawOverview",12:"drawPeriods"};
 const OLD_TABS = [10,11,9,12,7,1,8,3,5,6,4];
 $("oldbtn").onclick = () => {
