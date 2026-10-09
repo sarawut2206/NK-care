@@ -494,6 +494,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
 .ovp{font-family:"TH Sarabun New","Sarabun",sans-serif;font-size:16pt;line-height:1.2;color:#000;text-align:left}
 .ovp .ov-top{display:flex;align-items:center;gap:14px;border-bottom:1.5px solid #000;padding-bottom:7px;margin-bottom:12px}
 .ovp .ov-top img{height:20mm;width:auto;display:block}.ovp .ov-hd{flex:1}
+.ovp .ov-t2{font-size:17pt;font-weight:700;line-height:1.1}
 .ovp .ov-org{font-size:14pt;font-weight:600}.ovp .ov-title{font-size:21pt;font-weight:700;line-height:1.1}.ovp .ov-sub{font-size:14pt}
 .ovp .ov-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
 .ovp .ov-kpi{border:1px solid #000;padding:3px 8px 5px;min-width:0}
@@ -615,7 +616,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-92</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-93</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -3063,7 +3064,7 @@ async function nwxPng(html, base){
 
 /* ---------- Word ---------- */
 const NWX_ONE = {K:0.85, SC:0.9, mt:10, mb:10, ml:16, mr:8};      /* เอกสาร ๑ หน้า/ใบ: ขอบแคบแบบเดียวกับตอนพิมพ์ */
-const NWX_FIT = {K:0.78, SC:0.8, mt:8, mb:8, ml:16, mr:8};      /* สรุป ๑ หน้า (มีกราฟ): ย่อให้พอดี ๑ หน้า A4 */
+const NWX_FIT = {K:0.72, SC:0.76, mt:8, mb:8, ml:16, mr:8};      /* สรุป ๑ หน้า (มีกราฟ): ย่อให้พอดี ๑ หน้า A4 */
 const NWX_FONT = "'TH Sarabun New','TH SarabunPSK',Tahoma,sans-serif";
 const nwxHex = c => { const m = String(c || "").match(/rgba?\(\s*(\d+)[ ,]+(\d+)[ ,]+(\d+)(?:[ ,/]+([\d.]+))?/); if(!m) return ""; if(m[4] !== undefined && +m[4] === 0) return "";
   return "#" + [m[1], m[2], m[3]].map(v => (+v).toString(16).padStart(2, "0")).join(""); };
@@ -4582,7 +4583,7 @@ function nwOverviewDoc(){
   const per68 = O.n68 ? `${lbl(O.f68)}–${lbl(O.l68)} (${O.n68} เดือน)` : "—", per69 = O.n69 ? `${lbl(O.f69)}–${lbl(O.l69)} (${O.n69} เดือน)` : "—";
   return `<div class="ovp">
     <div class="ov-top"><img src="${NW_LOGO}" alt="กบข.นข."><div class="ov-hd"><div class="ov-org">${ORGF} (กบข.นข.)</div>
-      <div class="ov-title">สรุปภาพรวมกองทุน ประจำเดือน${pl} ${yr}</div><div class="ov-sub">ข้อมูลจากทะเบียน ณ สิ้นเดือน${pl} ${yr} · สมาชิก ${O.n} คน</div></div></div>
+      <div class="ov-title">สรุปสถานะความมั่นคง กบข.นข.</div><div class="ov-t2">สรุปภาพรวมกองทุน ประจำเดือน${pl} ${yr}</div><div class="ov-sub">ข้อมูลจากทะเบียน ณ สิ้นเดือน${pl} ${yr} · สมาชิก ${O.n} คน</div></div></div>
     <div class="ov-kpis">
       ${kpi("ทุนเรือนหุ้นสะสมรวม", tM(D.shNow), `บาท · ${up ? "เพิ่มขึ้น" : "ลดลง"} ${tM(Math.abs(O.chgS))} บาท (ร้อยละ ${Math.abs(O.pctS).toFixed(1)}) จากสิ้นปี 2568`, "#1F3A68")}
       ${kpi("หนี้คงเหลือรวม", tM(D.dbNow), `บาท · ผู้กู้ ${O.nLoan} คน · ตรงกับทะเบียนผู้กู้`, "#C4570F")}
@@ -4640,7 +4641,7 @@ function nwMonthlyDoc(p){
   const trend = D.tot.filter(t => pNum(t.p) <= pNum(p)).slice(-12).map(t => { const a = ovMonthAgg(D, t.p); return {p:t.p, v:a.pay}; });
   return `<div class="ovp">
     <div class="ov-top"><img src="${NW_LOGO}" alt="กบข.นข."><div class="ov-hd"><div class="ov-org">${ORGF} (กบข.นข.)</div>
-      <div class="ov-title">สรุปประจำเดือน${pl} ${yr}</div><div class="ov-sub">ข้อมูลจากทะเบียนเดือน${pl} ${yr} · สมาชิก ${nAll} คน</div></div></div>
+      <div class="ov-title">สรุปสถานะความมั่นคง กบข.นข.</div><div class="ov-t2">สรุปประจำเดือน${pl} ${yr}</div><div class="ov-sub">ข้อมูลจากทะเบียนเดือน${pl} ${yr} · สมาชิก ${nAll} คน</div></div></div>
     <div class="ov-kpis">
       ${kpi("รับชำระรวมเดือนนี้", tM(A.pay), `บาท · ${cmp(A.pay, Pv ? Pv.pay : 0)}`, "#1F3A68")}
       ${kpi("ดอกเบี้ยรับเดือนนี้", tM(A.int), `บาท · ${cmp(A.int, Pv ? Pv.int : 0)}`, "#1B7F5A")}
@@ -4682,7 +4683,7 @@ function nwStatusDoc(){
         <div class="ov-dl">${ovDelta(O.chgI, O.pctI)}</div></div>`;
   return `<div class="ovp">
     <div class="ov-top"><img src="${NW_LOGO}" alt="กบข.นข."><div class="ov-hd"><div class="ov-org">${ORGF} (กบข.นข.)</div>
-      <div class="ov-title">สรุปสถานะกองทุน ประจำเดือน${pl} ${yr}</div><div class="ov-sub">ข้อมูลจากทะเบียน ณ สิ้นเดือน${pl} ${yr} · สมาชิก ${O.n} คน</div></div></div>
+      <div class="ov-title">สรุปสถานะความมั่นคง กบข.นข.</div><div class="ov-t2">สถานะกองทุน ประจำเดือน${pl} ${yr}</div><div class="ov-sub">ข้อมูลจากทะเบียน ณ สิ้นเดือน${pl} ${yr} · สมาชิก ${O.n} คน</div></div></div>
     <div class="ov-kpis">
       ${kpi("ทุนเรือนหุ้นสมาชิก", tM(D.shNow), `บาท · ${dir(O.chgS)} ${tM(Math.abs(O.chgS))} บาท (ร้อยละ ${Math.abs(O.pctS).toFixed(1)}) จากสิ้นปี 2568${outs.length ? ` · ไม่รวมผู้ลาออก ${outs.length} ราย` : ""}`, "#1F3A68")}
       ${kpi("เงินกู้คงเหลือรวม", tM(D.dbNow), `บาท · ผู้กู้ ${O.nLoan} คน · ตรงกับทะเบียนผู้กู้`, "#C4570F")}
