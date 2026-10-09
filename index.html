@@ -598,6 +598,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   .kpage{page:doc;zoom:1.85;font-size:11.8px;line-height:1.3;text-align:left;break-after:auto}
   .kpage.ks:not(.kc){page:single}
   .kpage.kc{page:contract;zoom:1.6}
+  .kpage p,.kpage li{text-align:left}                      /* จัดชิดซ้าย (ไม่ยืดช่องไฟ) ตามสกิล — ทับ justify ของ .kpage p */
   .kpage.kd{zoom:1.6}                                       /* แฟ้ม/ใบปะหน้าที่มีตารางมาก (ชุดฟ้องร้อง) ใช้ 14 pt เหมือนสัญญา */
   .kpage.kend,.kpage.kb{break-after:page}
   .kpage.k1{break-before:page}
@@ -668,7 +669,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-115</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-117</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -4691,7 +4692,7 @@ const LIT_STAGES = ["กำลังเตรียมเอกสาร", "บ�
 const LIT_KINDS = {warn:"หนังสือแจ้งเตือนผู้กู้", guar:"หนังสือแจ้งผู้ค้ำประกัน", final:"หนังสือบอกกล่าวทวงถามครั้งสุดท้าย", ack:"หนังสือรับสภาพหนี้", other:"อื่น ๆ"};
 const LIT_HOW = ["ไปรษณีย์ลงทะเบียนตอบรับ", "EMS", "มอบด้วยตนเอง (ลงชื่อรับทราบ)", "LINE / อีเมล", "อื่น ๆ"];
 const LIT_LEGAL = [
-  {id:"plaintiff", t:"ใครเป็นโจทก์ — ข้อตกลงระบุว่ากลุ่มไม่เป็นนิติบุคคล แต่ให้ฟ้องในนามคณะกรรมการ (ตกลงรูปแบบกับทนายก่อนฟ้อง)"},
+  {id:"plaintiff", t:"รูปแบบโจทก์ — ข้อตกลงให้อำนาจคณะกรรมการวาระปัจจุบันฟ้องในนามคณะกรรมการ (หมวด 1 ข้อ 4–5, หมวด 7) แต่กลุ่มไม่เป็นนิติบุคคล ถามทนายว่าฟ้องในนามนี้ได้เลยหรือควรให้กรรมการฟ้องในนามบุคคล + แนบมติรายคดี"},
   {id:"sect", t:"ข้อตกลงอ้างมาตรา 1074–1088 แห่ง ป.พ.พ. เป็นฐานของกลุ่ม — ให้ทนายตรวจว่าถูกต้องหรือไม่"},
   {id:"cap15", t:"ดอกเบี้ยรวมค่าธรรมเนียมทุกอย่างต้องไม่เกิน 15% ต่อปี (ม.654) — ค่าทวงถาม 5% และเงินหุ้นเพิ่มอาจถูกมองเป็นดอกเบี้ยแฝง"},
   {id:"compound", t:"ห้ามทบต้นดอกเบี้ย (ม.655–656) — ดอกเบี้ยผิดนัดควรคิดจากเงินต้นค้างเท่านั้น (โปรแกรมคิดจากยอดค้างทั้งงวด)"},
@@ -4732,7 +4733,9 @@ function nwLitItems(cs){
     {id:"nb", g:"ยอดหนี้และการบอกกล่าว", t:"ส่งหนังสือแจ้ง/ทวงถามผู้กู้ พร้อมหลักฐานการส่ง (แนะนำครบ 3 ครั้ง)", auto:true, ok:mine.length > 0 && withProof > 0, d:`ส่งแล้ว ${mine.length} ครั้ง · มีเลขอ้างอิง/วันรับ ${withProof} ครั้ง`},
     {id:"n686", g:"ยอดหนี้และการบอกกล่าว", t:"บอกกล่าวผู้ค้ำภายใน 90 วันนับแต่หนี้ถึงกำหนด ครบทุกงวดที่ค้าง", law:"ม.686 — ถ้าไม่ทำ ผู้ค้ำพ้นความรับผิดเท่าที่เสียหายจากการไม่บอกกล่าว", auto:true, crit:true,
       ok:need === 0 || (cs.nLate === 0 && cs.nUnc === 0), d:need === 0 ? "สัญญานี้ไม่ต้องมีผู้ค้ำ" : cs.nLate ? `เลยกำหนด 90 วันแล้ว ${cs.nLate} งวด` : cs.nUnc ? `ยังไม่ได้บอกกล่าว ${cs.nUnc} งวด — ใกล้สุดอีก ${cs.nextLeft} วัน` : "บอกกล่าวครบทุกงวด"},
-    {id:"resol", g:"อำนาจฟ้อง", t:"มติคณะกรรมการให้ฟ้องรายนี้ (กรอกวันที่มติด้านล่าง)", auto:true, ok:!!L.resD, d:L.resD ? `มติเมื่อ ${litShort(L.resD)}${L.resNo ? " · " + L.resNo : ""}` : "ยังไม่มีมติ"},
+    {id:"resol", g:"อำนาจฟ้อง", t:"มติคณะกรรมการให้ดำเนินคดีรายนี้ (กรอกวันที่มติและครั้งที่ประชุมด้านล่าง)", auto:true, ok:!!(L.resD && L.resNo), d:L.resD ? `มติเมื่อ ${litShort(L.resD)}${L.resNo ? " · ครั้งที่ " + L.resNo : " · ยังไม่ระบุครั้งที่ประชุม"}` : "ยังไม่มีมติ"},
+    {id:"att", g:"อำนาจฟ้อง", t:`รายชื่อกรรมการผู้เข้าประชุมครบองค์ประชุม (ไม่น้อยกว่า ${cs.quorum} จาก ${BOARD.list.length} คน)`, auto:true, ok:cs.attN >= cs.quorum, d:`เข้าประชุม ${cs.attN} / ${BOARD.list.length} คน — ติ๊กชื่อกรรมการด้านล่าง`},
+    {id:"minutes", g:"อำนาจฟ้อง", t:"รายงานการประชุมที่กรรมการลงนามแล้ว (พิมพ์ร่างจากปุ่ม «รายงานประชุม + มติ») แนบรายชื่อผู้เข้าประชุมและมติ", law:"ข้อตกลงให้อำนาจกว้าง แต่ศาลมักดูว่ามีการใช้อำนาจจริงตามขั้นตอนรายคดี"},
     {id:"poa", g:"อำนาจฟ้อง", t:"หนังสือมอบอำนาจทนายความ (กรอกชื่อทนายและวันที่ด้านล่าง)", auto:true, ok:!!(L.poaD && L.lawyer), d:L.poaD && L.lawyer ? `${L.lawyer} · ${litShort(L.poaD)}` : "ยังไม่ได้มอบอำนาจ"},
     {id:"board", g:"อำนาจฟ้อง", t:"สำเนาบัตรประชาชนกรรมการผู้ลงนาม + เอกสารแต่งตั้งกรรมการวาระปัจจุบัน"}
   ].map(q => { if(!q.auto) q.ok = ck(q.id); return q; });
@@ -4747,7 +4750,8 @@ function nwLitData(){
       const cov = P.guar === 0 ? true : Array.from({length:P.guar}, (_, i) => !!gs[i] && L.log.some(e => e.d >= due && e.d <= dl90 && (e.to === "ผู้ค้ำทุกคน" || e.to === "ผู้ค้ำ" + (i + 1)))).every(Boolean);
       return Object.assign({}, w, {due, dl90, cov, late:!cov && dl90 < today, left:nwDays(today, dl90)}); });
     const unc = rows.filter(w => !w.cov && !w.late), nextLeft = unc.length ? Math.min(...unc.map(w => w.left)) : null;
-    const cs = {key, o, pk, P, c, L, gs, D, rows, today, logTo, gw:gBy[o.x.no + "_" + o.a.prod], nLate:rows.filter(w => w.late).length, nUnc:unc.length, nextLeft,
+    const attN = BOARD.list.filter((b, i) => L.att && L.att[i]).length, quorum = +nwLit().quorum > 0 ? Math.round(+nwLit().quorum) : Math.floor(BOARD.list.length / 2) + 1;
+    const cs = {key, o, pk, P, c, L, gs, D, rows, today, logTo, attN, quorum, gw:gBy[o.x.no + "_" + o.a.prod], nLate:rows.filter(w => w.late).length, nUnc:unc.length, nextLeft,
       maxDl:D.maxDl, claim:r2(o.short + D.pen + (L.feeIn ? D.fee : 0))};
     cs.items = nwLitItems(cs); cs.done = cs.items.filter(q => q.ok).length; cs.pct = Math.round(100 * cs.done / cs.items.length);
     cs.auto = L.filedD ? 3 : cs.pct === 100 ? 2 : L.log.length ? 1 : 0;
@@ -4788,6 +4792,30 @@ function nwLitDoc(cs){
       ${L.log.slice().sort((a, b) => a.d.localeCompare(b.d)).map(e => `<tr><td>${litShort(e.d)}</td><td>${esc(e.to)}</td><td>${esc(LIT_KINDS[e.kind] || e.kind)}</td><td>${esc(e.how || "—")}</td><td>${esc(e.ref || "—")}</td><td>${litShort(e.got)}</td></tr>`).join("") || '<tr><td colspan="6">ยังไม่มีการบันทึกการส่งหนังสือ</td></tr>'}</tbody></table>
     <div class="ksigs" style="grid-template-columns:1fr 1fr;max-width:420px;margin:14px auto 0">${sigOf("กรรมการฝ่ายติดตามหนี้", DEBT())}${sigOf("ประธานคณะกรรมการ", CHAIR())}</div>`, "");
   return (p1 + p2).split('class="kpage').join('class="kpage kd');
+}
+
+/* รายงานการประชุมคณะกรรมการบริหาร + มติให้ดำเนินคดีรายบุคคล (ร่าง — ตรวจ/แก้แล้วให้กรรมการลงนาม) */
+function nwLitResDoc(cs){
+  const o = cs.o, m = o.x, c = cs.c, L = cs.L, B7 = BOARD.list, org = `${ORG}โรงเรียนมัธยมวัดหนองแขม`;
+  const sent = L.log.slice().sort((a, b) => a.d.localeCompare(b.d)).map(e => `${litShort(e.d)} · ${LIT_KINDS[e.kind] || e.kind} ถึง${e.to}${e.how ? " (" + e.how + ")" : ""}`);
+  const gs = cs.gs.filter(Boolean).map(g => `${nwNmOf(g)} (สมาชิกเลขที่ ${g})`).join(" และ ") || "[ระบุข้อมูล: ผู้ค้ำประกัน]";
+  const body = `${logo()}<div class="kt1">รายงานการประชุมคณะกรรมการบริหารกลุ่มบุคคล<br>และมติให้ดำเนินคดีต่อผู้กู้ผิดนัดชำระหนี้</div>
+    <div class="kt2">${ORG}<br>โรงเรียนมัธยมวัดหนองแขม (กบข.นข.)</div>
+    <div class="kmeta2"><span>ครั้งที่ ${L.resNo ? esc(L.resNo) : "……………"}</span><span>ประชุมเมื่อวันที่ ${L.resD ? thDate(L.resD) : "……………………………………"}</span><span>ณ ………………………………</span></div>
+    <p><b>ผู้มาประชุม</b> (ครบองค์ประชุมเมื่อมีกรรมการเข้าประชุมไม่น้อยกว่า ${cs.quorum} จาก ${B7.length} คน)</p>
+    <table class="kt kw"><thead><tr><th style="width:36px">ที่</th><th class="l">ชื่อ–สกุล</th><th class="l">ตำแหน่ง</th><th class="l">ลายมือชื่อ</th></tr></thead><tbody>
+      ${B7.map((b, i) => `<tr><td class="c">${i + 1}</td><td>${esc(b.n)}</td><td>${esc(b.r)}</td><td>${L.att && L.att[i] ? "………………………………" : "&nbsp;"}</td></tr>`).join("")}</tbody></table>
+    <p>กรรมการเข้าประชุม <b>${cs.attN}</b> คน จากทั้งหมด ${B7.length} คน${cs.attN >= cs.quorum ? " ครบองค์ประชุม" : " <b>ยังไม่ครบองค์ประชุม</b>"} · เริ่มประชุมเวลา ………… น.</p>
+    <p class="i2"><b>เรื่องที่ ๑ เรื่องแจ้งให้ที่ประชุมทราบ</b> — ประธานแจ้งว่ามีสมาชิกผิดนัดชำระหนี้เงินกู้ตามสัญญาและได้ดำเนินการติดตามทวงถามตามข้อตกลงแล้ว</p>
+    <p class="i2"><b>เรื่องที่ ๒ พิจารณาดำเนินคดีต่อ ${esc(m.name)}</b></p>
+    <p class="i2"><b>ข้อเท็จจริง</b> — ${esc(m.name)} (สมาชิกเลขที่ ${esc(m.no)}) เป็นผู้กู้ตามสัญญาเงินกู้สินเชื่อ${cs.pk} เลขที่ ${esc(c && c.code) || "[ระบุข้อมูล: เลขที่สัญญา]"} ลงวันที่ ${c && c.d ? litShort(c.d) : "[ระบุข้อมูล]"} วงเงิน ${c ? B(c.amt) : "[ระบุข้อมูล]"} บาท ผ่อนชำระงวดละ ${B(o.inst)} บาท โดยมี ${gs} เป็นผู้ค้ำประกัน ปัจจุบันผิดนัดชำระรวม ${o.rows.length} งวด ค้างชำระนานที่สุด ${cs.maxDl} วัน ยอดค้างชำระรวม ${B(o.short)} บาท ดอกเบี้ยผิดนัด ${B(cs.D.pen)} บาท รวมยอดเรียกร้อง ${B(cs.claim)} บาท เงินต้นคงเหลือ ${B(o.debt)} บาท</p>
+    <p class="i2"><b>การติดตามทวงถามที่ผ่านมา</b> — ${sent.length ? "ได้ส่งหนังสือแจ้ง/ทวงถาม " + sent.length + " ครั้ง ได้แก่ " + sent.map(esc).join(" ; ") : "[ระบุข้อมูล: ยังไม่มีบันทึกการส่งหนังสือทวงถาม]"}</p>
+    <p class="i2"><b>อำนาจดำเนินคดี</b> — ตามข้อตกลงกลุ่มบุคคลฯ หมวด 1 ข้อ 4 คณะกรรมการบริหารเป็นผู้ดำเนินการฟ้องร้องเมื่อสมาชิกผิดนัดชำระหนี้ ข้อ 5 สมาชิกยินยอมให้คณะกรรมการบริหารมีอำนาจฟ้องร้องแทนกลุ่มบุคคล และหมวด 7 คณะกรรมการบริหารที่ดำรงตำแหน่งในวาระปัจจุบันมีอำนาจดำเนินคดีและแต่งตั้งทนายความหรือผู้รับมอบอำนาจ โดยฟ้องในนามคณะกรรมการบริหารกลุ่มบุคคลฯ ประจำวาระปี ${BOARD.year} ทั้งนี้ คณะกรรมการไม่มีภาระชำระหนี้แทนผู้กู้หรือผู้ค้ำประกัน</p>
+    <p class="i2"><b>มติที่ประชุม</b> — ที่ประชุมพิจารณาแล้วมีมติ ${cs.attN ? "" : "[ระบุข้อมูล: เห็นชอบเป็นเอกฉันท์ / เสียงข้างมาก]"}ให้ดำเนินคดีทางแพ่งต่อ ${esc(m.name)} ผู้กู้ และ${esc(gs)} ผู้ค้ำประกัน เพื่อเรียกให้ชำระหนี้ตามสัญญาเงินกู้เลขที่ ${esc(c && c.code) || "[ระบุข้อมูล]"} พร้อมดอกเบี้ยตามสัญญา และมอบอำนาจให้ ${esc(L.lawyer) || "[ระบุข้อมูล: ชื่อทนายความ]"} เป็นผู้ดำเนินคดีแทนในนามคณะกรรมการบริหารกลุ่มบุคคลฯ ${L.poaD ? "ตามหนังสือมอบอำนาจลงวันที่ " + litShort(L.poaD) : "(ออกหนังสือมอบอำนาจแยกต่างหาก)"} และให้ประธานคณะกรรมการลงนามในเอกสารที่เกี่ยวข้อง</p>
+    <p class="i2">ปิดประชุมเวลา ………… น.</p>
+    <div class="ksigs" style="grid-template-columns:1fr 1fr;max-width:460px;margin:12px auto 0">${sigOf("ผู้จดรายงานการประชุม", SECR())}${sigOf("ประธานที่ประชุม", CHAIR())}</div>
+    <p class="kh" style="margin-top:10px">เอกสารแนบ: รายชื่อกรรมการผู้เข้าประชุม · สำเนาสัญญาเงินกู้และสัญญาค้ำประกัน · ตารางยอดหนี้ค้างชำระ · สำเนาหนังสือทวงถามและหลักฐานการส่ง</p>`;
+  return pg(1, 1, body, "");
 }
 
 /* ---------- หน้าจอ ---------- */
@@ -4848,6 +4876,13 @@ function drawNWLit(){
       <div class="tbl"><table><thead><tr><th class="l">งวด</th><th>คงค้าง</th><th>ค้างมาแล้ว (วัน)</th><th class="l">ครบ 90 วัน</th><th class="l">สถานะการแจ้งผู้ค้ำ</th></tr></thead><tbody>
         ${sel.rows.map(w => `<tr><td class="l">${thPer(w.p)}</td><td class="amt">${B(w.short)}</td><td class="amt">${w.dl}</td><td class="l">${litShort(w.dl90)}</td><td class="l">${w.cov ? '<span class="pill grn">แจ้งแล้ว</span>' : w.late ? '<span class="pill red">เลยกำหนด — ยังไม่ได้แจ้ง</span>' : `<span class="pill amb">ต้องแจ้งภายใน ${w.left} วัน</span>`}</td></tr>`).join("")}</tbody></table></div>` : ""}
       <div class="eyebrow" style="margin-top:12px">อำนาจฟ้องและสถานะคดี</div>
+      <div class="keybox" style="margin:6px 0;font-size:13px"><b>ฐานอำนาจตามข้อตกลง:</b> หมวด 1 ข้อ 4 (คณะกรรมการเป็นผู้ฟ้องเมื่อสมาชิกผิดนัด) · ข้อ 5 (สมาชิกยินยอมให้คณะกรรมการฟ้องแทนกลุ่ม) · หมวด 7 (คณะกรรมการวาระปัจจุบันมีอำนาจดำเนินคดีและแต่งตั้งทนาย ฟ้องในนาม «คณะกรรมการบริหารกลุ่มบุคคลฯ ประจำวาระปี ${BOARD.year}») · คณะกรรมการไม่มีภาระชำระหนี้แทนผู้กู้/ผู้ค้ำ
+        <br><span class="hint">มีอำนาจตามข้อตกลง แต่ศาลมักดูว่าใช้อำนาจจริงตามขั้นตอนรายคดี — จึงควรมี <b>มติกรรมการรายบุคคล + รายงานประชุม + รายชื่อกรรมการผู้เข้าประชุม</b> แนบกับสัญญารายนั้น</span></div>
+      <div class="bar" style="margin:6px 0;flex-wrap:wrap"><b style="font-size:13px">กรรมการผู้เข้าประชุม</b>
+        ${BOARD.list.map((b, i) => `<label class="rlf" style="margin:0 8px 0 0"><input type="checkbox" data-lat="${k}|${i}" ${L.att && L.att[i] ? "checked" : ""}> ${esc(b.n)} <span class="hint">(${esc(b.r)})</span></label>`).join("")}
+        <label class="hint" style="margin-left:auto;display:flex;align-items:center;gap:6px">องค์ประชุมไม่น้อยกว่า <input type="number" min="1" id="lt_q" value="${sel.quorum}" style="width:56px"> คน</label>
+        <button class="ghost sm" id="lt_res">🖨 พิมพ์รายงานประชุม + มติ (ร่าง)</button><button class="ghost sm" id="lt_resw">Word</button></div>
+      <p class="hint" style="margin:0 0 6px">ข้อตกลงไม่ได้กำหนดองค์ประชุมของคณะกรรมการ — ค่าเริ่มต้น = มากกว่ากึ่งหนึ่ง (${Math.floor(BOARD.list.length / 2) + 1} จาก ${BOARD.list.length}) ปรับได้ และควรระบุไว้ในข้อตกลง</p>
       <div class="pf">${fi("resD", "วันที่มติคณะกรรมการให้ฟ้อง", "d")}${fi("resNo", "เลขที่/ครั้งที่ประชุม", "t")}${fi("lawyer", "ทนายความ", "t")}${fi("poaD", "วันที่หนังสือมอบอำนาจ", "d")}${fi("filedD", "วันที่ยื่นฟ้อง", "d")}${fi("caseNo", "เลขคดี (ดำ/แดง)", "t")}
         <div><label>ขั้นตอน (ว่าง = ให้โปรแกรมกำหนด)</label><select data-lfs="${k}"><option value="">อัตโนมัติ — ${LIT_STAGES[sel.auto]}</option>${LIT_STAGES.map((s, i) => `<option value="${i}" ${has(L.stage) && L.stage !== "" && +L.stage === i ? "selected" : ""}>${s}</option>`).join("")}</select></div>
         <div style="grid-column:span 4"><label>หมายเหตุ</label><input data-lf="${k}|note" value="${esc(L.note || "")}"></div></div></div>`; })();
@@ -4878,6 +4913,7 @@ function drawNWLit(){
   el.querySelectorAll("[data-lsel],[data-lopen]").forEach(b => b.onclick = ev => { if(ev.target.closest("input,select,button") && !b.dataset.lopen) return; S.litSel = b.dataset.lsel || b.dataset.lopen; redraw(); const t = $("lt_case"); if(t) t.scrollIntoView({behavior:"smooth", block:"start"}); });
   el.querySelectorAll("[data-lck]").forEach(i => i.addEventListener("change", () => { const [no, a, id] = i.dataset.lck.split("|"), c = nwLitC(no + "|" + a); if(i.checked) c.ck[id] = true; else delete c.ck[id]; save(); redraw(); }));
   el.querySelectorAll("[data-lf]").forEach(i => i.addEventListener("change", () => { const p = i.dataset.lf.split("|"), c = nwLitC(p[0] + "|" + p[1]); c[p[2]] = i.value.trim(); save(); redraw(); }));
+  el.querySelectorAll("[data-lat]").forEach(i => i.addEventListener("change", () => { const p = i.dataset.lat.split("|"), c = nwLitC(p[0] + "|" + p[1]); c.att = c.att || {}; if(i.checked) c.att[p[2]] = true; else delete c.att[p[2]]; save(); redraw(); }));
   el.querySelectorAll("[data-lfc]").forEach(i => i.addEventListener("change", () => { const p = i.dataset.lfc.split("|"), c = nwLitC(p[0] + "|" + p[1]); if(i.checked) c[p[2]] = true; else delete c[p[2]]; save(); redraw(); }));
   el.querySelectorAll("[data-lfs]").forEach(i => i.addEventListener("change", () => { const c = nwLitC(keyOf(i.dataset.lfs)); if(i.value === "") delete c.stage; else c.stage = +i.value; save(); redraw(); }));
   el.querySelectorAll("[data-ldel]").forEach(b => b.onclick = () => { const p = b.dataset.ldel.split("|"), c = nwLitC(p[0] + "|" + p[1]); if(!confirm("ลบรายการส่งหนังสือนี้?")) return; c.log.splice(+p[2], 1); save(); redraw(); });
@@ -4890,6 +4926,9 @@ function drawNWLit(){
       nwLitC(k).log.push({id:"N" + Math.random().toString(36).slice(2, 7), kind:$("ln_kind").value, to:$("ln_to").value, d, how:$("ln_how").value, ref:$("ln_ref").value.trim(), got:$("ln_got").value});
       save(); redraw(); toast("บันทึกการส่งหนังสือแล้ว"); };
     $("lt_print").onclick = () => nwPrint(nwLitDoc(sel));
+    $("lt_res").onclick = () => nwPrint(nwLitResDoc(sel), "รายงานประชุมและมติดำเนินคดี");
+    $("lt_resw").onclick = () => nwxRun("รายงานประชุม + มติ → Word", () => nwxDocx(nwLitResDoc(sel), "รายงานประชุมและมติดำเนินคดี-" + sel.o.x.name));
+    $("lt_q").onchange = e => { nwLit().quorum = Math.max(1, Math.round(+e.target.value || 1)); save(); redraw(); };
     $("lt_w").onclick = () => nwxRun("ใบปะหน้าชุดฟ้องร้อง → Word", () => nwxDocx(nwLitDoc(sel), "ใบปะหน้าชุดฟ้องร้อง-" + sel.o.x.name, {K:1.0}));
     $("lt_i").onclick = () => nwxRun("ใบปะหน้าชุดฟ้องร้อง → รูป", () => nwxPng(nwLitDoc(sel), "ใบปะหน้าชุดฟ้องร้อง-" + sel.o.x.name));
     el.querySelectorAll("[data-lgo]").forEach(b => b.onclick = () => { if(b.dataset.lgo === "guar"){ goTab(28); return; }
