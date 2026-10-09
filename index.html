@@ -509,9 +509,9 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
 .ovp .ov-leg>div{display:grid;grid-template-columns:12px 1fr auto 52px;gap:6px;align-items:center;font-size:13pt;padding:0;border-top:1px dotted #888}
 .ovp .ov-leg i{display:block;width:10px;height:10px}.ovp .ov-leg b{text-align:right;font-weight:600}.ovp .ov-leg em{font-style:normal;text-align:right}
 .ovp .ov-foot{font-size:12.5pt;margin:4px 0 4px}
-.ovp .sg{border:1px solid #000;border-left:6px solid #1F3A68;padding:9px 14px 10px;margin-bottom:14px;display:grid;grid-template-columns:1fr auto;gap:2px 16px;align-items:center}
-.ovp .sg-l{min-width:0}.ovp .sg-t{font-size:16pt;font-weight:700;margin-bottom:2px}.ovp .sg-c{font-size:14pt;line-height:1.25}
-.ovp .sg-v{font-size:32pt;font-weight:700;line-height:1.05;text-align:right;white-space:nowrap}.ovp .sg-v small{font-size:14pt;font-weight:600}
+.ovp .sg{border:1px solid #000;border-left:6px solid #1F3A68;padding:5px 12px 6px;margin-bottom:8px;display:grid;grid-template-columns:1fr auto;gap:2px 16px;align-items:center}
+.ovp .sg-l{min-width:0}.ovp .sg-t{font-size:15pt;font-weight:700}.ovp .sg-c{font-size:13pt;line-height:1.2}
+.ovp .sg-v{font-size:28pt;font-weight:700;line-height:1.05;text-align:right;white-space:nowrap}.ovp .sg-v small{font-size:14pt;font-weight:600}
 .ovp .ov-sig{display:grid;grid-template-columns:1fr 1fr;gap:20px;text-align:center;font-size:14pt}
 .ovp .ov-sig .ln{border-bottom:1px dotted #000;margin:22px 10px 2px}.ovp .ov-dt{grid-column:1/-1;text-align:left;font-size:12pt}
 .nwrc,.nwrg{font-family:"TH Sarabun New","Sarabun",sans-serif;font-size:16pt;line-height:1.25;color:#000}
@@ -616,7 +616,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-94</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-95</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -4669,38 +4669,45 @@ function nwStatusData(){
   return {O, D, yr, outs, outNow, outOpen, lfl, tot0, dTot, pTot:tot0 > 0 ? dTot / tot0 * 100 : 0};
 }
 function nwStatusDoc(){
-  const Z = nwStatusData(), {O, D, yr, outs, outOpen, lfl, dTot, pTot} = Z, today = nwToday(), pl = nwPFull(D.end).split(" ")[0], up = O.chgS >= 0;
+  const Z = nwStatusData(), {O, D, yr, outs, outOpen, lfl, dTot} = Z, today = nwToday(), pl = nwPFull(D.end).split(" ")[0];
+  const sg = (clr, t, val, caps) => `<div class="sg" style="border-left-color:${clr}"><div class="sg-l"><div class="sg-t">${t}</div>${caps.filter(Boolean).map(c => `<div class="sg-c">${c}</div>`).join("")}</div><div class="sg-v">${val}</div></div>`;
   const kpi = (l, val, cap, clr) => `<div class="ov-kpi" style="border-top:3px solid ${clr}"><div class="ov-kl">${l}</div><div class="ov-kv">${val}</div><div class="ov-kc">${cap}</div></div>`;
-  const dir = v => v >= 0 ? "เพิ่มขึ้น" : "ลดลง", sgn = v => (v >= 0 ? "+" : "−") + tM(Math.abs(v)), mm = q => thMS(q).slice(0, -2);
-  const avg68 = O.n68 ? O.int68 / O.n68 : 0, avg69 = O.n69 ? O.int69 / O.n69 : 0, pAvg = avg68 > 0 ? (avg69 - avg68) / avg68 * 100 : 0, cmpYr = +yr > 2568 && O.n68 > 0;
-  const per = O.n69 ? `${thMS(O.f69)}–${thMS(O.l69)}` : "";
-  const bars = D.tot.filter(t => t.p.startsWith(yr)).slice(-12);
-  const stP = [{l:"ผู้ฝาก", v:O.nSave, c:"#1B7F5A"}, {l:"ผู้กู้ ชำระปกติ", v:O.okP, c:"#1F3A68"}, {l:"ผู้กู้ มีงวดค้าง", v:O.arrP, c:"#C4570F"}];
+  const mm = q => thMS(q).slice(0, -2), ar = v => v >= 0 ? "↑ +" : "↓ −", pc = v => Math.abs(v).toFixed(1);
+  const avg69 = O.n69 ? O.int69 / O.n69 : 0, per = O.n69 ? `${thMS(O.f69)}–${thMS(O.l69)} (${O.n69} เดือน)` : "";
+  const grow = O.chgS >= 0, netUp = dTot >= 0, lflPct = lfl && lfl.a > 0 ? (lfl.b - lfl.a) / lfl.a * 100 : null;
+  const rows = [
+    sg("#1F3A68", grow ? "ทุนสมาชิกเติบโตต่อเนื่อง" : "ทุนสมาชิก", `${tM(D.shNow)} <small>บาท</small>`,
+      [`${ar(O.chgS)}${tM(Math.abs(O.chgS))} บาท (${O.chgS >= 0 ? "+" : "−"}${pc(O.pctS)}%) จากต้นปี`,
+       outs.length ? `${grow ? "แม้คืนทุนสมาชิก" : "คืนทุนสมาชิก"} ${tM(outOpen)} บาท (${outs.length} ราย)` : ""]),
+    sg("#6B4FA0", netUp ? "การเติบโตของทุนสุทธิหลังคืนทุน" : "การเปลี่ยนแปลงของทุนสุทธิหลังคืนทุน", `${netUp ? "+" : "−"}${tM(Math.abs(dTot))} <small>บาท</small>`,
+      [netUp ? "สะท้อนการสะสมทุนของสมาชิกอย่างต่อเนื่อง" : "ทุนรวมลดลง เพราะคืนทุนมากกว่าการสะสมเพิ่ม"]),
+    sg("#C4570F", "เงินให้สมาชิกกู้หมุนเวียน", `${tM(D.dbNow)} <small>บาท</small>`, [`สมาชิกผู้กู้ ${O.nLoan} คน`]),
+    sg("#1B7F5A", "รายได้ดอกเบี้ยสะสม", `${tM(O.int69)} <small>บาท</small>`,
+      [lflPct === null ? "ยังไม่มีข้อมูลช่วงเดียวกันของปีก่อนให้เทียบ" : `${ar(lflPct)}${pc(lflPct)}% จากช่วงเดียวกันของปีก่อน (${mm(lfl.from)}–${mm(lfl.to)})`,
+       per ? `${per} · เฉลี่ยเดือนละ ${tM(avg69)} บาท` : ""]),
+    sg("#1F3A68", "สถานะสมาชิกและการชำระเงิน", `${O.n} <small>คน</small>`,
+      [`สมาชิกทั้งหมด ${O.n} คน`, `ผู้กู้ชำระปกติ ${O.okP} คน`, `อยู่ระหว่างติดตาม ${O.arrP} คน`])
+  ].join("");
   const intBox = lfl
-    ? `<div class="ov-box"><div class="ov-h">ดอกเบี้ยรับ เทียบช่วงเดียวกัน (${mm(lfl.from)}–${mm(lfl.to)})</div>${ovCmp(lfl.a, lfl.b, ["ปี " + (yr - 1), `${mm(lfl.from)}–${mm(lfl.to)}`], ["ปี " + yr, `${mm(lfl.from)}–${mm(lfl.to)}`], "#8CC9AE", "#1B7F5A")}
-        <div class="ov-dl">${ovDelta(r2(lfl.b - lfl.a), lfl.a > 0 ? (lfl.b - lfl.a) / lfl.a * 100 : 0)}</div></div>`
-    : `<div class="ov-box"><div class="ov-h">ดอกเบี้ยรับสะสม เทียบปี</div>${ovCmp(O.int68, O.int69, ["ปี 2568", O.n68 ? `${mm(O.f68)}–${mm(O.l68)}` : "—"], ["ปี " + yr, O.n69 ? `${mm(O.f69)}–${mm(O.l69)}` : "—"], "#8CC9AE", "#1B7F5A")}
+    ? `<div class="ov-box"><div class="ov-h">รายได้ดอกเบี้ย เทียบช่วงเดียวกันของปีก่อน (${mm(lfl.from)}–${mm(lfl.to)})</div>${ovCmp(lfl.a, lfl.b, ["ปี " + (yr - 1), `${mm(lfl.from)}–${mm(lfl.to)}`], ["ปี " + yr, `${mm(lfl.from)}–${mm(lfl.to)}`], "#8CC9AE", "#1B7F5A")}
+        <div class="ov-dl">${ovDelta(r2(lfl.b - lfl.a), lflPct || 0)}</div></div>`
+    : `<div class="ov-box"><div class="ov-h">รายได้ดอกเบี้ยสะสม เทียบปี</div>${ovCmp(O.int68, O.int69, ["ปี 2568", O.n68 ? `${mm(O.f68)}–${mm(O.l68)}` : "—"], ["ปี " + yr, O.n69 ? `${mm(O.f69)}–${mm(O.l69)}` : "—"], "#8CC9AE", "#1B7F5A")}
         <div class="ov-dl">${ovDelta(O.chgI, O.pctI)}</div></div>`;
   return `<div class="ovp">
     <div class="ov-top"><img src="${NW_LOGO}" alt="กบข.นข."><div class="ov-hd"><div class="ov-org">${ORGF} (กบข.นข.)</div>
-      <div class="ov-title">สรุปสถานะความมั่นคง กบข.นข.</div><div class="ov-t2">สรุปสถานะ ประจำเดือน${pl} ${yr}</div><div class="ov-sub">ข้อมูลจากทะเบียน ณ สิ้นเดือน${pl} ${yr} · สมาชิก ${O.n} คน</div></div></div>
+      <div class="ov-title">สรุปสถานะความมั่นคง กบข.นข.</div><div class="ov-t2">ประจำเดือน${pl} พ.ศ. ${yr}</div><div class="ov-sub">ข้อมูลจากทะเบียน ณ สิ้นเดือน${pl} ${yr} · สมาชิก ${O.n} คน</div></div></div>
+    <div class="ov-h" style="margin-bottom:5px">ภาพรวม</div>
+    ${rows}
+    <div class="ov-h" style="margin:2px 0 5px">ภาพรวมเดือนนี้</div>
     <div class="ov-kpis">
-      ${kpi("ทุนเรือนหุ้นสมาชิก", tM(D.shNow), `บาท · ${dir(O.chgS)} ${tM(Math.abs(O.chgS))} บาท (ร้อยละ ${Math.abs(O.pctS).toFixed(1)}) จากสิ้นปี 2568${outs.length ? ` · ไม่รวมผู้ลาออก ${outs.length} ราย` : ""}`, "#1F3A68")}
-      ${kpi("เงินกู้คงเหลือรวม", tM(D.dbNow), `บาท · ผู้กู้ ${O.nLoan} คน · ตรงกับทะเบียนผู้กู้`, "#C4570F")}
-      ${kpi("ดอกเบี้ยรับสะสม ปี " + yr, tM(O.int69), `บาท · ${per ? `${per} (${O.n69} เดือน) · ` : ""}เฉลี่ยเดือนละ ${tM(avg69)} บาท${cmpYr ? ` · เทียบปี 2568 (${tM(avg68)}) ${dir(avg69 - avg68)}ร้อยละ ${Math.abs(pAvg).toFixed(1)}` : ""}`, "#1B7F5A")}
-      ${kpi("สมาชิกทั้งหมด", `${O.n} <span style="font-size:15pt;font-weight:600">คน</span>`, `ผู้ฝาก ${O.nSave} คน · ผู้กู้ ${O.nLoan} คน`, "#1F3A68")}
-      ${kpi("ผู้กู้ชำระปกติ", `${O.okP} <span style="font-size:15pt;font-weight:600">คน</span>`, `จากผู้กู้ ${O.nLoan} คน`, "#1B7F5A")}
-      ${kpi("อยู่ระหว่างติดตาม", `${O.arrP} <span style="font-size:15pt;font-weight:600">คน</span>`, "ผู้กู้ที่มีงวดค้างชำระ", "#C4570F")}</div>
+      ${kpi(grow ? "ทุนสมาชิกเพิ่มขึ้น" : "ทุนสมาชิกลดลง", `<span style="font-size:16pt">${grow ? "▲" : "▼"}</span> ${pc(O.pctS)} <span style="font-size:15pt;font-weight:600">%</span>`, "จากต้นปี", "#1F3A68")}
+      ${kpi("เงินทุนหมุนเวียนสร้างรายได้", tM(D.dbNow), "บาท", "#C4570F")}
+      ${kpi("รายได้ดอกเบี้ยสะสม", tM(O.int69), "บาท", "#1B7F5A")}</div>
     <div class="ov-row">
-      <div class="ov-box"><div class="ov-h">ทุนเรือนหุ้นสมาชิก เทียบสิ้นปี</div>${ovCmp(D.open.sh, D.shNow, ["ปี 2568", "ณ 31 ธ.ค."], ["ปี " + yr, "ณ " + pl], "#8FA3C7", "#1F3A68")}
-        <div class="ov-dl">${ovDelta(O.chgS, O.pctS)}</div>
-        ${outs.length ? `<div class="ov-dl">รวมผู้ลาออก ${outs.length} ราย (คืนทุน −${tM(outOpen)} บาท): ทุนรวมของกลุ่ม ${sgn(dTot)} บาท (${dir(dTot)}ร้อยละ ${Math.abs(pTot).toFixed(1)}) จากสิ้นปี 2568</div>` : ""}</div>
+      <div class="ov-box"><div class="ov-h">ทุนสมาชิก เทียบต้นปี</div>${ovCmp(D.open.sh, D.shNow, ["ปี 2568", "ณ 31 ธ.ค."], ["ปี " + yr, "ณ " + pl], "#8FA3C7", "#1F3A68")}
+        <div class="ov-dl">${ovDelta(O.chgS, O.pctS)}</div></div>
       ${intBox}</div>
-    <div class="ov-row3">
-      <div class="ov-box"><div class="ov-h">สถานะสมาชิก</div><div class="ov-pie">${ovDonut(stP, O.n, "สมาชิก")}</div>${ovLeg(stP, v => v + " คน")}</div>
-      <div class="ov-box"><div class="ov-h">ดอกเบี้ยรับรายเดือน ปี ${yr} (พันบาท)</div>${ovBars(bars)}
-        <div class="ov-dl">${cmpYr ? `ปี 2568 (${O.n68} เดือน) เฉลี่ยเดือนละ ${tM(avg68)} บาท · ปี ${yr} (${O.n69} เดือน) เฉลี่ยเดือนละ ${tM(avg69)} บาท` : `เฉลี่ยเดือนละ ${tM(avg69)} บาท`}</div></div></div>
-    <div class="ov-foot">${outs.length ? "ยอดหุ้นของผู้ลาออก = ยอดล่าสุดที่บันทึกในทะเบียน (ถือเป็นยอดที่คืนทุนแล้ว) · " : ""}ดอกเบี้ยรับ = ดอกเบี้ยที่รับชำระตามทะเบียน (ข้อมูลเริ่ม พ.ค. 2568 จึงเทียบช่วงเดียวกันได้ตั้งแต่ พ.ค.) · «อยู่ระหว่างติดตาม» = ผู้กู้ที่มีงวดค้างชำระ</div>
+    <div class="ov-foot">${outs.length ? "ยอดทุนของผู้ลาออก = ยอดล่าสุดที่บันทึกในทะเบียน (ถือเป็นยอดที่คืนทุนแล้ว) · " : ""}รายได้ดอกเบี้ย = ดอกเบี้ยที่รับชำระตามทะเบียน (ข้อมูลเริ่ม พ.ค. 2568 จึงเทียบช่วงเดียวกันได้ตั้งแต่ พ.ค.) · «อยู่ระหว่างติดตาม» = ผู้กู้ที่มีงวดค้างชำระ · เงินให้สมาชิกกู้หมุนเวียน = เงินต้นคงเหลือ</div>
     <div class="ov-sig"><div><div class="ln"></div><div>( ${esc(FIN())} )</div><div>กรรมการฝ่ายการเงิน</div></div><div><div class="ln"></div><div>( ${esc(CHAIR())} )</div><div>ประธานกลุ่มบุคคล</div></div>
       <div class="ov-dt">จัดทำเมื่อ ${thDay(today)}</div></div></div>`;
 }
@@ -4732,7 +4739,7 @@ function drawNWOverview(){
   $("ov_mc").onclick = () => { S.ovmode = "cum"; drawNWOverview(); }; $("ov_mm").onclick = () => { S.ovmode = "month"; drawNWOverview(); }; $("ov_ms").onclick = () => { S.ovmode = "status"; drawNWOverview(); };
   if(mode === "status"){
     $("ov_print").onclick = () => nwPrint(nwStatusDoc());
-    $("ov_w").onclick = () => nwxRun("สรุปสถานะ → Word", () => nwxDocx(nwStatusDoc(), `สรุปสถานะ-${D.end}`, Object.assign({}, NWX_FIT, {K:0.68, SC:0.72})));
+    $("ov_w").onclick = () => nwxRun("สรุปสถานะ → Word", () => nwxDocx(nwStatusDoc(), `สรุปสถานะ-${D.end}`, Object.assign({}, NWX_FIT, {K:0.56, SC:0.62, mt:5, mb:5})));
     $("ov_i").onclick = () => nwxRun("สรุปสถานะ → รูป", () => nwxPng(nwStatusDoc(), `สรุปสถานะ-${D.end}`)); }
   else if(mode === "cum"){ $("ov_rs").onchange = e => set({rs:Math.max(0, +e.target.value || 0)}); $("ov_ri").onchange = e => set({ri:Math.max(0, +e.target.value || 0)});
     $("ov_print").onclick = () => nwPrint(nwOverviewDoc());
