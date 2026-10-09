@@ -302,6 +302,9 @@ th.svcol{background:#FFF4D6!important}
 .kt.sg td{height:24px} .kt.sg tr.hl td{background:#FDF6E3}
 .kt .c{text-align:center}
 .kt.kw td,.kt.kw th{white-space:normal;vertical-align:top}
+.nwx-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:9999;display:flex;gap:8px;align-items:center;background:var(--ink);color:#fff;padding:8px 12px;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,.3);font-size:14px}
+.nwx-bar button{background:#fff;color:var(--ink);border:0;border-radius:6px;padding:5px 10px;cursor:pointer;font-weight:600}
+@media print{.nwx-bar{display:none!important}}
 .hr{border:0;border-top:1px dashed var(--rule);margin:10px 0}
 .kmeta2{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:10.5px;color:var(--soft);
   border-bottom:1px solid var(--rule);padding:6px 0;margin-bottom:6px}
@@ -665,7 +668,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-114</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-115</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -3068,11 +3071,24 @@ function nwDocHTML(x, kind){
     </div></div>`;
 }
 
-function nwPrint(html){
+let NWX_LAST = null;
+const nwxGuessName = html => { const a = html.indexOf('class="kt1">'); if(a < 0) return "เอกสาร"; const b = html.indexOf("</div>", a);
+  return html.slice(a + 12, b).split("<").map(x => x.split(">").pop()).join("").trim() || "เอกสาร"; };
+function nwPrint(html, name){
   const d = $("nwdoc"); if(!d) return;
-  d.innerHTML = html;
+  d.innerHTML = html; NWX_LAST = {html, name:name || nwxGuessName(html)};
   document.body.classList.add("nwprint");
-  setTimeout(()=>{ window.print(); document.body.classList.remove("nwprint"); }, 250);
+  setTimeout(()=>{ window.print(); document.body.classList.remove("nwprint"); nwxBar(); }, 250);
+}
+/* หลังพิมพ์ (ทุกเอกสาร): แถบเล็กด้านล่าง — ดาวน์โหลดเอกสารชุดเดียวกันเป็น Word (.docx) หรือรูป */
+function nwxBar(){
+  const old = $("nwx_bar"); if(old) old.remove(); if(!NWX_LAST) return;
+  const b = document.createElement("div"); b.id = "nwx_bar"; b.className = "nwx-bar";
+  b.innerHTML = `<span>เอกสาร «${esc(NWX_LAST.name)}»</span><button id="nwx_bw">ดาวน์โหลด Word (.docx)</button><button id="nwx_bi">รูป PNG</button><button id="nwx_bx" title="ปิด">✕</button>`;
+  document.body.appendChild(b);
+  $("nwx_bw").onclick = () => nwxRun("Word", () => nwxDocx(NWX_LAST.html, NWX_LAST.name));
+  $("nwx_bi").onclick = () => nwxRun("รูป", () => nwxPng(NWX_LAST.html, NWX_LAST.name));
+  $("nwx_bx").onclick = () => b.remove();
 }
 
 /* ============ ส่งออกเอกสาร: Word (.docx) และรูปภาพ (PNG) ============
@@ -3118,7 +3134,9 @@ async function nwxPng(html, base){
 /* ---------- Word ---------- */
 const NWX_ONE = {K:0.85, SC:0.9, mt:10, mb:10, ml:16, mr:8};      /* เอกสาร ๑ หน้า/ใบ: ขอบแคบแบบเดียวกับตอนพิมพ์ */
 const NWX_FIT = {K:0.72, SC:0.76, mt:8, mb:8, ml:16, mr:8};      /* สรุป ๑ หน้า (มีกราฟ): ย่อให้พอดี ๑ หน้า A4 */
-const NWX_FONT = "'TH Sarabun New','TH SarabunPSK',Tahoma,sans-serif";
+const NWX_FONT = "'TH Sarabun New','TH SarabunPSK',sans-serif";
+const NWX_MSO = "mso-ascii-font-family:'TH Sarabun New';mso-hansi-font-family:'TH Sarabun New';mso-bidi-font-family:'TH Sarabun New';mso-fareast-font-family:'TH Sarabun New';";
+const NWX_K16 = 16 / (15 * 0.75), NWX_K14 = 14 / (15 * 0.75);        /* ตัวอักษรหลักบนจอ 15px → 16 pt (หนังสือ/แบบฟอร์ม) หรือ 14 pt (สัญญา/แฟ้ม) */
 const nwxHex = c => { const m = String(c || "").match(/rgba?\(\s*(\d+)[ ,]+(\d+)[ ,]+(\d+)(?:[ ,/]+([\d.]+))?/); if(!m) return ""; if(m[4] !== undefined && +m[4] === 0) return "";
   return "#" + [m[1], m[2], m[3]].map(v => (+v).toString(16).padStart(2, "0")).join(""); };
 const nwxEsc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/ /g, "&nbsp;");
@@ -3132,19 +3150,20 @@ async function nwxSvgPng(svg){
 }
 
 /* DOM → HTML ที่ Word อ่านได้ · K = ตัวคูณขนาดอักษร · SC = ตัวคูณขนาดรูป */
-async function nwxWordBody(stage, K, SC){
+async function nwxWordBody(stage, K, SC, opt){
+  let LET = false, LH = false;                       /* LET = หนังสือ (ย่อหน้าแรก 2.5 ซม.) · LH = ระยะบรรทัด 1 เท่า */
   const sp = v => Math.round((parseFloat(v) || 0) * 0.75 * 10) / 10, fs = v => Math.round((parseFloat(v) || 0) * 0.75 * K * 2) / 2;
   const bdr = (cs, side) => { const w = parseFloat(cs["border" + side + "Width"]) || 0, st = cs["border" + side + "Style"]; if(!(w > 0) || st === "none" || st === "hidden") return "";
     return `border-${side.toLowerCase()}:${Math.max(0.5, Math.round(w * 0.75 * 2) / 2)}pt ${st === "dotted" || st === "dashed" ? st : "solid"} ${nwxHex(cs["border" + side + "Color"]) || "#000000"};`; };
   const box = (cs, noPad) => { let s = ["Top", "Right", "Bottom", "Left"].map(q => bdr(cs, q)).join("");
     const bg = nwxHex(cs.backgroundColor); if(bg && bg !== "#ffffff") s += `background:${bg};`;
-    if(!noPad) ["Top", "Right", "Bottom", "Left"].forEach(q => { const v = parseFloat(cs["padding" + q]) || 0; if(v > 0.5) s += `padding-${q.toLowerCase()}:${sp(v)}pt;`; });
+    if(!noPad) ["Top", "Right", "Bottom", "Left"].forEach(q => { const v = parseFloat(cs["padding" + q]) || 0; if(v > 0.5) s += `padding-${q.toLowerCase()}:${LH ? Math.min(sp(v), q === "Top" || q === "Bottom" ? 1.5 : 4) : sp(v)}pt;`; });
     return s; };
-  const txt = cs => { let s = `font-family:${NWX_FONT};font-size:${fs(cs.fontSize)}pt;`;
-    if((parseInt(cs.fontWeight, 10) || 400) >= 600) s += "font-weight:bold;"; if(cs.fontStyle === "italic") s += "font-style:italic;";
+  const txt = cs => { const z = fs(cs.fontSize); let s = `font-family:${NWX_FONT};${NWX_MSO}font-size:${z}pt;mso-bidi-font-size:${z}pt;`;
+    if((parseInt(cs.fontWeight, 10) || 400) >= 600) s += "font-weight:bold;mso-bidi-font-weight:bold;"; if(cs.fontStyle === "italic") s += "font-style:italic;mso-bidi-font-style:italic;";
     s += `color:${nwxHex(cs.color) || "#000000"};`; const td = cs.textDecorationLine; if(td && td !== "none") s += `text-decoration:${td};`; return s; };
   const align = cs => { const a = cs.textAlign; return a === "center" ? "center" : a === "right" || a === "end" ? "right" : a === "justify" ? "justify" : "left"; };
-  const lh = cs => { const l = parseFloat(cs.lineHeight), f = parseFloat(cs.fontSize); return l > 0 && f > 0 ? `line-height:${Math.round(Math.min(1.3, Math.max(1, l / f)) * 100)}%;` : ""; };
+  const lh = cs => { if(LH) return "line-height:100%;"; const l = parseFloat(cs.lineHeight), f = parseFloat(cs.fontSize); return l > 0 && f > 0 ? `line-height:${Math.round(Math.min(1.3, Math.max(1, l / f)) * 100)}%;` : ""; };
   const pseudo = (el, w) => { try{ const c = getComputedStyle(el, w).content; if(c && c !== "none" && c !== "normal" && c !== '""') return nwxEsc(c.replace(/^["']|["']$/g, "")); }catch(e){} return ""; };
   const skip = el => { const q = getComputedStyle(el); return /^(SCRIPT|STYLE|NOSCRIPT|BUTTON|INPUT|SELECT|TEXTAREA)$/.test(el.tagName) || q.display === "none" || q.visibility === "hidden" || q.position === "absolute" && !el.matches("svg,img")
     || el.classList.contains("pgno") || el.classList.contains("pgsig"); };
@@ -3197,25 +3216,58 @@ async function nwxWordBody(stage, K, SC){
     const inline = /^inline/.test(cs.display) && !n.matches(".dt"), inner = await kids(n), pre = pseudo(n, "::before"), post = pseudo(n, "::after");
     if(n.matches(".dt") && !n.textContent.trim()){ const w = n.getBoundingClientRect().width; return `<span style="${txt(cs)}">${"…".repeat(Math.max(3, Math.round(w / 5)))}</span>`; }   // ช่องว่างให้เขียนมือ
     if(inline) return `<span style="${txt(cs)}${(parseInt(cs.fontWeight, 10) || 400) >= 600 ? "" : ""}">${pre}${inner}${post}</span>`;
-    const li = cs.display === "list-item", cap = v => Math.min(6, sp(v)), mtb = `margin-top:${cap(cs.marginTop)}pt;margin-bottom:${cap(cs.marginBottom)}pt;`, mlf = (parseFloat(cs.marginLeft) || 0) + (li ? 14 : 0) > 0.5 ? `margin-left:${sp((parseFloat(cs.marginLeft) || 0) + (li ? 14 : 0))}pt;` : "";
+    const li = cs.display === "list-item", cap = v => Math.min(LH ? 2 : 6, sp(v)), mtb = `margin-top:${cap(cs.marginTop)}pt;margin-bottom:${cap(cs.marginBottom)}pt;`, mlf = (parseFloat(cs.marginLeft) || 0) + (li ? 14 : 0) > 0.5 ? `margin-left:${sp((parseFloat(cs.marginLeft) || 0) + (li ? 14 : 0))}pt;` : "";
     if(["Left", "Right"].some(q => parseFloat(cs["border" + q + "Width"]) > 0 && cs["border" + q + "Style"] !== "none"))          // กล่องมีขอบข้าง → ตาราง ๑ ช่อง (Word วาดขอบกล่องได้ครบกว่า)
       return `<table cellspacing="0" cellpadding="0" style="width:100%;border-collapse:collapse;${mtb}"><tr><td style="${box(cs)}${txt(cs)}${lh(cs)}text-align:${align(cs)};vertical-align:top">${pre}${inner}${post}</td></tr></table>`;
-    return `<div style="${txt(cs)}${lh(cs)}text-align:${align(cs)};${mtb}${mlf}${box(cs)}">${li ? "• " : ""}${pre}${inner}${post}</div>`;
+    return `<div style="${txt(cs)}${lh(cs)}text-align:${align(cs)};${LET && n.matches(".i2") ? "text-indent:2.5cm;" : ""}${mtb}${mlf}${box(cs)}">${li ? "• " : ""}${pre}${inner}${post}</div>`;
   }
 
   const brk = `<p style="margin:0;font-size:1pt;line-height:1pt;page-break-before:always">&nbsp;</p>`;
-  let o = "", i = 0; for(const pgEl of [...stage.children]){ if(i++) o += brk; o += await conv(pgEl); }
+  let o = "", i = 0; for(const pgEl of [...stage.children]){ if(i++) o += brk;
+    const pm = opt && opt.pageMode ? opt.pageMode(pgEl) : null; if(pm){ K = pm.K; LET = !!pm.let; LH = true; }
+    if(pm){ const pc = getComputedStyle(pgEl); o += `<div style="${txt(pc)}line-height:100%;text-align:left">${await kids(pgEl)}</div>`; }      /* หน้ากระดาษ: ไม่ใส่ padding ของจอ — ขอบมาจากตั้งค่าหน้า */
+    else o += await conv(pgEl); }
   return o;
 }
 
 async function nwxDocx(html, base, o){
-  o = o || {}; await Promise.all([nwxLoad("hd")]); const st = nwxStage(html); let body;
+  o = o || {}; await Promise.all([nwxLoad("hd"), nwxLoad("jz")]); const st = nwxStage(html), segs = [];
   try{ await (document.fonts && document.fonts.ready);
-    const K = o.K || ((st.firstElementChild && st.firstElementChild.classList.contains("kpage")) ? 1.3 : 1), SC = o.SC || 0.85;
-    body = await nwxWordBody(st, K, SC);
+    const kind = el => !el.classList.contains("kpage") ? "plain" : el.classList.contains("kc") ? "con" : el.classList.contains("kd") ? "k14" : "let";
+    let cur = null;
+    for(const el of [...st.children]){ const k = kind(el);
+      if(!cur || cur.k !== k || (k !== "plain" && el.classList.contains("k1"))){ cur = {k, els:[]}; segs.push(cur); }          /* เอกสารใหม่ = เริ่มส่วนใหม่ (เลขหน้าเริ่ม 1 ใหม่) */
+      cur.els.push(el); }
+    for(const g of segs){ const pm = g.k === "plain" ? null : {K:g.k === "let" ? NWX_K16 : NWX_K14, let:g.k === "let"};
+      g.body = await nwxWordBody({children:g.els}, o.K || 1, o.SC || 0.85, {pageMode:pm ? () => pm : null}); }
   } finally { st.remove(); }
-  const mm = v => Math.round(v * 56.7), full = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${nwxEsc(base || "")}</title><style>body{font-family:${NWX_FONT}}p{margin:0}</style></head><body>${body}</body></html>`;
-  const blob = htmlDocx.asBlob(full, {orientation:"portrait", margins:{top:mm(o.mt || 15), right:mm(o.mr || 15), bottom:mm(o.mb || 15), left:mm(o.ml || 20), header:mm(8), footer:mm(8), gutter:0}});
+  const mm = v => Math.round(v * 56.7);
+  for(const g of segs){ const kp = g.k !== "plain";
+    g.m = kp ? {top:15, right:20, bottom:20, left:30} : {top:o.mt || 15, right:o.mr || 15, bottom:o.mb || 15, left:o.ml || 20};
+    const full = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${nwxEsc(base || "")}</title><style>body{font-family:${NWX_FONT};${NWX_MSO}font-size:${kp ? (g.k === "let" ? 16 : 14) : 11}pt;mso-bidi-font-size:${kp ? (g.k === "let" ? 16 : 14) : 11}pt}p{margin:0}</style></head><body>${g.body}</body></html>`;
+    const bl = htmlDocx.asBlob(full, {orientation:"portrait", margins:{top:mm(g.m.top), right:mm(g.m.right), bottom:mm(g.m.bottom), left:mm(g.m.left), header:mm(7), footer:mm(8), gutter:0}});
+    g.zip = await JSZip.loadAsync(bl); g.mht = await g.zip.file("word/afchunk.mht").async("string"); }
+  const NW_ = "http:\/\/schemas.openxmlformats.org/wordprocessingml/2006/main", NR_ = "http:\/\/schemas.openxmlformats.org/officeDocument/2006/relationships", NP_ = "http:\/\/schemas.openxmlformats.org/package/2006/relationships", NC_ = "http:\/\/schemas.openxmlformats.org/package/2006/content-types";
+  const XH = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>', FN = '<w:rFonts w:ascii="TH Sarabun New" w:hAnsi="TH Sarabun New" w:eastAsia="TH Sarabun New" w:cs="TH Sarabun New"/>';
+  const SP0 = '<w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/>', ns = `xmlns:w="${NW_}" xmlns:r="${NR_}"`;
+  const part = (tag, inner) => `${XH}<w:${tag} ${ns}>${inner}</w:${tag}>`, rp = z => `<w:rPr>${FN}<w:sz w:val="${z}"/><w:szCs w:val="${z}"/></w:rPr>`;
+  const z = segs[0].zip; z.remove("word/afchunk.mht");
+  z.file("word/styles.xml", `${XH}<w:styles ${ns}><w:docDefaults><w:rPrDefault><w:rPr>${FN}<w:sz w:val="32"/><w:szCs w:val="32"/><w:lang w:val="en-US" w:eastAsia="en-US" w:bidi="th-TH"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr>${SP0}</w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style></w:styles>`);
+  z.file("word/header_num.xml", part("hdr", `<w:p><w:pPr>${SP0}<w:jc w:val="center"/></w:pPr><w:fldSimple w:instr=" PAGE "><w:r>${rp(32)}<w:t>2</w:t></w:r></w:fldSimple></w:p>`));
+  z.file("word/header_empty.xml", part("hdr", "<w:p/>"));
+  z.file("word/footer_init.xml", part("ftr", `<w:p><w:pPr>${SP0}<w:jc w:val="right"/></w:pPr><w:r>${rp(28)}<w:t xml:space="preserve">ลงชื่อกำกับ ..............................</w:t></w:r></w:p>`));
+  z.file("word/footer_empty.xml", part("ftr", "<w:p/>"));
+  let body = "", rels = "", ct = "";
+  segs.forEach((g, i) => { const n = i + 1, kp = g.k !== "plain", fr = g.k === "con" ? "rIdFi" : "rIdFe";
+    z.file(`word/afchunk${n}.mht`, g.mht); rels += `<Relationship Id="htmlChunk${n}" Type="${NR_}/aFChunk" Target="/word/afchunk${n}.mht"/>`; ct += `<Override PartName="/word/afchunk${n}.mht" ContentType="message/rfc822"/>`;
+    const sect = `<w:sectPr><w:headerReference w:type="default" r:id="${kp ? "rIdHn" : "rIdHe"}"/><w:headerReference w:type="first" r:id="rIdHe"/><w:footerReference w:type="default" r:id="${fr}"/><w:footerReference w:type="first" r:id="${fr}"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="${mm(g.m.top)}" w:right="${mm(g.m.right)}" w:bottom="${mm(g.m.bottom)}" w:left="${mm(g.m.left)}" w:header="${mm(7)}" w:footer="${mm(8)}" w:gutter="0"/><w:pgNumType w:start="1"/>${kp ? "<w:titlePg/>" : ""}</w:sectPr>`;
+    body += `<w:altChunk r:id="htmlChunk${n}"/>` + (i < segs.length - 1 ? `<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/>${sect}</w:pPr></w:p>` : sect); });
+  rels += `<Relationship Id="rIdHn" Type="${NR_}/header" Target="/word/header_num.xml"/><Relationship Id="rIdHe" Type="${NR_}/header" Target="/word/header_empty.xml"/><Relationship Id="rIdFi" Type="${NR_}/footer" Target="/word/footer_init.xml"/><Relationship Id="rIdFe" Type="${NR_}/footer" Target="/word/footer_empty.xml"/><Relationship Id="rIdSt" Type="${NR_}/styles" Target="/word/styles.xml"/>`;
+  z.file("word/_rels/document.xml.rels", `${XH}<Relationships xmlns="${NP_}">${rels}</Relationships>`);
+  z.file("word/document.xml", `${XH}<w:document ${ns}><w:body>${body}</w:body></w:document>`);
+  const WM = "application\/vnd.openxmlformats-officedocument.wordprocessingml";
+  z.file("[Content_Types].xml", `${XH}<Types xmlns="${NC_}"><Default Extension="rels" ContentType="application\/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application\/xml"/><Override PartName="/word/document.xml" ContentType="${WM}.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="${WM}.styles+xml"/><Override PartName="/word/header_num.xml" ContentType="${WM}.header+xml"/><Override PartName="/word/header_empty.xml" ContentType="${WM}.header+xml"/><Override PartName="/word/footer_init.xml" ContentType="${WM}.footer+xml"/><Override PartName="/word/footer_empty.xml" ContentType="${WM}.footer+xml"/>${ct}</Types>`);
+  const blob = await z.generateAsync({type:"blob", mimeType:WM + ".document"});
   nwxSave(blob, nwxName(base) + ".docx"); return blob;
 }
 
@@ -3893,7 +3945,7 @@ function nwLoanCardHTML(k){
         <div><label>วันที่ทำสัญญา</label><input type="date" data-nlf="${k}|d" value="${esc(g.d || "")}"></div>
         <div><label>เลขที่สัญญา</label><input data-nlf="${k}|code" value="${esc(g.code || "")}" placeholder="ออกอัตโนมัติ: ${esc(nwNextConNo(g.d))}" title="ว่าง = ออกเลขต่อจากเลขที่สัญญาล่าสุดให้เอง"></div></div>
       <div class="bar" style="margin-top:8px;flex-wrap:wrap">
-        <button class="ghost" data-nlc="apply|${k}" title="พิมพ์แบบคำขอกู้ ตามด้วยหนังสือยินยอมเป็นผู้ค้ำประกัน (ผู้ค้ำละ 1 ฉบับ)">พิมพ์แบบคำขอกู้${g.cons !== false ? " + หนังสือยินยอมผู้ค้ำ" : ""}</button><label class="rlf" style="margin:0"><input type="checkbox" data-nlf="${k}|cons" ${g.cons !== false ? "checked" : ""}> รวมหนังสือยินยอมผู้ค้ำ</label><button class="ghost" data-nlc="sched|${k}">พิมพ์ตารางชำระหนี้ A4</button>
+        <button class="ghost" data-nlc="apply|${k}" title="พิมพ์แบบคำขอกู้ ตามด้วยหนังสือยินยอมเป็นผู้ค้ำประกัน (ผู้ค้ำละ 1 ฉบับ)">พิมพ์แบบคำขอกู้${g.cons !== false ? " + หนังสือยินยอมผู้ค้ำ" : ""}</button><button class="ghost" data-nlc="applyw|${k}" title="บันทึกเป็น Word (.docx) — TH Sarabun New ตามมาตรฐานเอกสาร">Word</button><label class="rlf" style="margin:0"><input type="checkbox" data-nlf="${k}|cons" ${g.cons !== false ? "checked" : ""}> รวมหนังสือยินยอมผู้ค้ำ</label><button class="ghost" data-nlc="sched|${k}">พิมพ์ตารางชำระหนี้ A4</button><button class="ghost" data-nlc="schedw|${k}" title="บันทึกตารางชำระหนี้เป็น Word (.docx)">Word</button>
         <button data-nlc="save|${k}" style="margin-left:auto" title="ยืนยันคำขอกู้ และออกเลขที่สัญญา — ยังไม่อนุมัติ ยังไม่ลงทะเบียนการกู้">บันทึกคำขอกู้ (ออกเลขที่สัญญา)</button></div>
       <p class="hint" style="margin:6px 0">งวดที่ 1 กำหนดชำระ <b>${thDay(p1)}</b> · งวดสุดท้าย (งวดที่ ${N}) <b>${thDay(dueOfTerm(p1, N))}</b> · ผู้ค้ำต้องไม่มีงวดค้างและต้องเป็นสมาชิก · อนุมัติเท่าไหร่เป็นดุลพินิจของประธาน (สัญญาข้อ 1.6)</p>
       <details class="opn"><summary>ตารางการชำระหนี้ที่คำนวณได้ (${N} งวด)</summary><div class="tbl" style="max-height:360px"><table><thead><tr><th>งวด</th><th class="l">กำหนดชำระ</th><th>ยอดส่ง</th><th>เงินต้น</th><th>ดอกเบี้ย</th><th>หุ้นประจำ</th><th>หุ้นเพิ่ม</th><th>คงเหลือ</th></tr></thead><tbody>
@@ -4896,9 +4948,10 @@ function drawNWLoanDash(){
     if(act === "calc"){ if(!g.no){ alert("เลือกผู้ขอกู้ก่อน"); return; } g.go = true; redraw(); const t = $("nl_" + k); if(t) t.scrollIntoView({behavior:"smooth", block:"start"}); return; }
     const C = nwLoanCalc(k, g); if(C.err){ alert(C.err); return; }
     const p1 = g.p1 || firstDue();
-    if(act === "apply"){ const ao = {no:g.no, prod:PK, M:C.Mpay, Mmax:C.M, B:C.B, N:C.N, i:C.i, P0:C.P0, want:C.want, cap:C.cap, g1:g.g1, g2:g.g2, code:(g.code || "").trim() || nwNextConNo(g.d)};
-      nwPrint(docApply(ao) + (g.cons !== false ? docApplyConsents(ao, g.d) : "")); }
-    else if(act === "sched") nwPrint(docSched({prod:PK, mode:"calc", amt:C.P0, terms:C.N, inst:C.Mpay, shareM:C.B, no:g.no, code:(g.code || "").trim(), d:g.d, p1}));
+    const wd = act.endsWith("w"), emit = (h, nm) => wd ? nwxRun(nm + " → Word", () => nwxDocx(h, nm + "-" + nwNmOf(g.no))) : nwPrint(h, nm);
+    if(act === "apply" || act === "applyw"){ const ao = {no:g.no, prod:PK, M:C.Mpay, Mmax:C.M, B:C.B, N:C.N, i:C.i, P0:C.P0, want:C.want, cap:C.cap, g1:g.g1, g2:g.g2, code:(g.code || "").trim() || nwNextConNo(g.d)};
+      emit(docApply(ao) + (g.cons !== false ? docApplyConsents(ao, g.d) : ""), "แบบคำขอกู้เงิน"); }
+    else if(act === "sched" || act === "schedw") emit(docSched({prod:PK, mode:"calc", amt:C.P0, terms:C.N, inst:C.Mpay, shareM:C.B, no:g.no, code:(g.code || "").trim(), d:g.d, p1}), "ตารางชำระหนี้");
     else if(act === "save"){
       const P = PROD[PK], dup = nwApps().find(q => q.no === g.no && q.prod === PK && q.status === "ขอกู้");
       if(dup && !confirm(`${nwNmOf(g.no)} มีคำขอกู้สินเชื่อ${PK}ที่ยังไม่เสร็จอยู่แล้ว (เลขที่ ${dup.code})\n\nบันทึกคำขอใหม่เพิ่มหรือไม่?`)) return;
