@@ -619,7 +619,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-105</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-106</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -3806,7 +3806,7 @@ function nwLoanCardHTML(k){
         <div><label>วันที่ทำสัญญา</label><input type="date" data-nlf="${k}|d" value="${esc(g.d || "")}"></div>
         <div><label>เลขที่สัญญา</label><input data-nlf="${k}|code" value="${esc(g.code || "")}" placeholder="กบขนข-69/…"></div></div>
       <div class="bar" style="margin-top:8px;flex-wrap:wrap">
-        <button class="ghost" data-nlc="apply|${k}">พิมพ์แบบคำขอกู้</button><button class="ghost" data-nlc="sched|${k}">พิมพ์ตารางชำระหนี้ A4</button>
+        <button class="ghost" data-nlc="apply|${k}" title="พิมพ์แบบคำขอกู้ ตามด้วยหนังสือยินยอมเป็นผู้ค้ำประกัน (ผู้ค้ำละ 1 ฉบับ)">พิมพ์แบบคำขอกู้${g.cons !== false ? " + หนังสือยินยอมผู้ค้ำ" : ""}</button><label class="rlf" style="margin:0"><input type="checkbox" data-nlf="${k}|cons" ${g.cons !== false ? "checked" : ""}> รวมหนังสือยินยอมผู้ค้ำ</label><button class="ghost" data-nlc="sched|${k}">พิมพ์ตารางชำระหนี้ A4</button>
         <button data-nlc="add|${k}" style="margin-left:auto" title="บันทึกเป็นสัญญาในทะเบียนสัญญา แล้วไปพิมพ์สัญญาและสัญญาค้ำที่แท็บ พิมพ์สัญญา">สร้างสัญญา &amp; ไปพิมพ์เอกสาร</button></div>
       <p class="hint" style="margin:6px 0">งวดที่ 1 กำหนดชำระ <b>${thDay(p1)}</b> · งวดสุดท้าย (งวดที่ ${N}) <b>${thDay(dueOfTerm(p1, N))}</b> · ผู้ค้ำต้องไม่มีงวดค้างและต้องเป็นสมาชิก · อนุมัติเท่าไหร่เป็นดุลพินิจของประธาน (สัญญาข้อ 1.6)</p>
       <details class="opn"><summary>ตารางการชำระหนี้ที่คำนวณได้ (${N} งวด)</summary><div class="tbl" style="max-height:360px"><table><thead><tr><th>งวด</th><th class="l">กำหนดชำระ</th><th>ยอดส่ง</th><th>เงินต้น</th><th>ดอกเบี้ย</th><th>หุ้นประจำ</th><th>หุ้นเพิ่ม</th><th>คงเหลือ</th></tr></thead><tbody>
@@ -4588,13 +4588,14 @@ function drawNWLoanDash(){
   el.querySelectorAll("[data-gog]").forEach(b => b.onclick = () => goTab(28));
   el.querySelectorAll("[data-nlg]").forEach(b => b.onclick = () => { const t = $(b.dataset.nlg); if(t) t.scrollIntoView({behavior:"smooth", block:"start"}); });
   el.querySelectorAll("[data-nlf]").forEach(i => i.addEventListener("change", () => { const [k, f] = i.dataset.nlf.split("|"), g = S.nlc[k];
-    g[f] = i.type === "number" ? (i.value === "" ? "" : +i.value) : i.value;
+    g[f] = i.type === "checkbox" ? i.checked : i.type === "number" ? (i.value === "" ? "" : +i.value) : i.value; if(f === "cons"){ redraw(); return; }
     if(f === "no"){ const x = NW.person(g.no); if(x && nwAcct(x, k).shM) g.B = nwAcct(x, k).shM; else if(x && nwAcct(x, k === "sam" ? "dk" : "sam").shM) g.B = nwAcct(x, k === "sam" ? "dk" : "sam").shM; g.go = false; redraw(); } }));
   el.querySelectorAll("[data-nlc]").forEach(b => b.onclick = () => { const [act, k] = b.dataset.nlc.split("|"), g = S.nlc[k], PK = NLP[k];
     if(act === "calc"){ if(!g.no){ alert("เลือกผู้ขอกู้ก่อน"); return; } g.go = true; redraw(); const t = $("nl_" + k); if(t) t.scrollIntoView({behavior:"smooth", block:"start"}); return; }
     const C = nwLoanCalc(k, g); if(C.err){ alert(C.err); return; }
     const p1 = g.p1 || firstDue();
-    if(act === "apply") nwPrint(docApply({no:g.no, prod:PK, M:C.Mpay, Mmax:C.M, B:C.B, N:C.N, i:C.i, P0:C.P0, want:C.want, cap:C.cap, g1:g.g1, g2:g.g2}));
+    if(act === "apply"){ const ao = {no:g.no, prod:PK, M:C.Mpay, Mmax:C.M, B:C.B, N:C.N, i:C.i, P0:C.P0, want:C.want, cap:C.cap, g1:g.g1, g2:g.g2, code:(g.code || "").trim()};
+      nwPrint(docApply(ao) + (g.cons !== false ? docApplyConsents(ao, g.d) : "")); }
     else if(act === "sched") nwPrint(docSched({prod:PK, mode:"calc", amt:C.P0, terms:C.N, inst:C.Mpay, shareM:C.B, no:g.no, code:(g.code || "").trim(), d:g.d, p1}));
     else if(act === "add"){ if(!g.d){ alert("กรุณาเลือกวันที่ทำสัญญา"); return; }
       const id = "C" + Math.random().toString(36).slice(2, 8);
@@ -8165,10 +8166,10 @@ function docGuar(c, idx){
 }
 
 /* ---------- 3) หนังสือยินยอมเป็นผู้ค้ำประกัน (2 หน้า) ---------- */
-function docConsent(c, idx){
+function docConsent(c, idx, blank){
   const m=DB.members.find(z=>z.no===c.no)||{name:memName(c.no),no:c.no};
-  const gno=[c.g1,c.g2][idx-1]; if(!gno) return "";
-  const g=DB.members.find(z=>z.no===gno)||{no:gno,name:memName(gno)}; const p=prof(g.no);
+  const gno=[c.g1,c.g2][idx-1]; if(!gno && !blank) return "";
+  const g=gno ? (DB.members.find(z=>z.no===gno)||{no:gno,name:memName(gno)}) : {no:"",name:""}; const p=gno ? prof(g.no) : {};
   const cap=capOf(c), P=PROD[c.prod];
   const isDK = c.prod==="ดูแลกัน";
 
@@ -8507,10 +8508,15 @@ const DOCS_REQ = [
   ["สำเนาหน้าสมุดบัญชีธนาคารของผู้ขอกู้", "บัญชีที่จะใช้โอนชำระหนี้ · ระบบใช้จับคู่เงินเข้าอัตโนมัติ", 1],
   ["สำเนาบัตรประจำตัวประชาชนของผู้ค้ำประกัน", "ทุกคน · รับรองสำเนาถูกต้อง", 2],
   ["สำเนาทะเบียนบ้านของผู้ค้ำประกัน", "ทุกคน · รับรองสำเนาถูกต้อง", 2],
-  ["หนังสือยินยอมเป็นผู้ค้ำประกัน ที่ลงนามแล้ว", "ผู้ค้ำละ 1 ฉบับ · ระบบพิมพ์ให้ที่แท็บ «พิมพ์สัญญา»", 2],
+  ["หนังสือยินยอมเป็นผู้ค้ำประกัน ที่ลงนามแล้ว", "ผู้ค้ำละ 1 ฉบับ · พิมพ์ต่อท้ายแบบคำขอนี้ให้แล้ว (ให้ผู้ค้ำลงนาม)", 2],
   ["สำเนาบัตรประจำตัวประชาชนของผู้รับผลประโยชน์", "เฉพาะกรณีระบุผู้รับผลประโยชน์ตามข้อ 6.5", 0],
 ];
 
+function docApplyConsents(o, d){
+  const P = PROD[o.prod] || PROD["สามัญ"], tmp = {no:o.no, prod:o.prod, mode:"calc", amt:o.P0, terms:o.N, inst:o.M, shareM:o.B, d:d || "", code:o.code || "", g1:o.g1 || "", g2:o.g2 || ""};
+  let out = ""; for(let i = 1; i <= Math.min(2, P.guar || 0); i++) out += docConsent(tmp, i, true);
+  return out;
+}
 function docApply(o){
   const m = DB.members.find(z=>z.no===o.no) || {name:memName(o.no),no:o.no,share:0};
   const p = prof(o.no), P = PROD[o.prod] || PROD["สามัญ"];
@@ -8798,8 +8804,7 @@ function renderCalc(){
   $("n_apply").onclick = () => {
     $("a_doc").innerHTML = `<div class="eyebrow" style="margin-top:14px">แบบคำขอกู้
       <button class="ghost sm" onclick="document.body.classList.add('aprint');setTimeout(()=>{window.print();document.body.classList.remove('aprint')},250)">พิมพ์แบบคำขอ</button></div>`
-      + docApply({no:$("n_no").value, prod:$("n_prod").value, M:Mpay, Mmax:M, B:bs, N, i, P0, want, cap,
-                  g1:$("n_g1").value, g2:$("n_g2").value});
+      + (() => { const ao = {no:$("n_no").value, prod:$("n_prod").value, M:Mpay, Mmax:M, B:bs, N, i, P0, want, cap, g1:$("n_g1").value, g2:$("n_g2").value}; return docApply(ao) + docApplyConsents(ao, ""); })();
     try{ $("a_doc").scrollIntoView({behavior:"smooth",block:"start"}); }catch(e){}
   };
   $("n_sched").onclick = () => {
