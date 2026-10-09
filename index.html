@@ -612,7 +612,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-88</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-89</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -4802,7 +4802,7 @@ function drawNWRc(){
     <div class="pf">
       <div><label>เดือนที่ต้องการพิมพ์</label><div style="display:flex;gap:6px"><button class="ghost sm" id="rc_prev" title="เดือนก่อนหน้า">◀</button>
         <select id="rc_m">${mo.join("")}</select><button class="ghost sm" id="rc_next" title="เดือนถัดไป">▶</button></div></div>
-      <div style="align-self:end"><button class="ghost" id="rg_print" ${withR.length ? "" : "disabled"}>🗂 พิมพ์ทะเบียนคุมใบเสร็จ ${nwPFull(p)}</button></div>
+      <div style="align-self:end;display:flex;gap:6px;flex-wrap:wrap"><button class="ghost" id="rg_print" ${withR.length ? "" : "disabled"}>🗂 พิมพ์ทะเบียนคุมใบเสร็จ ${nwPFull(p)}</button><button class="ghost" id="rg_w" ${withR.length ? "" : "disabled"} title="บันทึกทะเบียนคุมใบเสร็จเป็นไฟล์ Word (.docx)">Word</button><button class="ghost" id="rg_i" ${withR.length ? "" : "disabled"} title="บันทึกทะเบียนคุมใบเสร็จเป็นรูป PNG">บันทึกเป็นรูป</button></div>
     </div>
     <p class="hint" style="margin:8px 0 0">ดึงจากรายการที่กรอกไว้ในทะเบียนเดือน ${nwPFull(p)} · ใบเสร็จ 1 คนต่อ 1 หน้า A4 · ยอดยกมา/คงเหลือคือยอด ณ สิ้นเดือน · คนที่ไม่มีรายการในเดือนนี้จะไม่ถูกพิมพ์ · ทะเบียนคุมรวมทุกใบที่ออกในเดือนนี้ พร้อมช่องลงชื่อผู้รับใบเสร็จ</p>
   </div>
@@ -4831,7 +4831,7 @@ function drawNWRc(){
       </tbody></table></div>
   </div>
   ${cur ? `<div class="card"><div class="bar" style="margin:0 0 8px"><span class="eyebrow" style="margin:0">ตัวอย่างใบเสร็จ · ${esc(cur.no)} ${esc(cur.name)}</span>
-      <button class="ghost sm" id="rc_p1" style="margin-left:auto">พิมพ์ใบนี้</button></div>${nwRcDoc(cur, p)}</div>` : ""}
+      <span style="margin-left:auto;display:flex;gap:6px"><button class="ghost sm" id="rc_p1">พิมพ์ใบนี้</button><button class="ghost sm" id="rc_p1w" title="บันทึกใบเสร็จใบนี้เป็นไฟล์ Word (.docx)">Word</button><button class="ghost sm" id="rc_p1i" title="บันทึกใบเสร็จใบนี้เป็นรูป PNG">บันทึกเป็นรูป</button></span></div>${nwRcDoc(cur, p)}</div>` : ""}
   ${withR.length ? `<details class="card" style="overflow-x:auto"><summary class="eyebrow" style="cursor:pointer;margin:0">ตัวอย่างทะเบียนคุมใบเสร็จ ${nwPFull(p)}</summary>${nwRgDoc(p)}</details>` : ""}
   </div>
   <div class="nwdoc" id="nwdoc"></div>`;
@@ -4847,6 +4847,10 @@ function drawNWRc(){
   el.querySelectorAll("[data-rc]").forEach(tr => tr.onclick = () => { S.rcv = tr.dataset.rc; redo(); const c = $("rc_p1"); if(c) c.scrollIntoView({behavior:"smooth", block:"start"}); });
   const go = arr => nwPrint(arr.map(x => nwRcDoc(x, p)).join(""));
   if($("rc_p1")) $("rc_p1").onclick = () => go([cur]);
+  if($("rc_p1w")) $("rc_p1w").onclick = () => nwxRun("ใบเสร็จ → Word", () => nwxDocx(nwRcDoc(cur, p), `ใบเสร็จ-${p}-${cur.no}-${cur.name}`, NWX_ONE));
+  if($("rc_p1i")) $("rc_p1i").onclick = () => nwxRun("ใบเสร็จ → รูป", () => nwxPng(nwRcDoc(cur, p), `ใบเสร็จ-${p}-${cur.no}-${cur.name}`));
+  $("rg_w").onclick = () => { if(withR.length) nwxRun("ทะเบียนคุมใบเสร็จ → Word", () => nwxDocx(nwRgDoc(p), `ทะเบียนคุมใบเสร็จ-${p}`, NWX_ONE)); };
+  $("rg_i").onclick = () => { if(withR.length) nwxRun("ทะเบียนคุมใบเสร็จ → รูป", () => nwxPng(nwRgDoc(p), `ทะเบียนคุมใบเสร็จ-${p}`)); };
   $("rc_w").onclick = () => { if(chosen.length) nwxRun("ใบเสร็จ → Word", () => nwxDocx(chosen.map(a => nwRcDoc(a.x, p)).join(""), `ใบเสร็จ-${p}-${chosen.length}ใบ`, NWX_ONE)); };
   $("rc_i").onclick = () => { if(chosen.length) nwxRun("ใบเสร็จ → รูป", () => nwxPng(chosen.map(a => nwRcDoc(a.x, p)).join(""), `ใบเสร็จ-${p}`)); };
   $("rc_print").onclick = () => { if(!chosen.length) return;
