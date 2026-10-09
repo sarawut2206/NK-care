@@ -619,7 +619,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-99</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-100</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -4639,13 +4639,13 @@ function nwStatusData(){
   const outNow = r2(outs.reduce((u, x) => u + nwState(x).shares, 0)), outOpen = r2(outs.reduce((u, x) => u + at(nwSeries(x), "2568-12", "shares"), 0));
   const sumInt = (a, b) => r2(D.tot.filter(t => pNum(t.p) >= pNum(a) && pNum(t.p) <= pNum(b)).reduce((u, t) => u + t.int, 0));
   const lfl = yr >= 2569 && m >= 5 ? {a:sumInt(`${yr - 1}-05`, `${yr - 1}-${pad(m)}`), b:sumInt(`${yr}-05`, `${yr}-${pad(m)}`), from:`${yr - 1}-05`, to:`${yr}-${pad(m)}`} : null;
-  const cfg = (S.nw && S.nw.dash) || {}, mR = +cfg.ret > 0 ? +cfg.ret : 0, mO = +cfg.retOpen > 0 ? +cfg.retOpen : 0;      // ยอดคืนทุนที่กรอกเอง (ถ้ามี) ใช้แทนที่คำนวณจากผู้ลาออกในทะเบียน
-  const ret = mR || (outs.length ? outNow : 0), retOpen = mO || mR || outOpen;
+  const cfg = (S.nw && S.nw.dash) || {}, mR = +cfg.ret > 0 ? +cfg.ret : 0, hasO = cfg.retOpen !== undefined && cfg.retOpen !== "" && cfg.retOpen !== null && isFinite(+cfg.retOpen), mO = hasO ? +cfg.retOpen : null;      // ยอดคืนทุนที่กรอกเอง (ถ้ามี) ใช้แทนที่คำนวณจากผู้ลาออกในทะเบียน
+  const ret = mR || (outs.length ? outNow : 0), retOpen = hasO ? mO : (mR || outOpen), showNet = hasO || (!mR && outs.length > 0);   // แสดงทุนสุทธิหลังคืนทุนเมื่อรู้ทุนต้นปีของผู้ที่คืนทุน (กรอกเอง หรือมีผู้ลาออกในทะเบียน)
   const tot0 = r2(D.open.sh + retOpen), dTot = r2(D.shNow - tot0);
-  return {O, D, yr, outs, outNow, outOpen, ret, retOpen, mR, mO, lfl, tot0, dTot, pTot:tot0 > 0 ? dTot / tot0 * 100 : 0};
+  return {O, D, yr, outs, outNow, outOpen, ret, retOpen, showNet, mR, mO, lfl, tot0, dTot, pTot:tot0 > 0 ? dTot / tot0 * 100 : 0};
 }
 function nwStatusDoc(){
-  const Z = nwStatusData(), {O, D, yr, outs, ret, retOpen, lfl, dTot} = Z, today = nwToday(), pl = nwPFull(D.end).split(" ")[0];
+  const Z = nwStatusData(), {O, D, yr, outs, ret, retOpen, showNet, lfl, dTot} = Z, today = nwToday(), pl = nwPFull(D.end).split(" ")[0];
   const kpi = (l, val, cap, clr) => `<div class="ov-kpi" style="border-top:4px solid ${clr}"><div class="ov-kl">${l}</div><div class="ov-kv">${val}</div><div class="ov-kc">${cap}</div></div>`;
   const mm = q => thMS(q).slice(0, -2), tri = v => v >= 0 ? "▲" : "▼", pc = v => Math.abs(v).toFixed(1), sgn = v => (v >= 0 ? "+" : "−") + tM(Math.abs(v)), U = t => `<small>${t}</small>`;
   const avg69 = O.n69 ? O.int69 / O.n69 : 0, grow = O.chgS >= 0, lflPct = lfl && lfl.a > 0 ? (lfl.b - lfl.a) / lfl.a * 100 : null;
@@ -4653,7 +4653,7 @@ function nwStatusDoc(){
   const stP = [{l:"ผู้กู้ ชำระปกติ", v:O.okP, c:"#1F3A68"}, {l:"ผู้กู้ อยู่ระหว่างติดตาม", v:O.arrP, c:"#C4570F"}, {l:"ผู้ฝาก", v:O.nSave, c:"#1B7F5A"}];
   const tiles = [
     kpi(grow ? "ทุนสมาชิกเติบโตต่อเนื่อง" : "ทุนสมาชิก", `${tM(D.shNow)} ${U("บาท")}`,
-      `${tri(O.chgS)} ${sgn(O.chgS)} บาท (${O.chgS >= 0 ? "+" : "−"}${pc(O.pctS)}%) จากต้นปี${ret > 0 ? `<div class="ov-kn">${grow && dTot > 0 ? `แม้มีการคืนทุนสมาชิกประมาณ ${tM(ret)} บาท แต่ทุนรวมยังเพิ่มขึ้น` : `มีการคืนทุนสมาชิกประมาณ ${tM(ret)} บาท`} · ทุนสุทธิหลังคืนทุน ${sgn(dTot)} บาท</div>` : ""}`, "#1F3A68"),
+      `${tri(O.chgS)} ${sgn(O.chgS)} บาท (${O.chgS >= 0 ? "+" : "−"}${pc(O.pctS)}%) จากต้นปี${ret > 0 ? `<div class="ov-kn">${grow ? "แม้คืนทุนสมาชิกประมาณ" : "คืนทุนสมาชิกประมาณ"} ${tM(ret)} บาท${showNet ? ` · ทุนสุทธิหลังคืนทุน ${sgn(dTot)} บาท` : ""}</div>` : ""}`, "#1F3A68"),
     kpi("เงินให้สมาชิกกู้หมุนเวียน", `${tM(D.dbNow)} ${U("บาท")}`, `ผู้กู้ ${O.nLoan} คน<div class="ov-kn">(เงินทุนหมุนเวียนจากเงินสะสมและรายได้ของกลุ่มบุคคล)</div>`, "#C4570F"),
     kpi("รายได้ดอกเบี้ยสะสม", `${tM(O.int69)} ${U("บาท")}`, lflPct === null ? `เฉลี่ยเดือนละ ${tM(avg69)} บาท` : `${tri(lflPct)} ${lflPct >= 0 ? "+" : "−"}${pc(lflPct)}% จากช่วงเดียวกันของปีก่อน<div class="ov-kn">เฉลี่ยเดือนละ ${tM(avg69)} บาท</div>`, "#1B7F5A"),
     kpi("สถานะสมาชิกและการชำระเงิน", `${O.n} ${U("คน")}`, `ผู้กู้ชำระปกติ <b>${O.okP}</b> · อยู่ระหว่างติดตาม <b>${O.arrP}</b> · ผู้ฝาก <b>${O.nSave}</b>`, "#6B4FA0")].join("");
@@ -4673,7 +4673,7 @@ function nwStatusDoc(){
     <div class="ov-row3">
       <div class="ov-box"><div class="ov-h">สถานะสมาชิก</div><div class="ov-pie">${ovDonut(stP, O.n, "สมาชิก")}</div>${ovLeg(stP, v => v + " คน")}</div>
       <div class="ov-box"><div class="ov-h">รายได้ดอกเบี้ยรายเดือน ปี ${yr} (พันบาท)</div>${ovBars(bars)}</div></div>
-    <div class="ov-foot">ตัวเลขจากทะเบียน · รายได้ดอกเบี้ยเทียบช่วงเดียวกันได้ตั้งแต่ พ.ค. (ข้อมูลเริ่ม พ.ค. 2568)${ret > 0 ? ` · ทุนสุทธิหลังคืนทุน = ทุนปัจจุบัน − (ทุนต้นปีของสมาชิกที่ยังอยู่ + ทุนต้นปีของผู้ที่คืนทุน ${tM(retOpen)} บาท)` : ""}</div>
+    <div class="ov-foot">ตัวเลขจากทะเบียน · รายได้ดอกเบี้ยเทียบช่วงเดียวกันได้ตั้งแต่ พ.ค. (ข้อมูลเริ่ม พ.ค. 2568)${ret > 0 && showNet ? ` · ทุนสุทธิหลังคืนทุน = ทุนปัจจุบัน − (ทุนต้นปีของสมาชิกที่ยังอยู่ + ทุนต้นปีของผู้ที่คืนทุน ${tM(retOpen)} บาท)` : ""}</div>
     <div class="ov-sig"><div><div class="ln"></div><div>( ${esc(FIN())} )</div><div>กรรมการฝ่ายการเงิน</div></div><div><div class="ln"></div><div>( ${esc(CHAIR())} )</div><div>ประธานกลุ่มบุคคล</div></div>
       <div class="ov-dt">จัดทำเมื่อ ${thDay(today)}</div></div></div>`;
 }
@@ -4688,7 +4688,7 @@ function drawNWOverview(){
       <div class="bar" style="margin:0 0 8px"><button class="${mode === "status" ? "" : "ghost"}" id="ov_ms">สรุปสถานะความมั่นคง</button><button class="${mode === "month" ? "" : "ghost"}" id="ov_mm">สรุปรายเดือน</button></div>
       <div class="pf">${mode === "status"
         ? `<div><label>คืนทุนสมาชิกแล้ว (บาท)</label><input type="number" step="0.01" min="0" id="ov_ret" value="${(S.nw.dash || {}).ret || ""}" placeholder="${nwStatusData().outs.length ? "ว่าง = ตามผู้ลาออกในทะเบียน" : "เช่น ยอดที่คืนให้สมาชิกที่ลาออก"}"></div>
-           <div><label>ทุนของผู้ที่คืนทุน ณ สิ้นปี 2568 (บาท)</label><input type="number" step="0.01" min="0" id="ov_reto" value="${(S.nw.dash || {}).retOpen || ""}" placeholder="ว่าง = เท่ากับยอดคืนทุน"></div>
+           <div><label>ทุนของผู้ที่คืนทุน ณ สิ้นปี 2568 (บาท)</label><input type="number" step="0.01" min="0" id="ov_reto" value="${has((S.nw.dash || {}).retOpen) ? S.nw.dash.retOpen : ""}" placeholder="ว่าง = ไม่แสดงทุนสุทธิ · ใส่ 0 ถ้าฐานต้นปีรวมไว้แล้ว"></div>
            <div style="align-self:end;display:flex;gap:6px;flex-wrap:wrap"><button id="ov_print">🖨 พิมพ์ ๑ หน้า A4</button>${nwxBtns("ov")}</div>`
         : `<div><label>เดือนที่ต้องการพิมพ์</label><div style="display:flex;gap:6px"><button class="ghost sm" id="ov_pm">◀</button><select id="ov_m">${mths.map(q => `<option value="${q}" ${q === p ? "selected" : ""}>${nwPFull(q)}</option>`).join("")}</select><button class="ghost sm" id="ov_nm">▶</button></div></div>
            <div style="align-self:end;display:flex;gap:6px;flex-wrap:wrap"><button id="ov_print">🖨 พิมพ์เดือนนี้ ๑ หน้า A4</button>${nwxBtns("ov")}</div><div style="align-self:end"><button class="ghost" id="ov_pall">พิมพ์ทุกเดือนปี ${D.end.split("-")[0]} (${yrM.length} หน้า)</button></div>`}</div>
@@ -4702,7 +4702,7 @@ function drawNWOverview(){
   $("ov_mm").onclick = () => { S.ovmode = "month"; drawNWOverview(); }; $("ov_ms").onclick = () => { S.ovmode = "status"; drawNWOverview(); };
   const setDash = patch => { S.nw.dash = Object.assign({}, S.nw.dash || {}, patch); save(); drawNWOverview(); };
   if(mode === "status"){
-    $("ov_ret").onchange = e => setDash({ret:Math.max(0, +e.target.value || 0)}); $("ov_reto").onchange = e => setDash({retOpen:Math.max(0, +e.target.value || 0)});
+    $("ov_ret").onchange = e => setDash({ret:e.target.value === "" ? "" : Math.max(0, +e.target.value || 0)}); $("ov_reto").onchange = e => setDash({retOpen:e.target.value === "" ? "" : Math.max(0, +e.target.value || 0)});
     $("ov_print").onclick = () => nwPrint(nwStatusDoc());
     $("ov_w").onclick = () => nwxRun("สรุปสถานะ → Word", () => nwxDocx(nwStatusDoc(), `สรุปสถานะ-${D.end}`, Object.assign({}, NWX_FIT, {K:0.52, SC:0.58, mt:5, mb:5})));
     $("ov_i").onclick = () => nwxRun("สรุปสถานะ → รูป", () => nwxPng(nwStatusDoc(), `สรุปสถานะ-${D.end}`)); }
