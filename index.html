@@ -612,7 +612,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกองทุน 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-89</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-90</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -3685,7 +3685,7 @@ function drawNWDiv(){
         <td class="amt">${B(T("divS"))}</td><td class="amt">${B(T("divI"))}</td><td class="amt"><b>${B(T("tot"))}</b></td></tr></tfoot></table></div>
   </div>
   ${cur ? `<div class="card"><div class="bar" style="margin:0 0 8px"><span class="eyebrow" style="margin:0">ตัวอย่างใบสรุป · ${esc(cur.no)} ${esc(cur.name)}</span>
-      <button class="ghost sm" id="dv_p1" style="margin-left:auto">พิมพ์ใบนี้</button></div>${nwSumDoc(cur, D)}</div>` : ""}
+      <span style="margin-left:auto;display:flex;gap:6px"><button class="ghost sm" id="dv_p1">พิมพ์ใบนี้</button><button class="ghost sm" id="dv_p1w" title="บันทึกใบสรุปใบนี้เป็นไฟล์ Word (.docx)">Word</button><button class="ghost sm" id="dv_p1i" title="บันทึกใบสรุปใบนี้เป็นรูป PNG">บันทึกเป็นรูป</button></span></div>${nwSumDoc(cur, D)}</div>` : ""}
   </div>
   <div class="nwdoc" id="nwdoc"></div>`;
 
@@ -3700,6 +3700,8 @@ function drawNWDiv(){
   el.querySelectorAll("[data-dv]").forEach(tr=>tr.onclick = () => { S.dvsel = tr.dataset.dv; drawNWDiv();
     const c = $("dv_p1"); if(c) c.scrollIntoView({behavior:"smooth", block:"start"}); });
   if($("dv_p1")) $("dv_p1").onclick = () => nwPrint(nwSumDoc(cur, D));
+  if($("dv_p1w")) $("dv_p1w").onclick = () => nwxRun("ใบสรุป → Word", () => nwxDocx(nwSumDoc(cur, D), `ใบสรุป-${cur.no}-${cur.name}-${nwAdYm(D.from)}-${nwAdYm(D.to)}`, NWX_ONE));
+  if($("dv_p1i")) $("dv_p1i").onclick = () => nwxRun("ใบสรุป → รูป", () => nwxPng(nwSumDoc(cur, D), `ใบสรุป-${cur.no}-${cur.name}-${nwAdYm(D.from)}-${nwAdYm(D.to)}`));
   $("dv_w").onclick = () => { if(list.length) nwxRun("ใบสรุป → Word", () => nwxDocx(list.map(a => nwSumDoc(a.x, D)).join(""), `ใบสรุป-${nwAdYm(D.from)}-${nwAdYm(D.to)}-${list.length}คน`, NWX_ONE)); };
   $("dv_i").onclick = () => { if(list.length) nwxRun("ใบสรุป → รูป", () => nwxPng(list.map(a => nwSumDoc(a.x, D)).join(""), `ใบสรุป-${nwAdYm(D.from)}-${nwAdYm(D.to)}`)); };
   $("dv_all").onclick = () => { if(!list.length || !confirm(`พิมพ์ใบสรุป ${list.length} คน คนละหน้า?`)) return;
