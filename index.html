@@ -586,8 +586,12 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
 .nwrg td.sg{height:9mm}
 .nwrg .rg-sum{margin-top:12px;page-break-inside:avoid}
 @media print{
-  body.nwprint .nwdoc .receipt.nwrc,body.nwprint .nwdoc .receipt.nwrg{padding-left:16mm!important;padding-right:6mm!important}      /* ขอบซ้าย 3 ซม. ขวา 2 ซม. (รวมกับขอบหน้ากระดาษ) */
-  body.nwprint .nwdoc .receipt.nwrc{page-break-inside:avoid}
+  body.nwprint .nwdoc .receipt.nwrc{padding-left:6mm!important;padding-right:1mm!important;page-break-inside:avoid}      /* ใบเสร็จ ๑ ใบ/หน้า: ขอบซ้าย ๒ ซม. ขวา ๑.๕ ซม. (ขอบหน้ากระดาษ ๑.๔ ซม. + ระยะเสริม) ขยายออกซ้าย-ขวา */
+  body.nwprint .nwdoc .receipt.nwr:not(.nwrc):not(.nwrg){padding-left:6mm!important;padding-right:1mm!important}
+  body.nwprint .nwdoc .receipt.nwrg{page:reg;padding:0!important}                         /* ทะเบียนคุม: หน้า A4 ขอบซ้าย ๒ ขวา ๑.๕ ซม. มีเลขหน้า */
+  body.nwprint .nwdoc .nwrg table{page-break-inside:auto;break-inside:auto}              /* ตารางยาวต้องไหลต่อหน้าถัดไปได้ — ห้ามกันทั้งตารางไว้หน้าเดียว (เดิมทำให้หน้าแรกเหลือแต่หัวกระดาษ) */
+  body.nwprint .nwdoc .nwrg table.rg-sum{page-break-inside:avoid;break-inside:avoid}
+  body.nwprint .nwdoc .nwrg thead{display:table-header-group}
   body.nwprint section:not(.on){display:none!important}
   body.nwprint .nwscreen{display:none!important}
   body.nwprint .nwdoc{display:block!important}
@@ -609,10 +613,13 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
 @page contract:first{@top-center{content:none}}
 @page single{size:A4 portrait;margin:15mm 20mm 20mm 20mm}
 @page one{size:A4 portrait;margin:11mm 14mm 12mm}
+@page reg{size:A4 portrait;margin:12mm 15mm 14mm 20mm;@top-center{content:counter(page);font-family:"TH Sarabun New","Sarabun",sans-serif;font-size:14pt;color:#000}}
+@page reg:first{@top-center{content:none}}
 @page wide{size:A4 landscape;margin:15mm 20mm 20mm 20mm;@top-center{content:counter(page);font-family:"TH Sarabun New","Sarabun",sans-serif;font-size:16pt;color:#000}}
 @page wide:first{@top-center{content:none}}
 @media print{
   .receipt,.ovp{page:one}
+  .receipt.nwrg{page:reg}
   .kpage{page:doc;zoom:1.808;font-size:11.8px;line-height:1.3;text-align:left;break-after:auto}
   .kpage.ks:not(.kc){page:single}
   .kpage.kc{page:contract;zoom:1.58}
@@ -689,7 +696,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-146</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-147</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
