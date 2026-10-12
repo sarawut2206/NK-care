@@ -675,7 +675,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-134</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-135</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -3711,7 +3711,7 @@ function nwDashCfg(){
   return {from:d.from || "", to:d.to || "", rs:has(d.rs) ? +d.rs : (has(dv.rs) ? +dv.rs : 4.5), ri:has(d.ri) ? +d.ri : (has(dv.ri) ? +dv.ri : 6.5), adj:d.adj !== false};
 }
 /* ข้อมูลทั้งหมดของแดชบอร์ด */
-function nwDashData(){
+function nwDashData(opt){
   const C = nwDashCfg(), people = NW.people(), all = NW.all();
   const lastRec = all.reduce((m, r) => (!m || pNum(r.p) > pNum(m)) ? r.p : m, null);
   const end = lastRec && pNum(lastRec) >= pNum("2568-12") ? lastRec : "2568-12";                 // เดือนล่าสุดที่กรอก
@@ -3721,16 +3721,20 @@ function nwDashData(){
   const tot = months.map(p => ({p, sh:r2(ser.reduce((s, o) => s + at(o.sr, p, "shares"), 0)), dbt:r2(ser.reduce((s, o) => s + at(o.sr, p, "debt"), 0)),
     int:r2(ser.reduce((s, o) => s + o.sr.filter(e => e.p === p).reduce((t, e) => t + e.int, 0), 0))}));
   const LC = nwLoanCum(); tot.forEach(t => t.cum = nwCumAt(LC, t.p, end));
+  let fcEnd = end;                                                                                  // คาดการณ์ล่วงหน้า: ต่อจากเดือนล่าสุดที่กรอก ถึงเดือนปัจจุบัน + ที่เลือกดู (6/12/24)
+  if(opt && opt.fc){ const fh = [6, 12, 24].includes(+((S.nw && S.nw.dash) || {}).fh) ? +S.nw.dash.fh : 12, H = pNum(nwCurP()) + fh - pNum(end);
+    if(H > 0){ const F = nwFcstData(H, pFrom(pNum(end) + 1)), cm = tot.length ? tot[tot.length - 1].cum : 0;
+      F.months.forEach((q, i) => { months.push(q); tot.push({p:q, sh:F.tot[i].shares, dbt:F.tot[i].debt, int:F.tot[i].int, cum:cm, fc:true}); }); fcEnd = F.months[F.months.length - 1]; } }
   const yr = end.split("-")[0], defFrom = pNum(`${yr}-01`) < pNum("2568-05") ? "2568-05" : `${yr}-01`;
-  const from = C.from && pNum(C.from) <= pNum(end) ? C.from : defFrom, to = C.to && pNum(C.to) >= pNum(from) ? C.to : end;
+  const from = C.from && pNum(C.from) <= pNum(end) ? C.from : defFrom, to = C.to && pNum(C.to) >= pNum(from) && pNum(C.to) <= pNum(fcEnd) ? C.to : end;
   const rng = tot.filter(t => pNum(t.p) >= pNum(from) && pNum(t.p) <= pNum(to)), m = pNum(to) - pNum(from) + 1;
   const shNow = r2(ser.reduce((s, o) => s + o.st.shares, 0)), dbNow = r2(ser.reduce((s, o) => s + o.st.debt, 0));
   const typ = k => r2(ser.reduce((s, o) => s + o.st.by[k].shares, 0)), typD = k => r2(ser.reduce((s, o) => s + o.st.by[k].debt, 0));
-  const intY = r2(rng.reduce((s, t) => s + t.int, 0)), f = C.adj ? m / 12 : 1;
-  const divS = r2(shNow * C.rs / 100 * f), divI = r2(intY * C.ri / 100 * f);
-  const intYr = m > 0 ? intY / m * 12 : 0, divSY = r2(shNow * C.rs / 100), divIY = r2(intYr * C.ri / 100 * (C.adj ? 1 : 1));
+  const intY = r2(rng.reduce((s, t) => s + t.int, 0)), f = C.adj ? m / 12 : 1, toT = tot.find(t => t.p === to), isFc = pNum(to) > pNum(end), shDiv = isFc && toT ? toT.sh : shNow;      // เลือกเดือนล่วงหน้า: ปันผลคิดจากหุ้น ณ สิ้นเดือนนั้น (คาดการณ์)
+  const divS = r2(shDiv * C.rs / 100 * f), divI = r2(intY * C.ri / 100 * f);
+  const intYr = m > 0 ? intY / m * 12 : 0, divSY = r2(shDiv * C.rs / 100), divIY = r2(intYr * C.ri / 100 * (C.adj ? 1 : 1));
   const open = tot.find(t => t.p === "2568-12") || tot[tot.length - 1] || {sh:0, dbt:0};
-  return {C, end, months, tot, from, to, m, rng, shNow, dbNow, intY, divS, divI, divSY, divIY, open, LC, n:people.length,
+  return {C, end, fcEnd, isFc, shDiv, toT, months, tot, from, to, m, rng, shNow, dbNow, intY, divS, divI, divSY, divIY, open, LC, n:people.length,
     shBy:{sam:typ("sam"), dk:typ("dk"), free:typ("free")}, dbBy:{sam:typD("sam"), dk:typD("dk")}, ser};
 }
 
@@ -3738,19 +3742,22 @@ function nwDashData(){
 function dashLine(tot){
   const W = 760, H = 270, L = 58, R = 74, T = 18, Bm = 34, n = tot.length; if(n < 2) return '<p class="hint">ยังมีข้อมูลไม่พอวาดกราฟ</p>';
   const mx = dshNice(Math.max(...tot.map(t => Math.max(t.sh, t.dbt))) * 1.04), X = i => L + i * (W - L - R) / (n - 1), Y = v => T + (1 - v / mx) * (H - T - Bm);
-  const path = k => tot.map((t, i) => `${i ? "L" : "M"}${X(i).toFixed(1)},${Y(t[k]).toFixed(1)}`).join(" ");
+  const k0 = tot.findIndex(t => t.fc), path = k => tot.map((t, i) => `${i ? "L" : "M"}${X(i).toFixed(1)},${Y(t[k]).toFixed(1)}`).join(" ");
+  const pathR = (k, a, b) => tot.slice(a, b + 1).map((t, i) => `${i ? "L" : "M"}${X(a + i).toFixed(1)},${Y(t[k]).toFixed(1)}`).join(" ");
+  const fcBand = k0 > 0 ? `<rect x="${X(k0 - 1)}" y="${T}" width="${X(n - 1) - X(k0 - 1)}" height="${H - T - Bm}" fill="#E8F1FF" opacity=".7"/><text x="${(X(k0 - 1) + X(n - 1)) / 2}" y="${T + 12}" text-anchor="middle" font-size="11" font-weight="700" fill="#1F3A68">คาดการณ์</text>` : "";
+  const line = k => k0 > 0 ? `<path d="${pathR(k, 0, k0 - 1)}" fill="none" stroke="${DSH[k === "sh" ? "sh" : "dbt"]}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/><path d="${pathR(k, k0 - 1, n - 1)}" fill="none" stroke="${DSH[k === "sh" ? "sh" : "dbt"]}" stroke-width="2.6" stroke-dasharray="6 5" stroke-linejoin="round" stroke-linecap="round"/>`
+    : `<path d="${path(k)}" fill="none" stroke="${DSH[k === "sh" ? "sh" : "dbt"]}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>`;
   const area = k => `${path(k)} L${X(n - 1).toFixed(1)},${Y(0)} L${X(0).toFixed(1)},${Y(0)} Z`;
   const grid = [0, 1, 2, 3, 4].map(g => { const v = mx * g / 4, y = Y(v); return `<line x1="${L}" x2="${W - R}" y1="${y}" y2="${y}" stroke="#E4EAF4" stroke-width="1"/><text x="${L - 8}" y="${y + 4}" text-anchor="end" font-size="11" fill="#6B7A99">${dshK(v)}</text>`; }).join("");
   const step = Math.ceil(n / 8), xl = tot.map((t, i) => (i % step === 0 || i === n - 1) ? `<text x="${X(i)}" y="${H - 12}" text-anchor="middle" font-size="11" fill="#6B7A99">${thPer(t.p)}</text>` : "").join("");
-  const hov = tot.map((t, i) => `<rect x="${X(i) - (W - L - R) / (n - 1) / 2}" y="${T}" width="${(W - L - R) / (n - 1)}" height="${H - T - Bm}" fill="transparent"><title>${thPer(t.p)}\nหุ้นสะสม ${B0(t.sh)}\nหนี้คงเหลือ ${B0(t.dbt)}</title></rect>`).join("");
+  const hov = tot.map((t, i) => `<rect x="${X(i) - (W - L - R) / (n - 1) / 2}" y="${T}" width="${(W - L - R) / (n - 1)}" height="${H - T - Bm}" fill="transparent"><title>${thPer(t.p)}${t.fc ? " (คาดการณ์)" : ""}\nหุ้นสะสม ${B0(t.sh)}\nหนี้คงเหลือ ${B0(t.dbt)}</title></rect>`).join("");
   const last = tot[n - 1], dot = (k, c) => `<circle cx="${X(n - 1)}" cy="${Y(last[k])}" r="4.5" fill="#fff" stroke="${c}" stroke-width="2.5"/>`;
   const lab = (k, c, dy) => `<text x="${X(n - 1) + 9}" y="${Y(last[k]) + dy}" font-size="12" font-weight="700" fill="${c}">${dshK(last[k])}</text>`;
   const dy = Math.abs(Y(last.sh) - Y(last.dbt)) < 14 ? [-6, 12] : [4, 4];
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="กราฟหุ้นสะสมและหนี้คงเหลือรายเดือน" style="display:block">
-    ${grid}
+    ${fcBand}${grid}
     <path d="${area("sh")}" fill="${DSH.sh}" opacity=".10"/><path d="${area("dbt")}" fill="${DSH.dbt}" opacity=".10"/>
-    <path d="${path("sh")}" fill="none" stroke="${DSH.sh}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
-    <path d="${path("dbt")}" fill="none" stroke="${DSH.dbt}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
+    ${line("sh")}${line("dbt")}
     ${dot("sh", DSH.sh)}${dot("dbt", DSH.dbt)}${lab("sh", DSH.sh, dy[0])}${lab("dbt", DSH.dbt, dy[1])}${xl}${hov}</svg>`;
 }
 function dashDonut(parts, centerLbl){
@@ -3765,7 +3772,7 @@ function dashBars(rng){
   const W = 760, H = 220, L = 58, R = 16, T = 24, Bm = 30, n = rng.length; if(!n) return '<p class="hint">ยังไม่มีข้อมูลดอกเบี้ยในช่วงนี้</p>';
   const mx = dshNice(Math.max(1, ...rng.map(t => t.int)) * 1.12), bw = Math.min(46, (W - L - R) / n * 0.62), X = i => L + (i + .5) * (W - L - R) / n, Y = v => T + (1 - v / mx) * (H - T - Bm);
   const grid = [0, 1, 2, 3].map(g => { const v = mx * g / 3, y = Y(v); return `<line x1="${L}" x2="${W - R}" y1="${y}" y2="${y}" stroke="#E4EAF4"/><text x="${L - 8}" y="${y + 4}" text-anchor="end" font-size="11" fill="#6B7A99">${dshK(v)}</text>`; }).join("");
-  const bars = rng.map((t, i) => `<rect x="${X(i) - bw / 2}" y="${Y(t.int)}" width="${bw}" height="${Math.max(0, Y(0) - Y(t.int))}" rx="4" fill="${DSH.int}"><title>${thPer(t.p)}: ดอกเบี้ย ${B0(t.int)} บาท</title></rect>
+  const bars = rng.map((t, i) => `<rect x="${X(i) - bw / 2}" y="${Y(t.int)}" width="${bw}" height="${Math.max(0, Y(0) - Y(t.int))}" rx="4" fill="${DSH.int}"${t.fc ? ' opacity=".5" stroke="#0F6B4A" stroke-dasharray="4 3"' : ""}><title>${thPer(t.p)}${t.fc ? " (คาดการณ์)" : ""}: ดอกเบี้ย ${B0(t.int)} บาท</title></rect>
     ${n <= 14 && t.int ? `<text x="${X(i)}" y="${Y(t.int) - 5}" text-anchor="middle" font-size="10.5" font-weight="600" fill="#0F6B4A">${B0(t.int)}</text>` : ""}<text x="${X(i)}" y="${H - 10}" text-anchor="middle" font-size="11" fill="#6B7A99">${thPer(t.p)}</text>`).join("");
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="ดอกเบี้ยรับรายเดือน" style="display:block;max-width:100%;height:auto">${grid}${bars}</svg>`;
 }
@@ -3776,12 +3783,12 @@ function dashTop(list, k, color){
 }
 
 /* ============ คาดการณ์รายเดือน (ล่วงหน้า) — รวมแถวที่ลงไว้ล่วงหน้า + ที่คำนวณตามงวดละ · ใช้ดูเงินเข้า วงเงินกู้ และหุ้นแต่ละเดือน ============ */
-function nwFcstData(h){
-  const cur = pNum(nwCurP()), months = Array.from({length:h}, (_, i) => pFrom(cur + 1 + i)), tot = months.map(p => ({p, m:0, int:0, pri:0, dep:0, loan:0, debt:0, shares:0, nF:0, nC:0}));
+function nwFcstData(h, startP){
+  const cur = pNum(nwCurP()), s0 = startP ? pNum(startP) : cur + 1, months = Array.from({length:h}, (_, i) => pFrom(s0 + i)), mset = new Set(months), tot = months.map(p => ({p, m:0, int:0, pri:0, dep:0, loan:0, debt:0, shares:0, nF:0, nC:0}));
   const base = {debt:0, shares:0}, planned = [];
   NW.people().forEach(x => nwAccts(x).forEach(a => {
     const st = nwStateA(a); base.debt += st.debt; base.shares += st.shares;
-    const T = nwTimeline(a, true), by = {}; T.rows.forEach(o => { if(pNum(o.p) > cur && !o.warn && !o.gap) by[o.p] = o; });
+    const T = nwTimeline(a, true), by = {}; T.rows.forEach(o => { if(mset.has(o.p) && !o.warn && !o.gap) by[o.p] = o; });
     let dbt = st.debt, sh = st.shares;
     months.forEach((p, i) => { const o = by[p], t = tot[i];
       if(o){ const v = o.r || o.proj || {}, m = o.r ? (num(v.m) || r2(num(v.int) + num(v.pri) + nwSh(v))) : num(v.m);
@@ -3810,12 +3817,12 @@ function drawNWDash(){
   if(tab !== 23){ el.innerHTML = ""; return; }
   ["tab20", "tab21", "tab22", "tab24", "tab25", "tab26"].forEach(id => { const e = $(id); if(e) e.innerHTML = ""; });
   if(!NW.on()){ el.innerHTML = nwStartHTML("แดชบอร์ด"); bindNwImport(); return; }
-  const D = nwDashData(), C = D.C, chg = (a, b) => { const d = r2(a - b); return `<span class="ds-chg ${d > 0 ? "up" : d < 0 ? "dn" : ""}">${d > 0 ? "▲ +" : d < 0 ? "▼ −" : "• "}${B0(Math.abs(d))}</span>`; };
-  const opts = sel => D.months.map(p => `<option value="${p}" ${p === sel ? "selected" : ""}>${thPer(p)}</option>`).join("");
+  const D = nwDashData({fc:true}), C = D.C, chg = (a, b) => { const d = r2(a - b); return `<span class="ds-chg ${d > 0 ? "up" : d < 0 ? "dn" : ""}">${d > 0 ? "▲ +" : d < 0 ? "▼ −" : "• "}${B0(Math.abs(d))}</span>`; };
+  const opts = sel => D.months.map(p => `<option value="${p}" ${p === sel ? "selected" : ""}>${thPer(p)}${pNum(p) > pNum(D.end) ? " (คาดการณ์)" : ""}</option>`).join("");
   const divTot = r2(D.divS + D.divI), divY = r2(D.divSY + D.divIY), mx = Math.max(1, divTot, divY);
   el.innerHTML = `<div class="ds">
   <div class="ds-head"><div><div class="eyebrow" style="margin:0">แดชบอร์ดสรุป กบข.นข.</div>
-    <div class="hint">ตัวเลขที่กรอกไว้ในทะเบียนถึง <b>${thPer(D.end)}</b> · สมาชิก ${D.n} คน (ไม่รวมคนที่ลาออก) · เหมือนดูพอร์ตของกลุ่มบุคคล</div></div>
+    <div class="hint">ตัวเลขที่กรอกไว้ในทะเบียนถึง <b>${thPer(D.end)}</b> · สมาชิก ${D.n} คน (ไม่รวมคนที่ลาออก) · เลือก «ถึง» เดือน <b>(คาดการณ์)</b> ได้ = รวมยอดที่ลงล่วงหน้าไว้ + คำนวณตามงวดละ (ตัวเลข ①② ยังเป็นยอดปัจจุบัน)</div></div>
     <div class="ds-ctl"><label>ช่วงดอกเบี้ย/ปันผล จาก <select id="ds_from">${opts(D.from)}</select></label><label>ถึง <select id="ds_to">${opts(D.to)}</select></label></div></div>
 
   <div class="ds-kpis">
@@ -3823,13 +3830,15 @@ function drawNWDash(){
       <div class="s">${chg(D.shNow, D.open.sh)} จาก 31 ธ.ค.68</div></div>
     <div class="ds-kpi" style="border-top-color:${DSH.dbt}"><div class="k">② หนี้คงเหลือรวม</div><div class="v">${B0(D.dbNow)} <small>บาท</small></div>
       <div class="s">${chg(D.dbNow, D.open.dbt)} จาก 31 ธ.ค.68 · ผู้กู้ ${new Set(D.LC.items.map(i => i.no)).size} คน (ตรงกับทะเบียนผู้กู้)</div></div>
-    <div class="ds-kpi" style="border-top-color:${DSH.int}"><div class="k">③ ดอกเบี้ยรับสะสม (${thPer(D.from)} – ${thPer(D.to)})</div><div class="v">${B0(D.intY)} <small>บาท</small></div>
+    <div class="ds-kpi" style="border-top-color:${DSH.int}"><div class="k">③ ดอกเบี้ยรับสะสม (${thPer(D.from)} – ${thPer(D.to)})${D.isFc ? " · รวมคาดการณ์" : ""}</div><div class="v">${B0(D.intY)} <small>บาท</small></div>
       <div class="s">เฉลี่ยเดือนละ ${D.m > 0 ? B0(D.intY / D.m) : "0"} บาท · ${D.m} เดือน</div></div>
     <div class="ds-kpi" style="border-top-color:#0B2C6B"><div class="k">④ คาดการณ์เงินคืนสมาชิก</div><div class="v" style="color:#0B2C6B">${B0(divTot)} <small>บาท</small></div>
-      <div class="s">ปันผลหุ้น ${B0(D.divS)} + เฉลี่ยคืน ${B0(D.divI)}</div></div>
+      <div class="s">ปันผลหุ้น ${B0(D.divS)} + เฉลี่ยคืน ${B0(D.divI)}${D.isFc ? " · คาดการณ์" : ""}</div></div>
+    ${D.isFc && D.toT ? `<div class="ds-kpi" style="border-top-color:#1F3A68;background:#F3F8FF"><div class="k">⑤ คาดการณ์ ณ สิ้น ${thPer(D.to)}</div><div class="v" style="color:#1F3A68">${B0(D.toT.sh)} <small>บาท หุ้น</small></div>
+      <div class="s">หนี้คงเหลือ ${B0(D.toT.dbt)} บาท · ${chg(D.toT.sh, D.shNow)} หุ้น / ${chg(D.toT.dbt, D.dbNow)} หนี้ จากปัจจุบัน</div></div>` : ""}
   </div>
 
-  <div class="card"><div class="ds-ttl">ภาพรวมรายเดือน <span class="hint">หุ้นสะสม เทียบ หนี้คงเหลือ (รวมทุกคน)</span>
+  <div class="card"><div class="ds-ttl">ภาพรวมรายเดือน <span class="hint">หุ้นสะสม เทียบ หนี้คงเหลือ (รวมทุกคน)${D.fcEnd !== D.end ? " · ช่วงสีฟ้าเส้นประ = คาดการณ์ถึง " + thPer(D.fcEnd) : ""}</span>
       <span class="ds-lg"><i style="background:${DSH.sh}"></i>ทุนเรือนหุ้นสะสม <i style="background:${DSH.dbt}"></i>หนี้คงเหลือ</span></div>${dashLine(D.tot)}</div>
 
   <div class="ds-g2">
@@ -3845,7 +3854,7 @@ function drawNWDash(){
       <label>เฉลี่ยคืนดอกเบี้ย ร้อยละ <input type="number" id="ds_ri" step="0.01" min="0" value="${C.ri}"> %</label>
       <label class="rlf" title="ใบสรุปเดิมคูณ เดือน/12 ทั้งปันผลหุ้นและเฉลี่ยคืน — ติ๊กไว้ตัวเลขจะตรงกับแท็บ «ใบสรุป + ปันผล»"><input type="checkbox" id="ds_adj" ${C.adj ? "checked" : ""}> ปรับตามจำนวนเดือน (× ${D.m}/12 เหมือนใบสรุป)</label></div>
     <div class="ds-div">
-      <div class="ds-dr"><span>ปันผลหุ้น = หุ้นสะสม ${B0(D.shNow)} × ${C.rs}%${C.adj ? ` × ${D.m}/12` : ""}</span><div class="ds-bar2"><i style="width:${(D.divS / mx * 100).toFixed(1)}%;background:${DSH.sh}"></i></div><b>${B0(D.divS)}</b></div>
+      <div class="ds-dr"><span>ปันผลหุ้น = หุ้นสะสม${D.isFc ? " (คาดการณ์ ณ " + thPer(D.to) + ")" : ""} ${B0(D.shDiv)} × ${C.rs}%${C.adj ? ` × ${D.m}/12` : ""}</span><div class="ds-bar2"><i style="width:${(D.divS / mx * 100).toFixed(1)}%;background:${DSH.sh}"></i></div><b>${B0(D.divS)}</b></div>
       <div class="ds-dr"><span>เฉลี่ยคืนดอกเบี้ย = ดอกเบี้ยรับ ${B0(D.intY)} × ${C.ri}%${C.adj ? ` × ${D.m}/12` : ""}</span><div class="ds-bar2"><i style="width:${(D.divI / mx * 100).toFixed(1)}%;background:${DSH.int}"></i></div><b>${B0(D.divI)}</b></div>
       <div class="ds-dr tot"><span>รวมคาดการณ์เงินคืนสมาชิก (ถึง ${thPer(D.to)})</span><div class="ds-bar2"><i style="width:${(divTot / mx * 100).toFixed(1)}%;background:#0B2C6B"></i></div><b>${B0(divTot)}</b></div>
       <div class="ds-dr est"><span>ประมาณทั้งปี (ถ้ายอดหุ้นคงที่ และดอกเบี้ยรายเดือนเท่าเดิม) : หุ้น ${B0(D.divSY)} + เฉลี่ยคืน ${B0(D.divIY)}</span><div class="ds-bar2"><i style="width:${(divY / mx * 100).toFixed(1)}%;background:#9AA6BC"></i></div><b>${B0(divY)}</b></div></div>
