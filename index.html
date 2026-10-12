@@ -675,7 +675,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-133</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-134</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -3409,10 +3409,10 @@ const nwxBtns = id => `<button class="ghost" id="${id}_w" title="บันทึ
    ต่อคนต่อบัญชี: มีแถวลงตามตาราง/ล่วงหน้าไว้แล้ว (รอยืนยัน) → ยืนยันรับเงิน · ไม่มีแถวแต่มียอดคาดการณ์ → ลงตามคาดการณ์ · ไม่มีคาดการณ์ (งวดก่อนหน้ายังไม่ได้ลง) → ข้าม
    คนที่มีแถวจริงของงวดนั้นแล้ว ไม่แตะ · ติ๊กออกคนที่ยังไม่จ่ายได้ */
 function nwBulkPlan(kind, p){
-  const prods = kind === "loan" ? ["sam", "dk"] : ["free"], items = [];
+  const prods = kind === "loan" ? ["sam", "dk"] : ["free"], items = [], fut = pNum(p) > pNum(nwCurP());
   NW.people().forEach(x => { if((kind === "loan") !== (nwState(x).kind === "loan")) return;
     prods.forEach(k => { const a = nwAcct(x, k), r = NW.row(x.no, p, k);
-      if(r){ if(r.exp) items.push({x, a, k, act:"confirm", m:num(r.m) || nwSh(r)}); return; }
+      if(r){ if(r.exp) items.push({x, a, k, act:fut ? "have" : "confirm", m:num(r.m) || nwSh(r)}); return; }
       if(k === "free" ? !(+a.shM || +a.shxM || +a.svM) : !(nwStateA(a).debt > 0.005)) return;
       const o = nwTimeline(a, true).rows.find(q => q.p === p && q.proj);
       items.push(o ? {x, a, k, act:"fill", m:num(o.proj.m)} : {x, a, k, act:"skip", m:0}); }); });
@@ -3420,20 +3420,20 @@ function nwBulkPlan(kind, p){
 }
 function nwBulkHTML(kind){
   const nowP = nwCurP(), B_ = S.nbk || (S.nbk = {}); let p = B_[kind];
-  if(!p || pNum(p) > pNum(nowP) || pNum(p) < pNum(P_ANCHOR)) p = nowP;
-  const items = nwBulkPlan(kind, p), off = S.nbkOff || (S.nbkOff = {}), key = q => `${q.x.no}|${q.k}|${p}`, on = items.filter(q => q.act !== "skip" && !off[key(q)]);
-  const nC = on.filter(q => q.act === "confirm").length, nF = on.filter(q => q.act === "fill").length, nS = items.filter(q => q.act === "skip").length, tot = r2(on.reduce((u, q) => u + q.m, 0));
-  const opts = (() => { const o = []; for(let n = pNum(nowP); n >= pNum(P_ANCHOR); n--){ const q = pFrom(n); o.push(`<option value="${q}" ${q === p ? "selected" : ""}>งวดที่ ${nwRound(q)} · ${thPer(q)}</option>`); } return o.join(""); })();
+  if(!p || pNum(p) > pNum(nowP) + 3 || pNum(p) < pNum(P_ANCHOR)) p = nowP;
+  const fut = pNum(p) > pNum(nowP), items = nwBulkPlan(kind, p), off = S.nbkOff || (S.nbkOff = {}), key = q => `${q.x.no}|${q.k}|${p}`, on = items.filter(q => q.act !== "skip" && q.act !== "have" && !off[key(q)]);
+  const nC = on.filter(q => q.act === "confirm").length, nF = on.filter(q => q.act === "fill").length, nS = items.filter(q => q.act === "skip").length, nH = items.filter(q => q.act === "have").length, tot = r2(on.reduce((u, q) => u + q.m, 0));
+  const opts = (() => { const o = []; for(let n = pNum(nowP) + 3; n >= pNum(P_ANCHOR); n--){ const q = pFrom(n); o.push(`<option value="${q}" ${q === p ? "selected" : ""}>งวดที่ ${nwRound(q)} · ${thPer(q)}${n > pNum(nowP) ? " (ล่วงหน้า)" : ""}</option>`); } return o.join(""); })();
   return `<div class="keybox" style="margin:0 0 12px;border-left:4px solid var(--gold)">
-    <div class="bar" style="margin:0 0 6px;flex-wrap:wrap"><b>💾 บันทึกการชำระ${kind === "loan" ? "ผู้กู้" : "ผู้ฝาก"}ทุกคนครั้งเดียว</b>
+    <div class="bar" style="margin:0 0 6px;flex-wrap:wrap"><b>💾 ${fut ? "ลงล่วงหน้า" : "บันทึกการชำระ"}${kind === "loan" ? "ผู้กู้" : "ผู้ฝาก"}ทุกคนครั้งเดียว</b>
       <label class="hint" style="display:flex;align-items:center;gap:6px;margin:0">เดือน <select id="bk_p" style="width:auto">${opts}</select></label>
-      <span class="hint">รอยืนยัน (ลงตามตารางไว้แล้ว) <b>${nC}</b> · ลงตามคาดการณ์ <b>${nF}</b>${nS ? ` · ข้าม <b>${nS}</b> (งวดก่อนหน้ายังไม่ได้ลง/ไม่มีคาดการณ์)` : ""} · รวม <b>${B0(tot)}</b> บาท</span>
-      <button id="bk_go" style="margin-left:auto" ${on.length ? "" : "disabled"}>บันทึกทั้งหมด ${on.length} รายการ</button></div>
+      <span class="hint">${fut ? `ลงล่วงหน้าตามคาดการณ์ <b>${nF}</b> · ลงไว้แล้ว <b>${nH}</b>` : `รอยืนยัน (ลงตามตารางไว้แล้ว) <b>${nC}</b> · ลงตามคาดการณ์ <b>${nF}</b>`}${nS ? ` · ข้าม <b>${nS}</b> (งวดก่อนหน้ายังไม่ได้ลง/ไม่มีคาดการณ์)` : ""} · รวม <b>${B0(tot)}</b> บาท</span>
+      <button id="bk_go" style="margin-left:auto" ${on.length ? "" : "disabled"}>${fut ? "ลงล่วงหน้า" : "บันทึก"}ทั้งหมด ${on.length} รายการ</button></div>
     ${items.length ? `<details class="opn" ${S.nbkOpen ? "open" : ""} id="bk_det"><summary class="hint">รายชื่อ ${items.length} รายการ — ติ๊กออกคนที่ยังไม่จ่ายหรือจ่ายไม่ตรงยอด (แล้วแก้ทีละคนในตาราง)</summary>
       <div class="tbl" style="max-height:260px;margin-top:6px"><table><thead><tr><th style="width:36px"></th><th class="l">สมาชิก</th><th class="l">บัญชี</th><th class="l">การทำ</th><th>ยอดชำระรวม</th></tr></thead><tbody>
-      ${items.map(q => `<tr${q.act === "skip" ? ' style="opacity:.5"' : ""}><td class="c"><input type="checkbox" data-bkx="${esc(key(q))}" ${q.act === "skip" ? "disabled" : off[key(q)] ? "" : "checked"}></td><td class="l"><span class="no">${esc(q.x.no)}</span>${esc(q.x.name)}</td><td class="l">${NW_ACCS[q.k]}</td>
-        <td class="l">${q.act === "confirm" ? '<span class="pill grn">ยืนยันรับเงิน (ลงตามตารางไว้แล้ว)</span>' : q.act === "fill" ? '<span class="pill">ลงตามคาดการณ์</span>' : '<span class="pill amb">ข้าม</span>'}</td><td class="amt">${q.m ? B(q.m) : "—"}</td></tr>`).join("")}</tbody></table></div></details>` : '<p class="hint" style="margin:0">ไม่มีรายการให้บันทึกในเดือนนี้ (ลงครบแล้ว หรือยังไม่มียอดคาดการณ์)</p>'}
-    <p class="hint" style="margin:6px 0 0">ใช้เมื่อรับเงินครบตามตารางแล้ว · คนที่มีแถวจริงของเดือนนี้แล้วไม่ถูกแตะ · วันที่รับตั้งเป็นวันที่ 5 ของเดือน (แก้ได้ในตาราง) · ผิดพลาดแก้/ลบทีละแถวได้</p></div>`;
+      ${items.map(q => `<tr${q.act === "skip" ? ' style="opacity:.5"' : ""}><td class="c"><input type="checkbox" data-bkx="${esc(key(q))}" ${q.act === "skip" || q.act === "have" ? "disabled" : off[key(q)] ? "" : "checked"}></td><td class="l"><span class="no">${esc(q.x.no)}</span>${esc(q.x.name)}</td><td class="l">${NW_ACCS[q.k]}</td>
+        <td class="l">${q.act === "confirm" ? '<span class="pill grn">ยืนยันรับเงิน (ลงตามตารางไว้แล้ว)</span>' : q.act === "fill" ? `<span class="pill">${fut ? "ลงล่วงหน้าตามคาดการณ์" : "ลงตามคาดการณ์"}</span>` : q.act === "have" ? '<span class="pill grn">ลงล่วงหน้าไว้แล้ว</span>' : '<span class="pill amb">ข้าม</span>'}</td><td class="amt">${q.m ? B(q.m) : "—"}</td></tr>`).join("")}</tbody></table></div></details>` : '<p class="hint" style="margin:0">ไม่มีรายการให้บันทึกในเดือนนี้ (ลงครบแล้ว หรือยังไม่มียอดคาดการณ์)</p>'}
+    <p class="hint" style="margin:6px 0 0">${fut ? "เดือนล่วงหน้า = ลงยอดคาดการณ์ไว้ก่อน (สีฟ้า) ยังไม่นับในยอดปัจจุบัน — ถึงงวดแล้วกลับมากดบันทึกอีกครั้งเพื่อยืนยันรับเงินทุกคน · " : "ใช้เมื่อรับเงินครบตามตารางแล้ว · "}คนที่มีแถวจริงของเดือนนี้แล้วไม่ถูกแตะ · วันที่รับตั้งเป็นวันที่ 5 ของเดือน (แก้ได้ในตาราง) · ผิดพลาดแก้/ลบทีละแถวได้</p></div>`;
 }
 function nwBulkBind(kind, el, redraw){
   const sel = $("bk_p"); if(!sel) return;
@@ -3441,12 +3441,15 @@ function nwBulkBind(kind, el, redraw){
   const det = $("bk_det"); if(det) det.ontoggle = () => { S.nbkOpen = det.open; };
   el.querySelectorAll("[data-bkx]").forEach(i => i.onchange = () => { (S.nbkOff || (S.nbkOff = {}))[i.dataset.bkx] = !i.checked; S.nbkOpen = true; redraw(); });
   $("bk_go").onclick = () => {
-    const p = sel.value, off = S.nbkOff || {}, todo = nwBulkPlan(kind, p).filter(q => q.act !== "skip" && !off[`${q.x.no}|${q.k}|${p}`]); if(!todo.length) return;
+    const p = sel.value, fut = pNum(p) > pNum(nwCurP()), off = S.nbkOff || {}, todo = nwBulkPlan(kind, p).filter(q => (q.act === "confirm" || q.act === "fill") && !off[`${q.x.no}|${q.k}|${p}`]); if(!todo.length) return;
     const nC = todo.filter(q => q.act === "confirm").length, nF = todo.length - nC, tot = r2(todo.reduce((u, q) => u + q.m, 0));
-    if(!confirm(`บันทึกการชำระเดือน ${thPer(p)} (${kind === "loan" ? "ผู้กู้" : "ผู้ฝาก"}) ${todo.length} รายการ\n• ยืนยันรับเงินที่ลงตามตารางไว้แล้ว ${nC}\n• ลงตามคาดการณ์ ${nF}\nยอดรวม ${B(tot)} บาท\n\nยืนยันว่ารับเงินครบตามนี้แล้วใช่หรือไม่?`)) return;
+    if(!confirm(fut ? `ลงล่วงหน้าเดือน ${thPer(p)} (${kind === "loan" ? "ผู้กู้" : "ผู้ฝาก"}) ${todo.length} รายการ ตามยอดคาดการณ์\nยอดรวม ${B(tot)} บาท\n\nยังไม่นับในยอดปัจจุบัน — ถึงงวดแล้วต้องกดยืนยันรับเงินอีกครั้ง ทำต่อหรือไม่?`
+      : `บันทึกการชำระเดือน ${thPer(p)} (${kind === "loan" ? "ผู้กู้" : "ผู้ฝาก"}) ${todo.length} รายการ\n• ยืนยันรับเงินที่ลงตามตารางไว้แล้ว ${nC}\n• ลงตามคาดการณ์ ${nF}\nยอดรวม ${B(tot)} บาท\n\nยืนยันว่ารับเงินครบตามนี้แล้วใช่หรือไม่?`)) return;
     todo.forEach(q => { if(q.act === "confirm"){ const r = NW.row(q.x.no, p, q.k); if(r){ delete r.exp; if(!r.d) r.d = nwDate5(p); r.ts = Date.now(); } }
+      else if(fut){ const o = nwTimeline(q.a, true).rows.find(z => z.p === p && z.proj); if(o){ const v = o.proj;
+        NW.set(q.x.no, p, q.k, q.k === "free" ? {sh:v.sh, shx:v.shx || "", sv:v.sv || "", m:nwSh(v)} : {m:v.m, int:v.int, pri:v.pri, sh:v.sh, shx:v.shx || "", sv:v.sv || "", bal:v.bal}); } }
       else { ceFill(q.x, q.a, p); NW.set(q.x.no, p, q.k, {d:nwDate5(p)}); } });
-    S.nbkOff = {}; save(); redraw(); toast(`บันทึกการชำระเดือน ${thPer(p)} แล้ว ${todo.length} รายการ`);
+    S.nbkOff = {}; save(); redraw(); toast(fut ? `ลงล่วงหน้าเดือน ${thPer(p)} แล้ว ${todo.length} รายการ (ยังไม่นับในยอดปัจจุบัน)` : `บันทึกการชำระเดือน ${thPer(p)} แล้ว ${todo.length} รายการ`);
   };
 }
 
