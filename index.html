@@ -325,14 +325,14 @@ th.svcol{background:#FFF4D6!important}
 
 /* จัดหน้าให้เต็ม ลดพื้นที่ว่าง */
 .kpage{font-size:11.8px;line-height:1.52}
-.kpage p{margin:4px 0}
+.kpage p{margin:2px 0}
 .kpage .h{margin:8px 0 3px}
 .kpage .ksec{margin:9px 0 5px}
 .pt{padding:5px 8px;margin:4px 0;line-height:1.6}
 .kt td,.kt th{padding:2px 3px}
 .keybox,.ack,.dtl,.calcbox{padding:6px 9px;margin:6px 0}
 .ksigs{margin-top:11px}
-.ksig .sp{height:34px}
+.ksig .sp{height:28px}
 .kpage .ul{margin:2px 0 4px 30px}
 
 /* ตัวอักษรในเอกสาร (หนังสือ/สัญญา/แบบฟอร์ม) เป็นสีดำทั้งหมด ทั้งบนจอ พิมพ์ Word และรูป */
@@ -589,20 +589,21 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
 /* ============ มาตรฐานเอกสารพิมพ์ (ตามสกิล thai-official-doc) ============
    A4 · ขอบ ซ้าย ๓ / ขวา ๒ / บน ๑.๕ / ล่าง ๒ ซม. · TH Sarabun New · จัดชิดซ้าย · เลขหน้าตรงกลางด้านบนตั้งแต่หน้า ๒ (เลขต่อเนื่องทั้งชุดที่พิมพ์)
    หนังสือ/แบบฟอร์ม ๑๖ pt · สัญญา ๑๔ pt + «ลงชื่อกำกับ» มุมล่างขวาทุกหน้า · ใบเสร็จ/สรุป ๑ หน้า ใช้ขอบเฉพาะ (ซ้ายรวมแล้ว ๓ ซม. ขวา ๒ ซม.) */
-@page doc{size:A4 portrait;margin:15mm 20mm 20mm 30mm;@top-center{content:counter(page);font-family:"TH Sarabun New","Sarabun",sans-serif;font-size:16pt;color:#000}}
+@page doc{size:A4 portrait;margin:15mm 20mm 20mm 20mm;@top-center{content:counter(page);font-family:"TH Sarabun New","Sarabun",sans-serif;font-size:16pt;color:#000}}
 @page doc:first{@top-center{content:none}}
-@page contract{size:A4 portrait;margin:15mm 20mm 20mm 30mm;@top-center{content:counter(page);font-family:"TH Sarabun New","Sarabun",sans-serif;font-size:16pt;color:#000}
+@page contract{size:A4 portrait;margin:15mm 20mm 20mm 20mm;@top-center{content:counter(page);font-family:"TH Sarabun New","Sarabun",sans-serif;font-size:16pt;color:#000}
   @bottom-right{content:"ลงชื่อกำกับ ..............................";font-family:"TH Sarabun New","Sarabun",sans-serif;font-size:14pt;color:#000}}
 @page contract:first{@top-center{content:none}}
-@page single{size:A4 portrait;margin:15mm 20mm 20mm 30mm}
+@page single{size:A4 portrait;margin:15mm 20mm 20mm 20mm}
 @page one{size:A4 portrait;margin:15mm 14mm 18mm}
-@page wide{size:A4 landscape;margin:15mm 20mm 20mm 30mm;@top-center{content:counter(page);font-family:"TH Sarabun New","Sarabun",sans-serif;font-size:16pt;color:#000}}
+@page wide{size:A4 landscape;margin:15mm 20mm 20mm 20mm;@top-center{content:counter(page);font-family:"TH Sarabun New","Sarabun",sans-serif;font-size:16pt;color:#000}}
 @page wide:first{@top-center{content:none}}
 @media print{
   .receipt,.ovp{page:one}
   .kpage{page:doc;zoom:1.808;font-size:11.8px;line-height:1.3;text-align:left;break-after:auto}
   .kpage.ks:not(.kc){page:single}
   .kpage.kc{page:contract;zoom:1.58}
+  .kpage .ksigs{break-before:avoid;break-inside:avoid}               /* ลายเซ็นอยู่หน้าเดียวกับข้อความก่อนหน้า ไม่แยกไปหน้าลำพัง */
   .kpage p,.kpage li{text-align:left}                      /* จัดชิดซ้าย (ไม่ยืดช่องไฟ) ตามสกิล — ทับ justify ของ .kpage p */
   .kpage.kl{page:wide;zoom:1.58}                              /* ทะเบียนตารางกว้าง: A4 แนวนอน 14 pt */
   .kpage.kd{zoom:1.58}                                       /* แฟ้ม/ใบปะหน้าที่มีตารางมาก (ชุดฟ้องร้อง) ใช้ 14 pt เหมือนสัญญา */
@@ -675,7 +676,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-136</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-138</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -3099,7 +3100,7 @@ function nwPrint(html, name){
   html = nwxFit(html); d.innerHTML = html; NWX_LAST = {html, name:name || nwxGuessName(html)};
   document.body.classList.add("nwprint"); const t0 = document.title; document.title = nwxName(NWX_LAST.name);          // ชื่อไฟล์เริ่มต้นเมื่อเลือก «บันทึกเป็น PDF»
   const land = html.indexOf("kpage kl") >= 0 && !/class="kpage(?![^"]*kl)/.test(html);            // ทะเบียนตารางกว้างล้วน → A4 แนวนอน (เบราว์เซอร์รุ่นเก่าที่ไม่รู้จักหน้าแบบมีชื่อ)
-  let sty = null; if(land){ sty = document.createElement("style"); sty.textContent = "@page{size:A4 landscape;margin:15mm 20mm 20mm 30mm}"; document.head.appendChild(sty); }
+  let sty = null; if(land){ sty = document.createElement("style"); sty.textContent = "@page{size:A4 landscape;margin:15mm 20mm 20mm 20mm}"; document.head.appendChild(sty); }
   setTimeout(()=>{ window.print(); document.body.classList.remove("nwprint"); document.title = t0; if(sty) sty.remove(); nwxBar(); }, 250);
 }
 /* หลังพิมพ์ (ทุกเอกสาร): แถบเล็กด้านล่าง — ดาวน์โหลดเอกสารชุดเดียวกันเป็น Word (.docx) หรือรูป */
@@ -3134,14 +3135,14 @@ function nwxStage(html, png){
     st.textContent = `.nwstage{position:fixed;left:-12000px;top:0;width:210mm;background:#fff;display:block!important}
       .nwstage>*{box-sizing:border-box;margin:0!important;border-radius:0!important;box-shadow:none!important;background:#fff}
       .nwstage>.receipt,.nwstage>.kpage{border:0!important}
-      .nwstage>.kpage{width:88.5mm!important;min-height:0!important;padding:0!important;font-size:11.8px;line-height:1.3;text-align:left;zoom:1}
-      .nwstage>.kpage.kc,.nwstage>.kpage.kd{width:101.3mm!important}
-      .nwstage>.kpage.kl{width:156.3mm!important}
+      .nwstage>.kpage{width:94mm!important;min-height:0!important;padding:0!important;font-size:11.8px;line-height:1.3;text-align:left;zoom:1}
+      .nwstage>.kpage.kc,.nwstage>.kpage.kd{width:107.6mm!important}
+      .nwstage>.kpage.kl{width:162.7mm!important}
       .nwstage>.kpage p,.nwstage>.kpage li{text-align:left}
       .nwstage>.kpage:not(.kc) p.i2{margin-left:0;text-indent:13.5mm}
-      .nwstage.nwpngst>.kpage{width:116.1mm!important;min-height:164.3mm!important;padding:8.3mm 11mm 11mm 16.6mm!important}
-      .nwstage.nwpngst>.kpage.kc,.nwstage.nwpngst>.kpage.kd{width:132.9mm!important;min-height:187.3mm!important;padding:9.5mm 12.7mm 12.7mm 19mm!important}
-      .nwstage.nwpngst>.kpage.kl{width:188mm!important;min-height:132.9mm!important;padding:9.5mm 12.7mm 12.7mm 19mm!important}
+      .nwstage.nwpngst>.kpage{width:116.1mm!important;min-height:164.3mm!important;padding:8.3mm 11.1mm 11.1mm 11.1mm!important}
+      .nwstage.nwpngst>.kpage.kc,.nwstage.nwpngst>.kpage.kd{width:132.9mm!important;min-height:187.3mm!important;padding:9.5mm 12.7mm 12.7mm 12.7mm!important}
+      .nwstage.nwpngst>.kpage.kl{width:188mm!important;min-height:132.9mm!important;padding:9.5mm 12.7mm 12.7mm 12.7mm!important}
       .nwstage>.receipt{padding:0 6mm 0 16mm!important}.nwstage>.ovp{padding-left:16mm;padding-right:6mm}
       .nwstage>.receipt.nwrc,.nwstage>.ovp{min-height:297mm}
       .nwstage .ovp .ov-stack span{color:#fff!important}`; document.head.appendChild(st); }
@@ -3322,7 +3323,9 @@ async function nwxOoxmlBody(pages, o, media){
       if(!isBlock(n, cs) && !(/^inline-(flex|grid)/.test(cs.display) && n.children.length)){ buf.push(n); continue; }
       await flush();
       if(n.tagName === "TABLE"){ x += await tableOf(n, cs, ctx) + '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="40" w:lineRule="exact"/></w:pPr></w:p>'; continue; }
-      if((/flex/.test(cs.display) && !/column/.test(cs.flexDirection) || /grid/.test(cs.display)) && n.children.length){ x += await gridOf(n, cs, ctx) + '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="40" w:lineRule="exact"/></w:pPr></w:p>'; continue; }
+      if((/flex/.test(cs.display) && !/column/.test(cs.flexDirection) || /grid/.test(cs.display)) && n.children.length){
+        if(n.classList.contains("ksigs")){ const k = x.lastIndexOf("<w:p><w:pPr>"); if(k >= 0 && !x.slice(k).includes("<w:tbl>")) x = x.slice(0, k + 12) + "<w:keepNext/>" + x.slice(k + 12); }       // ลายเซ็นติดกับย่อหน้าก่อนหน้า
+        x += await gridOf(n, cs, ctx) + '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="40" w:lineRule="exact"/></w:pPr></w:p>'; continue; }
       if(!n.textContent.trim() && !n.querySelector("img,svg,table")){ const hh = n.getBoundingClientRect().height * 0.75 * Z; if(hh > 3){ x += `<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="${tw(hh)}" w:lineRule="exact"/></w:pPr></w:p>`; } if(!parseFloat(cs.borderTopWidth) && !parseFloat(cs.borderBottomWidth)) continue; }
       const li = cs.display === "list-item", sideB = ["Left", "Right"].some(q => parseFloat(cs["border" + q + "Width"]) > 0 && cs["border" + q + "Style"] !== "none");
       const c2 = Object.assign({}, ctx), ml = lenPt(cs.marginLeft) + (li ? 14 * 0.75 * Z : 0), mr = lenPt(cs.marginRight);
@@ -3363,7 +3366,7 @@ async function nwxDocx(html, base, o){
       if(!cur || cur.k !== k || (k !== "plain" && el.classList.contains("k1"))){ cur = {k, els:[]}; segs.push(cur); }          /* เอกสารใหม่ = section ใหม่ (เลขหน้าเริ่ม 1 ใหม่) */
       cur.els.push(el); }
     for(const g of segs){ const kp = g.k !== "plain", Zk = g.k === "let" ? NWX_K16 : NWX_K14, wide = g.k === "wide";
-      g.m = kp ? {top:15, right:20, bottom:20, left:30} : {top:o.mt || 15, right:o.mr || 15, bottom:o.mb || 15, left:o.ml || 20};
+      g.m = kp ? {top:15, right:20, bottom:20, left:20} : {top:o.mt || 15, right:o.mr || 15, bottom:o.mb || 15, left:o.ml || 20};
       g.wTw = Math.round(((wide ? 297 : 210) - g.m.left - g.m.right) * 56.7);
       g.xml = await nwxOoxmlBody(g.els, {K:kp ? Zk : (o.K || 1), Z:kp ? Zk : 1, SC:o.SC || 0.85, let:g.k === "let", wTw:g.wTw, pageMode:kp ? () => ({K:Zk, let:g.k === "let"}) : null}, media); }
   } finally { st.remove(); }
@@ -8868,7 +8871,7 @@ function docConsent(c, idx, blank){
       ยินยอมเขตอำนาจศาลกรุงเทพมหานครหรือจังหวัดที่โรงเรียนตั้งอยู่ (ไม่ตัดสิทธิกลุ่มเลือกฟ้องตามภูมิลำเนาคู่กรณี) / หลัก No-Waiver และ Severability ใช้บังคับ</p>
     <p class="i"><b>12. การรับทราบเอกสารอ้างอิง</b><br>
       ข้าพเจ้าได้อ่านและยินยอมผูกพันตาม <b>${AGREE}</b>, <b>สัญญาเงินกู้</b>, <b>สัญญาค้ำประกัน</b> และระเบียบที่เกี่ยวข้องทุกประการ</p>
-    <div class="ksigs" style="grid-template-columns:1fr 1fr;margin-top:18px">
+    <div class="ksigs" style="grid-template-columns:1fr 1fr;margin-top:10px">
       <div class="ksig"><div class="sp"></div><div class="ln">ลงชื่อ ..............................................</div>
         <div>( ${esc(g.name) || ".............................................."} )</div><div class="rl">ผู้ค้ำประกัน</div><div class="rl">วันที่ ..............................</div></div>
       <div class="ksig"><div class="sp"></div><div class="ln">ลงชื่อ ..............................................</div>
