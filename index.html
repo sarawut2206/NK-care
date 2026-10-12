@@ -22,6 +22,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@400;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
+/* ฟอนต์ TH Sarabun New: ใช้ที่ติดตั้งในเครื่องก่อน ถ้าไม่มีโหลดจากโฟลเดอร์ fonts/ — ให้พิมพ์/PDF/ไฟล์ Word จัดหน้าเหมือนกันทุกเครื่อง */
+@font-face{font-family:"TH Sarabun New";font-weight:400;font-style:normal;src:local("TH Sarabun New"),local("THSarabunNew"),url("fonts/THSarabunNew-Regular.ttf") format("truetype")}
+@font-face{font-family:"TH Sarabun New";font-weight:700;font-style:normal;src:local("TH Sarabun New Bold"),local("THSarabunNew-Bold"),url("fonts/THSarabunNew-Bold.ttf") format("truetype")}
+@font-face{font-family:"TH Sarabun New";font-weight:400;font-style:italic;src:local("TH Sarabun New Italic"),local("THSarabunNew-Italic"),url("fonts/THSarabunNew-Italic.ttf") format("truetype")}
+@font-face{font-family:"TH Sarabun New";font-weight:700;font-style:italic;src:local("TH Sarabun New Bold Italic"),local("THSarabunNew-BoldItalic"),url("fonts/THSarabunNew-BoldItalic.ttf") format("truetype")}
+
 :root{
   /* โทนหลัก — น้ำเงินติดล้อ */
   --ink:#0B2C6B;            /* น้ำเงินเข้ม — ตัวหนังสือหลัก + เส้นขอบเน้น */
@@ -676,7 +682,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-138</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-141</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -3139,6 +3145,7 @@ function nwxStage(html, png){
       .nwstage>.kpage.kc,.nwstage>.kpage.kd{width:107.6mm!important}
       .nwstage>.kpage.kl{width:162.7mm!important}
       .nwstage>.kpage p,.nwstage>.kpage li{text-align:left}
+      .nwstage>.kpage,.nwstage>.kpage *{font-family:'TH Sarabun New','Sarabun',sans-serif!important}
       .nwstage>.kpage:not(.kc) p.i2{margin-left:0;text-indent:13.5mm}
       .nwstage.nwpngst>.kpage{width:116.1mm!important;min-height:164.3mm!important;padding:8.3mm 11.1mm 11.1mm 11.1mm!important}
       .nwstage.nwpngst>.kpage.kc,.nwstage.nwpngst>.kpage.kd{width:132.9mm!important;min-height:187.3mm!important;padding:9.5mm 12.7mm 12.7mm 12.7mm!important}
@@ -5492,6 +5499,106 @@ function nwStatusDoc(){
     <div class="ov-sig"><div><div class="ln"></div><div>( ${esc(FIN())} )</div><div>กรรมการฝ่ายการเงิน</div></div><div><div class="ln"></div><div>( ${esc(CHAIR())} )</div><div>ประธานกลุ่มบุคคล</div></div>
       <div class="ov-dt">จัดทำเมื่อ ${thDay(today)}</div></div></div>`;
 }
+/* ============ เอกสารสรุปภาพรวม กบข.นข. (เล่ม) — แนะนำกลุ่ม + กติกา + ขั้นตอน + ระบบ + ตัวเลขการเงินปัจจุบัน/คาดการณ์ ============
+   เนื้อหาแนะนำมาจากข้อตกลงกลุ่มบุคคลฯ และค่าตั้งของโปรแกรม (PROD/BOARD/ค่าเพดานค้ำ) · ตัวเลขดึงจากทะเบียน ณ วันที่พิมพ์ (เฉพาะงวดที่ยืนยันแล้ว) */
+function nwBookDoc(){
+  const Z = nwStatusData(), O = Z.O, D = Z.D, C = D.C, today = nwToday(), pl = nwPFull(D.end).split(" ")[0], R = nwArrears(), G = nwGuarData();
+  const F = nwFcstData(3), curN = pNum(nwCurP()), pend = NW.fut().filter(r => pNum(r.p) <= curN).length, planned = NW.fut().filter(r => pNum(r.p) > curN).length;
+  const lv = k => R.filter(o => nwLv(o.missed) === k), arrTot = r2(R.reduce((u, o) => u + o.short, 0));
+  const P1 = PROD["สามัญ"], P2 = PROD["ดูแลกัน"], gmax = nwGMax();
+  const row2 = (a, b) => `<tr><td class="kk" style="width:34%">${a}</td><td>${b}</td></tr>`;
+  const head = t => `<div class="ksec">${t}</div>`;
+  const li = a => `<ul class="ul">${a.map(t => `<li>${t}</li>`).join("")}</ul>`;
+  const NU = v => `<b class="f">${v}</b>`;
+  const cover = `${logo()}<div class="kt1" style="font-size:22px;margin-top:10px">เอกสารสรุปภาพรวม กบข.นข.</div>
+    <div class="kt2">${ORGF}<br>(กบข.นข.)</div>
+    <div class="kmeta2"><span>ข้อมูลตามทะเบียน ณ วันที่ ${thDate(today)}</span><span>งวดล่าสุด ${pl} พ.ศ. ${D.end.split("-")[0]}</span><span>สมาชิก ${O.n} คน</span></div>
+    ${head("ภาพรวมโดยย่อ")}
+    <table class="kt kw sum"><tbody>
+      <tr><td>ทุนสมาชิก (ทุนเรือนหุ้นสะสมรวม)</td><td class="n"><b>${B0(D.shNow)}</b> บาท</td></tr>
+      <tr><td>เงินให้สมาชิกกู้คงเหลือ (ผู้กู้ ${O.nLoan} คน)</td><td class="n"><b>${B0(D.dbNow)}</b> บาท</td></tr>
+      <tr><td>รายได้ดอกเบี้ยสะสม ปี ${O.yr}${O.n69 ? ` (${thPer(O.f69)} – ${thPer(O.l69)})` : ""}</td><td class="n"><b>${B0(O.int69)}</b> บาท</td></tr>
+      <tr><td>ผู้กู้ที่ชำระปกติ / อยู่ระหว่างติดตามหนี้</td><td class="n"><b>${O.okP}</b> / <b>${O.arrP}</b> คน</td></tr>
+      <tr><td>ประมาณเงินคืนสมาชิกสิ้นปี (ปันผลหุ้น + เฉลี่ยคืนดอกเบี้ย)</td><td class="n"><b>${B0(r2(D.divS + D.divI))}</b> บาท</td></tr>
+    </tbody></table>
+    ${head("สารบัญ")}
+    ${li(["๑ ข้อมูลทั่วไปและคณะกรรมการ", "๒ ผลิตภัณฑ์เงินกู้และเงินฝากหุ้น", "๓ กติกาสำคัญตามข้อตกลง", "๔ ขั้นตอนการดำเนินงานประจำ", "๕ ระบบโปรแกรมและเอกสารที่ออกได้", "๖ สถานะการเงินปัจจุบันและคาดการณ์ล่วงหน้า", "๗ งานที่ต้องติดตาม"])}
+    <p class="kh" style="margin-top:12px">เอกสารนี้สรุปให้เข้าใจภาพรวมเท่านั้น — ถ้าข้อความต่างจากข้อตกลงกลุ่มบุคคลฯ และระเบียบ ให้ถือตามข้อตกลงและระเบียบเป็นหลัก</p>`;
+  const body = `${head("๑ ข้อมูลทั่วไปและคณะกรรมการ")}
+    <table class="kt kw"><tbody>
+      ${row2("ชื่อกลุ่ม", `${ORGF} (กบข.นข.)`)}
+      ${row2("ลักษณะกลุ่ม", "ข้าราชการครูและบุคลากรทางการศึกษาโรงเรียนมัธยมวัดหนองแขมรวมตัวกันบริหารเงินทุน เพื่อให้สมาชิกเข้าถึงแหล่งเงินกู้อัตราดอกเบี้ยต่ำ")}
+      ${row2("สถานะทางกฎหมาย", "ไม่เป็นนิติบุคคล ดำเนินการภายใต้ข้อตกลงของสมาชิก · คณะกรรมการบริหารวาระปัจจุบันมีอำนาจติดตามหนี้และดำเนินคดีแทนกลุ่ม ในนามคณะกรรมการ (ข้อตกลงหมวด 1 และ 7)")}
+      ${row2("คุณสมบัติสมาชิก", "เป็นข้าราชการครูหรือบุคลากรทางการศึกษาของโรงเรียน สมัครใจเข้าร่วมและปฏิบัติตามข้อตกลง ชำระเงินเข้ากลุ่มตามที่ตกลง")}
+      ${row2("ข้อตกลงที่ใช้ปัจจุบัน", esc(AGREE))}
+      ${row2("วาระคณะกรรมการ", `5 ปี นับจากวันที่ลงตำแหน่ง · ชุดปัจจุบันได้รับเลือกจากที่ประชุมใหญ่ ${esc(BOARD.meet)}`)}
+    </tbody></table>
+    <table class="kt kw" style="margin-top:6px"><thead><tr><th class="l" style="width:46%">ตำแหน่ง</th><th class="l">ชื่อ–สกุล</th></tr></thead><tbody>
+      ${BOARD.list.map(b => `<tr><td>${esc(b.r)}</td><td>${esc(b.n)}</td></tr>`).join("")}</tbody></table>
+
+    ${head("๒ ผลิตภัณฑ์เงินกู้และเงินฝากหุ้น")}
+    <table class="kt kw"><thead><tr><th class="l" style="width:21%">ประเภท</th><th class="l">เงื่อนไขหลัก</th></tr></thead><tbody>
+      <tr><td><b>สินเชื่อสามัญ</b></td><td>ดอกเบี้ย ${(RATE * 100).toFixed(0)}% ต่อเดือนแบบลดต้นลดดอก · ผ่อนไม่เกิน ${P1.maxTerms} งวด · ผู้ค้ำประกัน ${P1.guar} คน · วงเงินตามความสามารถชำระ (เงินสุทธิในสลิปคงเหลือไม่น้อยกว่า 30% หลังหักยอดผ่อน)</td></tr>
+      <tr><td><b>สินเชื่อดูแลกัน</b></td><td>ดอกเบี้ยคิดแบบเดียวกัน · วงเงินไม่เกิน ${B0(P2.maxAmt)} บาทต่อราย · ผ่อนไม่เกิน ${P2.maxTerms} งวด · ผู้ค้ำประกัน ${P2.guar} คน · โควตารวม ${B0(P2.quota)} บาท (${P2.slots} ราย)</td></tr>
+      <tr><td><b>ฝากหุ้น</b></td><td>ฝากหุ้นอย่างเดียว ไม่มีหนี้และไม่มีดอกเบี้ย ถอนคืนได้ตามระเบียบการถอนทุน · ผู้กู้ต้องฝากหุ้นประจำทุกงวด และฝากหุ้นเพิ่มตามระยะเวลาการกู้ (ระเบียบอัตราการฝากหุ้น)</td></tr>
+    </tbody></table>
+
+    ${head("๓ กติกาสำคัญตามข้อตกลง")}
+    ${li([
+      "<b>การชำระ:</b> ชำระภายในวันที่ 5 ของทุกเดือน โอนได้ตั้งแต่วันที่ " + NW_OPEN + " ของเดือนก่อนหน้า · ยอดงวดประกอบด้วย ดอกเบี้ย + เงินฝากหุ้นประจำ + หุ้นเพิ่ม + เงินต้น",
+      "<b>สัญญา:</b> ผู้กู้และผู้ค้ำต้องลงนามสัญญาเงินกู้และหนังสือค้ำประกันทุกครั้ง ผู้ปฏิเสธลงนามไม่มีสิทธิ์กู้",
+      "<b>ผู้ค้ำประกัน:</b> ต้องเป็นสมาชิกที่ไม่ค้างชำระ ค้ำได้ไม่เกิน " + gmax + " สัญญาต่อคน (ตั้งค่าในโปรแกรม) · ผู้กู้ค้างครบ 3 / 6 / 12 งวด ผู้ค้ำร่วมรับผิด 20% / 50% / สูงสุด 80% ตามข้อตกลง",
+      "<b>ผิดนัดชำระ:</b> ค้างเกิน 90 วัน คิดดอกเบี้ยผิดนัด 1.2% ต่อเดือน · ผิดนัดติดต่อกัน 12 เดือนเข้าสู่กระบวนการทางกฎหมาย · ผิดนัด 2 ครั้งใน 12 เดือน จำกัดวงเงินกู้ครั้งถัดไป · 3 ครั้งใน 24 เดือน ระงับสิทธิ์กู้ 1 ปี",
+      "<b>ถอนทุนคืน:</b> ยื่นคำร้องเป็นหนังสือ คืนเป็นรอบทุก 6 เดือน (2 คนต่อรอบ) ระหว่างรอได้ดอกเบี้ย 2% ต่อปี · ต้องปิดหนี้และไม่มีภาระค้ำประกัน",
+      "<b>เงินคืนสิ้นปี:</b> ปันผลหุ้นและเฉลี่ยคืนดอกเบี้ย ตามมติที่ประชุม (โปรแกรมประมาณการด้วยอัตรา " + C.rs + "% และ " + C.ri + "%)",
+      "<b>การแก้ไขข้อตกลง:</b> ต้องได้รับการสนับสนุนจากสมาชิกไม่น้อยกว่า 75% และแจ้งล่วงหน้า (ตามข้อตกลงหมวด 10)"])}
+
+    ${head("๔ ขั้นตอนการดำเนินงานประจำ")}
+    <table class="kt kw"><thead><tr><th style="width:36px">ที่</th><th class="l">ขั้นตอน</th><th class="l">เอกสาร / แท็บในโปรแกรม</th></tr></thead><tbody>
+      <tr><td class="c">1</td><td>ขอกู้: คำนวณวงเงิน ตรวจผู้ค้ำ บันทึกคำขอ (ออกเลขที่สัญญาต่อจากสัญญาประเภทเดียวกันล่าสุด)</td><td>กู้ยืม + ติดตามหนี้ › แบบคำขอกู้ + หนังสือยินยอมผู้ค้ำ</td></tr>
+      <tr><td class="c">2</td><td>อนุมัติและทำสัญญา: พิมพ์สัญญาฉบับเต็มและบันทึกสัญญา แล้วลงทะเบียนการกู้</td><td>สัญญาเงินกู้ · สัญญาค้ำ · ตารางชำระหนี้</td></tr>
+      <tr><td class="c">3</td><td>จ่ายเงินกู้และบันทึกในทะเบียน (กู้เพิ่ม / กู้ทับ) · ลงตารางผ่อนล่วงหน้าได้</td><td>ทะเบียนผู้กู้</td></tr>
+      <tr><td class="c">4</td><td>รับชำระรายเดือน: บันทึกรายคนหรือ «บันทึกการชำระทุกคนครั้งเดียว» แล้วออกใบเสร็จ</td><td>ทะเบียนผู้กู้ · ทะเบียนผู้ฝาก · ใบเสร็จรายเดือน</td></tr>
+      <tr><td class="c">5</td><td>สรุปและรายงาน: ใบสรุปรายคน ปันผลสิ้นปี แดชบอร์ด สรุปภาพรวม ๑ หน้า</td><td>ใบสรุป + ปันผล · แดชบอร์ด · สรุปภาพรวม</td></tr>
+      <tr><td class="c">6</td><td>ติดตามหนี้: แจ้งเตือนผู้กู้ → แจ้งผู้ค้ำ (ภายใน 90 วัน) → บอกกล่าวครั้งสุดท้าย → หนังสือรับสภาพหนี้ → ชุดเอกสารฟ้องร้อง</td><td>กู้ยืม + ติดตามหนี้ · ชุดฟ้องร้อง</td></tr>
+      <tr><td class="c">7</td><td>ควบคุมผู้ค้ำ: จำนวนสัญญาที่ค้ำต่อคน เลขที่สัญญาค้ำตรงกับสัญญากู้ แจ้งเตือนเมื่อค้ำเกิน</td><td>ทะเบียนคุมผู้ค้ำ</td></tr>
+    </tbody></table>
+
+    ${head("๕ ระบบโปรแกรมและเอกสารที่ออกได้")}
+    ${li(["<b>แดชบอร์ด / สรุปภาพรวม ๑ หน้า:</b> หุ้น หนี้ ดอกเบี้ย ปันผล และคาดการณ์ล่วงหน้า · พิมพ์ Word PDF รูป",
+      "<b>ทะเบียนผู้กู้ / ผู้ฝาก:</b> บันทึกรายเดือน นำเข้าตารางผ่อนจากรูป ลงล่วงหน้า ยืนยันรับเงินทุกคนครั้งเดียว",
+      "<b>กู้ยืม + ติดตามหนี้:</b> คำขอกู้ สัญญา ตารางชำระหนี้ หนังสือแจ้งเตือน/ทวงถาม/รับสภาพหนี้",
+      "<b>ฐานข้อมูลสมาชิก / ทะเบียนคุมผู้ค้ำ / ชุดฟ้องร้อง:</b> ข้อมูลบุคคล OCR บัตร การค้ำ และแฟ้มคดีรายสัญญา",
+      "<b>มาตรฐานเอกสาร:</b> A4 ฟอนต์ TH Sarabun New หนังสือ 16 pt สัญญา 14 pt · พิมพ์ได้ทั้งกระดาษ PDF และ Word (ฝังฟอนต์)"])}`;
+  const stat = `${head("๖ สถานะการเงินปัจจุบันและคาดการณ์ล่วงหน้า")}
+    <p class="kh">ตัวเลข ณ วันที่ ${thDay(today)} (เฉพาะรายการที่ยืนยันรับเงินแล้ว ไม่รวมที่ลงล่วงหน้า/รอยืนยัน)</p>
+    <table class="kt kw sum"><tbody>
+      <tr><td>สมาชิกทั้งหมด (ไม่รวมผู้ลาออก)</td><td class="n"><b>${O.n}</b> คน · ผู้กู้ ${O.nLoan} · ผู้ฝาก ${O.nSave}</td></tr>
+      <tr><td>ทุนเรือนหุ้นสะสมรวม</td><td class="n"><b>${B(D.shNow)}</b> บาท</td></tr>
+      <tr><td>&nbsp;&nbsp;แยกประเภท: สามัญ / ดูแลกัน / ฝากหุ้นอื่น</td><td class="n">${B0(D.shBy.sam)} / ${B0(D.shBy.dk)} / ${B0(D.shBy.free)} บาท</td></tr>
+      <tr><td>เงินกู้คงเหลือรวม</td><td class="n"><b>${B(D.dbNow)}</b> บาท</td></tr>
+      <tr><td>&nbsp;&nbsp;แยกประเภท: สามัญ / ดูแลกัน</td><td class="n">${B0(D.dbBy.sam)} / ${B0(D.dbBy.dk)} บาท</td></tr>
+      <tr><td>ปล่อยกู้สะสมตามสัญญา (${D.LC.n} สัญญาที่ยังมีหนี้)</td><td class="n">${B0(D.LC.amt)} บาท</td></tr>
+      <tr><td>รายได้ดอกเบี้ยสะสม ปี ${O.yr}</td><td class="n"><b>${B(O.int69)}</b> บาท${O.n69 ? ` · เฉลี่ยเดือนละ ${B0(O.int69 / O.n69)}` : ""}</td></tr>
+      <tr><td>ประมาณเงินคืนสมาชิกสิ้นปี</td><td class="n">ปันผลหุ้น ${B0(D.divS)} + เฉลี่ยคืน ${B0(D.divI)} = <b>${B0(r2(D.divS + D.divI))}</b> บาท</td></tr>
+      <tr><td>การคืนทุนสมาชิกที่ลาออก</td><td class="n">${Z.ret > 0 ? `${Z.retN || Z.outs.length} ราย · ${B0(Z.ret)} บาท` : "—"}</td></tr>
+    </tbody></table>
+    <div class="ksec2">คาดการณ์ ${F.months.length} เดือนข้างหน้า (รวมยอดที่ลงล่วงหน้าไว้ + คำนวณตามงวดละ)</div>
+    <table class="kt kw"><thead><tr><th class="l">เดือน</th><th>ชำระรวมที่คาด</th><th>ดอกเบี้ย</th><th>ปล่อยกู้ใหม่</th><th>หนี้สิ้นเดือน</th><th>หุ้นสิ้นเดือน</th></tr></thead><tbody>
+      ${F.tot.map(t => `<tr><td class="l">${thPer(t.p)}</td><td class="n">${B0(t.m)}</td><td class="n">${B0(t.int)}</td><td class="n">${t.loan ? B0(t.loan) : "—"}</td><td class="n">${B0(t.debt)}</td><td class="n">${B0(t.shares)}</td></tr>`).join("")}</tbody></table>
+
+    ${head("๗ งานที่ต้องติดตาม")}
+    <table class="kt kw"><tbody>
+      <tr><td>ผู้กู้ค้างชำระ</td><td class="n"><b>${R.length}</b> สัญญา · ยอดค้างรวม ${B0(arrTot)} บาท (1–2 งวด ${lv(1).length} · 3–5 งวด ${lv(2).length} · 6 งวดขึ้นไป ${lv(3).length})</td></tr>
+      <tr><td>แจ้งเตือนทะเบียนคุมผู้ค้ำ</td><td class="n"><b>${G.alerts.length}</b> รายการ (ค้ำเกินเพดาน ${G.st.over} คน)</td></tr>
+      <tr><td>รอยืนยันรับเงิน (ถึงงวดแล้ว)</td><td class="n"><b>${pend}</b> รายการ</td></tr>
+      <tr><td>ลงล่วงหน้าไว้ (ยังไม่ถึงงวด)</td><td class="n"><b>${planned}</b> รายการ</td></tr>
+    </tbody></table>
+    <div class="ksigs" style="grid-template-columns:1fr 1fr;margin-top:14px">${sigOf("กรรมการฝ่ายการเงิน", FIN())}${sigOf("ประธานกลุ่มบุคคล", CHAIR())}</div>
+    <p class="kh" style="margin-top:8px;text-align:center">จัดทำเมื่อ ${thDay(today)} จากทะเบียนในโปรแกรม</p>`;
+  return pg(1, 3, cover, "").replace('class="kpage k1', 'class="kpage k1 kb') + pg(2, 3, body, "").replace('class="kpage', 'class="kpage kb') + pg(3, 3, stat, "");
+}
+
 function drawNWOverview(){
   const el = $("tab26"); if(!el) return;
   if(tab !== 26){ el.innerHTML = ""; return; }
@@ -5500,7 +5607,7 @@ function drawNWOverview(){
   const D = nwDashData(), mode = S.ovmode === "month" ? "month" : "status", mths = D.months.filter(p => pNum(p) >= pNum("2568-05")), p = (S.ovm && mths.includes(S.ovm)) ? S.ovm : D.end;
   const yrM = mths.filter(q => q.startsWith(D.end.split("-")[0]));
   el.innerHTML = `<div class="nwscreen"><div class="card"><div class="eyebrow">สรุป กบข.นข. — ๑ หน้า A4 สำหรับสมาชิก</div>
-      <div class="bar" style="margin:0 0 8px"><button class="${mode === "status" ? "" : "ghost"}" id="ov_ms">สรุปสถานะความมั่นคง</button><button class="${mode === "month" ? "" : "ghost"}" id="ov_mm">สรุปรายเดือน</button></div>
+      <div class="bar" style="margin:0 0 8px"><button class="${mode === "status" ? "" : "ghost"}" id="ov_ms">สรุปสถานะความมั่นคง</button><button class="${mode === "month" ? "" : "ghost"}" id="ov_mm">สรุปรายเดือน</button><span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap"><button class="ghost" id="ov_bk" title="เอกสารเล่ม: แนะนำกลุ่ม กติกา ขั้นตอน ระบบ + ตัวเลขการเงินปัจจุบันและคาดการณ์ (พิมพ์ / PDF)">📘 เอกสารสรุปภาพรวม (เล่ม)</button><button class="ghost" id="ov_bkw" title="บันทึกเป็น Word (.docx) ฝังฟอนต์">Word</button></span></div>
       <div class="pf">${mode === "status"
         ? `<div><label>คืนทุนสมาชิกแล้ว (บาท)</label><input type="number" step="0.01" min="0" id="ov_ret" value="${(S.nw.dash || {}).ret || ""}" placeholder="${nwStatusData().outs.length ? "ว่าง = ตามผู้ลาออกในทะเบียน" : "เช่น ยอดที่คืนให้สมาชิกที่ลาออก"}"></div>
            <div><label>จำนวนผู้คืนทุน (ราย)</label><input type="number" step="1" min="0" id="ov_retn" value="${(S.nw.dash || {}).retN || ""}" placeholder="${nwStatusData().outs.length ? "ว่าง = ตามผู้ลาออกในทะเบียน" : "เช่น 5"}"></div>
@@ -5515,6 +5622,7 @@ function drawNWOverview(){
   const fit = () => { const w = el.querySelector(".ov-wrap"), pp = el.querySelector(".ov-paper"); if(!w || !pp) return;
     const k = Math.min(1, (w.clientWidth - 4) / pp.offsetWidth); pp.style.transform = `scale(${k})`; pp.style.transformOrigin = "0 0"; w.style.height = Math.ceil(pp.offsetHeight * k + 24) + "px"; };
   fit(); window.onresize = () => { if(tab === 26) fit(); };
+  $("ov_bk").onclick = () => nwPrint(nwBookDoc(), "เอกสารสรุปภาพรวม กบข.นข."); $("ov_bkw").onclick = () => nwxRun("เอกสารสรุปภาพรวม → Word", () => nwxDocx(nwBookDoc(), "เอกสารสรุปภาพรวม กบข.นข."));
   $("ov_mm").onclick = () => { S.ovmode = "month"; drawNWOverview(); }; $("ov_ms").onclick = () => { S.ovmode = "status"; drawNWOverview(); };
   const setDash = patch => { S.nw.dash = Object.assign({}, S.nw.dash || {}, patch); save(); drawNWOverview(); };
   if(mode === "status"){
