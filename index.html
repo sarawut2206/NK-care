@@ -675,7 +675,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-135</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-136</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -8868,13 +8868,11 @@ function docConsent(c, idx, blank){
       ยินยอมเขตอำนาจศาลกรุงเทพมหานครหรือจังหวัดที่โรงเรียนตั้งอยู่ (ไม่ตัดสิทธิกลุ่มเลือกฟ้องตามภูมิลำเนาคู่กรณี) / หลัก No-Waiver และ Severability ใช้บังคับ</p>
     <p class="i"><b>12. การรับทราบเอกสารอ้างอิง</b><br>
       ข้าพเจ้าได้อ่านและยินยอมผูกพันตาม <b>${AGREE}</b>, <b>สัญญาเงินกู้</b>, <b>สัญญาค้ำประกัน</b> และระเบียบที่เกี่ยวข้องทุกประการ</p>
-    <div class="csig">
-      <div>ลงชื่อผู้ค้ำประกัน: ..................................................</div>
-      <div>( <b class="f">${esc(g.name)}</b> )</div><div class="rl">ผู้ค้ำประกัน</div>
-      <div>วันที่: ...........................................</div>
-      <div style="margin-top:16px">ลงชื่อพยาน: ..................................................</div>
-      <div>( ................................................ )</div><div class="rl">พยานรับรอง</div>
-      <div>วันที่: ...........................................</div></div>`;
+    <div class="ksigs" style="grid-template-columns:1fr 1fr;margin-top:18px">
+      <div class="ksig"><div class="sp"></div><div class="ln">ลงชื่อ ..............................................</div>
+        <div>( ${esc(g.name) || ".............................................."} )</div><div class="rl">ผู้ค้ำประกัน</div><div class="rl">วันที่ ..............................</div></div>
+      <div class="ksig"><div class="sp"></div><div class="ln">ลงชื่อ ..............................................</div>
+        <div>( .............................................. )</div><div class="rl">พยานรับรอง</div><div class="rl">วันที่ ..............................</div></div></div>`;
 
   return [p1,p2].map((b,i)=>pg(i+1,2,b,"ผู้ค้ำประกัน")).join("");
 }
