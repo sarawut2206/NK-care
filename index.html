@@ -249,7 +249,7 @@ th.svcol{background:#FFF4D6!important}
 .ksch{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .ktsch td,.ktsch th{padding:1.5px 4px;font-size:9px}
 .ktfull{width:100%}
-.ktfull td,.ktfull th{padding:1.8px 6px;font-size:9.5px}
+.ktfull td,.ktfull th{padding:1.8px 3px;font-size:9px}
 .ktot{border-top:1.5px solid var(--ink);margin-top:6px;padding-top:5px;text-align:right;font-size:11px}
 @media print{
   body.kprint .kpage{border:0;border-radius:0;padding:0;margin:0}
@@ -302,6 +302,7 @@ th.svcol{background:#FFF4D6!important}
 .kt.sg td{height:24px} .kt.sg tr.hl td{background:#FDF6E3}
 .kt .c{text-align:center}
 .kt.kw td,.kt.kw th{white-space:normal;vertical-align:top}
+.kpage .kt td,.kpage .kt th{white-space:normal}.kpage .kt td.n,.kpage .kt td.c{white-space:nowrap}   /* ตารางในเอกสารต้องตัดบรรทัดได้ ไม่งั้นกว้างเกินหน้าแล้วเบราว์เซอร์ย่อทั้งหน้าตอนพิมพ์ */
 .nwx-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:9999;display:flex;gap:8px;align-items:center;background:var(--ink);color:#fff;padding:8px 12px;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,.3);font-size:14px}
 .nwx-bar button{background:#fff;color:var(--ink);border:0;border-radius:6px;padding:5px 10px;cursor:pointer;font-weight:600}
 @media print{.nwx-bar{display:none!important}}
@@ -328,7 +329,7 @@ th.svcol{background:#FFF4D6!important}
 .kpage .h{margin:8px 0 3px}
 .kpage .ksec{margin:9px 0 5px}
 .pt{padding:5px 8px;margin:4px 0;line-height:1.6}
-.kt td,.kt th{padding:3px 6px}
+.kt td,.kt th{padding:2px 3px}
 .keybox,.ack,.dtl,.calcbox{padding:6px 9px;margin:6px 0}
 .ksigs{margin-top:11px}
 .ksig .sp{height:34px}
@@ -336,27 +337,27 @@ th.svcol{background:#FFF4D6!important}
 
 /* ---------- ตัวอย่างบนจอให้อ่านง่าย (เฉพาะจอ — การพิมพ์ใช้มาตรฐานเอกสารพิมพ์ด้านล่าง) ---------- */
 @media screen{
-  .kpage{font-family:"Sarabun","IBM Plex Sans Thai",sans-serif;font-size:15px;line-height:1.7;color:#111827}
-  .kpage p{text-align:left;margin:7px 0}
-  .kpage .i2{color:#111827;margin-left:0;text-indent:9mm}
-  .kpage .kt1{font-size:19px;margin-top:6px}
-  .kpage .kt2{font-size:14px;color:#374151;line-height:1.5}
-  .kpage .kmeta2{font-size:14px;color:#374151;padding:8px 0;margin-bottom:10px}
-  .kpage .h,.kpage .ksec{font-size:16px}
-  .kpage .kt{font-size:14px;margin:8px 0}
-  .kpage .kt td,.kpage .kt th{padding:6px 9px;border-color:#9CA3AF;line-height:1.35}
-  .kpage .kt th{font-size:13.5px;font-weight:700;background:#E4DDCB;color:#111827;text-align:center;vertical-align:middle}
-  .kpage .kt th.l{text-align:left}
-  .kpage .kt .n,.kpage .kt .c{font-family:"Sarabun","IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-size:14.5px}
-  .kpage .kt.sum td:first-child{font-size:14px}
-  .kpage .kt .kk{font-size:13.5px;color:#374151}
-  .kpage .kt tr.hl td{background:#FFF1C9}
-  .kpage .warnbox2{font-size:14px;line-height:1.65;padding:10px 14px;color:#111827}
-  .kpage .warnbox2 .ul li{margin-bottom:4px}
-  .kpage .ackbox,.kpage .ack{font-size:14px;line-height:1.7}
-  .kpage .ksigs{font-size:14px}
-  .kpage .kh,.kpage .sub,.kpage .rt{font-size:13.5px;color:#374151}
-  .kpage .pt,.kpage .dtl,.kpage .calcbox,.kpage .keybox{font-size:14.5px;line-height:1.7}
+  :not(.nwstage)>.kpage{font-family:"Sarabun","IBM Plex Sans Thai",sans-serif;font-size:15px;line-height:1.7;color:#111827}
+  :not(.nwstage)>.kpage p{text-align:left;margin:7px 0}
+  :not(.nwstage)>.kpage .i2{color:#111827;margin-left:0;text-indent:9mm}
+  :not(.nwstage)>.kpage .kt1{font-size:19px;margin-top:6px}
+  :not(.nwstage)>.kpage .kt2{font-size:14px;color:#374151;line-height:1.5}
+  :not(.nwstage)>.kpage .kmeta2{font-size:14px;color:#374151;padding:8px 0;margin-bottom:10px}
+  :not(.nwstage)>.kpage .h,:not(.nwstage)>.kpage .ksec{font-size:16px}
+  :not(.nwstage)>.kpage .kt{font-size:14px;margin:8px 0}
+  :not(.nwstage)>.kpage .kt td,:not(.nwstage)>.kpage .kt th{padding:6px 9px;border-color:#9CA3AF;line-height:1.35}
+  :not(.nwstage)>.kpage .kt th{font-size:13.5px;font-weight:700;background:#E4DDCB;color:#111827;text-align:center;vertical-align:middle}
+  :not(.nwstage)>.kpage .kt th.l{text-align:left}
+  :not(.nwstage)>.kpage .kt .n,:not(.nwstage)>.kpage .kt .c{font-family:"Sarabun","IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-size:14.5px}
+  :not(.nwstage)>.kpage .kt.sum td:first-child{font-size:14px}
+  :not(.nwstage)>.kpage .kt .kk{font-size:13.5px;color:#374151}
+  :not(.nwstage)>.kpage .kt tr.hl td{background:#FFF1C9}
+  :not(.nwstage)>.kpage .warnbox2{font-size:14px;line-height:1.65;padding:10px 14px;color:#111827}
+  :not(.nwstage)>.kpage .warnbox2 .ul li{margin-bottom:4px}
+  :not(.nwstage)>.kpage .ackbox,:not(.nwstage)>.kpage .ack{font-size:14px;line-height:1.7}
+  :not(.nwstage)>.kpage .ksigs{font-size:14px}
+  :not(.nwstage)>.kpage .kh,:not(.nwstage)>.kpage .sub,:not(.nwstage)>.kpage .rt{font-size:13.5px;color:#374151}
+  :not(.nwstage)>.kpage .pt,:not(.nwstage)>.kpage .dtl,:not(.nwstage)>.kpage .calcbox,:not(.nwstage)>.kpage .keybox{font-size:14.5px;line-height:1.7}
 }
 
 /* ---------- การพิมพ์ ---------- */
@@ -593,13 +594,16 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
 @page contract:first{@top-center{content:none}}
 @page single{size:A4 portrait;margin:15mm 20mm 20mm 30mm}
 @page one{size:A4 portrait;margin:15mm 14mm 18mm}
+@page wide{size:A4 landscape;margin:15mm 20mm 20mm 30mm;@top-center{content:counter(page);font-family:"TH Sarabun New","Sarabun",sans-serif;font-size:16pt;color:#000}}
+@page wide:first{@top-center{content:none}}
 @media print{
   .receipt,.ovp{page:one}
-  .kpage{page:doc;zoom:1.85;font-size:11.8px;line-height:1.3;text-align:left;break-after:auto}
+  .kpage{page:doc;zoom:1.808;font-size:11.8px;line-height:1.3;text-align:left;break-after:auto}
   .kpage.ks:not(.kc){page:single}
-  .kpage.kc{page:contract;zoom:1.6}
+  .kpage.kc{page:contract;zoom:1.58}
   .kpage p,.kpage li{text-align:left}                      /* จัดชิดซ้าย (ไม่ยืดช่องไฟ) ตามสกิล — ทับ justify ของ .kpage p */
-  .kpage.kd{zoom:1.6}                                       /* แฟ้ม/ใบปะหน้าที่มีตารางมาก (ชุดฟ้องร้อง) ใช้ 14 pt เหมือนสัญญา */
+  .kpage.kl{page:wide;zoom:1.58}                              /* ทะเบียนตารางกว้าง: A4 แนวนอน 14 pt */
+  .kpage.kd{zoom:1.58}                                       /* แฟ้ม/ใบปะหน้าที่มีตารางมาก (ชุดฟ้องร้อง) ใช้ 14 pt เหมือนสัญญา */
   .kpage.kend,.kpage.kb{break-after:page}
   .kpage.k1{break-before:page}
   .kpage,.kpage *{font-family:"TH Sarabun New","Sarabun",sans-serif!important}
@@ -669,7 +673,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-117</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-130</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -3072,14 +3076,18 @@ function nwDocHTML(x, kind){
     </div></div>`;
 }
 
+const nwxFit = h => String(h).replace(/min-width:(\d+)px/g, (m, n) => "min-width:" + Math.min(+n, 300) + "px");        /* ช่องเขียนมือ: จำกัดความกว้างไม่ให้ล้นหน้า */
+const nwLand = h => h.split('class="kpage').join('class="kpage kl');
 let NWX_LAST = null;
 const nwxGuessName = html => { const a = html.indexOf('class="kt1">'); if(a < 0) return "เอกสาร"; const b = html.indexOf("</div>", a);
   return html.slice(a + 12, b).split("<").map(x => x.split(">").pop()).join("").trim() || "เอกสาร"; };
 function nwPrint(html, name){
   const d = $("nwdoc"); if(!d) return;
-  d.innerHTML = html; NWX_LAST = {html, name:name || nwxGuessName(html)};
-  document.body.classList.add("nwprint");
-  setTimeout(()=>{ window.print(); document.body.classList.remove("nwprint"); nwxBar(); }, 250);
+  html = nwxFit(html); d.innerHTML = html; NWX_LAST = {html, name:name || nwxGuessName(html)};
+  document.body.classList.add("nwprint"); const t0 = document.title; document.title = nwxName(NWX_LAST.name);          // ชื่อไฟล์เริ่มต้นเมื่อเลือก «บันทึกเป็น PDF»
+  const land = html.indexOf("kpage kl") >= 0 && !/class="kpage(?![^"]*kl)/.test(html);            // ทะเบียนตารางกว้างล้วน → A4 แนวนอน (เบราว์เซอร์รุ่นเก่าที่ไม่รู้จักหน้าแบบมีชื่อ)
+  let sty = null; if(land){ sty = document.createElement("style"); sty.textContent = "@page{size:A4 landscape;margin:15mm 20mm 20mm 30mm}"; document.head.appendChild(sty); }
+  setTimeout(()=>{ window.print(); document.body.classList.remove("nwprint"); document.title = t0; if(sty) sty.remove(); nwxBar(); }, 250);
 }
 /* หลังพิมพ์ (ทุกเอกสาร): แถบเล็กด้านล่าง — ดาวน์โหลดเอกสารชุดเดียวกันเป็น Word (.docx) หรือรูป */
 function nwxBar(){
@@ -3108,22 +3116,30 @@ const nwxSave = (blob, name) => { const a = document.createElement("a"); a.href 
 const nwxName = s => String(s || "เอกสาร").replace(/[\\/:*?"<>|]+/g, "-").trim().slice(0, 80) || "เอกสาร";
 
 /* เวทีซ่อน — จัดหน้าแบบ A4 เหมือนตอนพิมพ์ */
-function nwxStage(html){
+function nwxStage(html, png){
   if(!document.getElementById("nwx_css")){ const st = document.createElement("style"); st.id = "nwx_css";
     st.textContent = `.nwstage{position:fixed;left:-12000px;top:0;width:210mm;background:#fff;display:block!important}
       .nwstage>*{box-sizing:border-box;margin:0!important;border-radius:0!important;box-shadow:none!important;background:#fff}
       .nwstage>.receipt,.nwstage>.kpage{border:0!important}
+      .nwstage>.kpage{width:88.5mm!important;min-height:0!important;padding:0!important;font-size:11.8px;line-height:1.3;text-align:left;zoom:1}
+      .nwstage>.kpage.kc,.nwstage>.kpage.kd{width:101.3mm!important}
+      .nwstage>.kpage.kl{width:156.3mm!important}
+      .nwstage>.kpage p,.nwstage>.kpage li{text-align:left}
+      .nwstage>.kpage:not(.kc) p.i2{margin-left:0;text-indent:13.5mm}
+      .nwstage.nwpngst>.kpage{width:116.1mm!important;min-height:164.3mm!important;padding:8.3mm 11mm 11mm 16.6mm!important}
+      .nwstage.nwpngst>.kpage.kc,.nwstage.nwpngst>.kpage.kd{width:132.9mm!important;min-height:187.3mm!important;padding:9.5mm 12.7mm 12.7mm 19mm!important}
+      .nwstage.nwpngst>.kpage.kl{width:188mm!important;min-height:132.9mm!important;padding:9.5mm 12.7mm 12.7mm 19mm!important}
       .nwstage>.receipt{padding:0 6mm 0 16mm!important}.nwstage>.ovp{padding-left:16mm;padding-right:6mm}
       .nwstage>.receipt.nwrc,.nwstage>.ovp{min-height:297mm}
       .nwstage .ovp .ov-stack span{color:#fff!important}`; document.head.appendChild(st); }
-  const d = document.createElement("div"); d.className = "nwdoc nwstage"; d.innerHTML = html; document.body.appendChild(d); return d;
+  const d = document.createElement("div"); d.className = "nwdoc nwstage" + (png ? " nwpngst" : ""); d.innerHTML = nwxFit(html); document.body.appendChild(d); return d;
 }
 
 /* ---------- รูปภาพ ---------- */
 async function nwxPng(html, base){
-  await nwxLoad("h2c"); const st = nwxStage(html), cvs = [];
+  await nwxLoad("h2c"); const st = nwxStage(html, true), cvs = [];
   try{ await (document.fonts && document.fonts.ready);
-    for(const pg of [...st.children]) cvs.push(await html2canvas(pg, {scale:2, backgroundColor:"#ffffff", logging:false, useCORS:true}));
+    for(const pg of [...st.children]) cvs.push(await html2canvas(pg, {scale:2 * (pg.classList.contains("kpage") ? (/(^| )(kc|kd|kl)( |$)/.test(pg.className) ? 1.58 : 1.808) : 1), backgroundColor:"#ffffff", logging:false, useCORS:true}));
   } finally { st.remove(); }
   const blobs = await Promise.all(cvs.map(c => new Promise(r => c.toBlob(r, "image/png"))));
   if(blobs.length === 1){ nwxSave(blobs[0], nwxName(base) + ".png"); return 1; }
@@ -3137,7 +3153,7 @@ const NWX_ONE = {K:0.85, SC:0.9, mt:10, mb:10, ml:16, mr:8};      /* เอก�
 const NWX_FIT = {K:0.72, SC:0.76, mt:8, mb:8, ml:16, mr:8};      /* สรุป ๑ หน้า (มีกราฟ): ย่อให้พอดี ๑ หน้า A4 */
 const NWX_FONT = "'TH Sarabun New','TH SarabunPSK',sans-serif";
 const NWX_MSO = "mso-ascii-font-family:'TH Sarabun New';mso-hansi-font-family:'TH Sarabun New';mso-bidi-font-family:'TH Sarabun New';mso-fareast-font-family:'TH Sarabun New';";
-const NWX_K16 = 16 / (15 * 0.75), NWX_K14 = 14 / (15 * 0.75);        /* ตัวอักษรหลักบนจอ 15px → 16 pt (หนังสือ/แบบฟอร์ม) หรือ 14 pt (สัญญา/แฟ้ม) */
+const NWX_K16 = 1.808, NWX_K14 = 1.58;        /* zoom เดียวกับตอนพิมพ์: ตัวอักษรหลัก 11.8px → 16.0 pt (หนังสือ/แบบฟอร์ม) หรือ 14.0 pt (สัญญา/แฟ้ม) */
 const nwxHex = c => { const m = String(c || "").match(/rgba?\(\s*(\d+)[ ,]+(\d+)[ ,]+(\d+)(?:[ ,/]+([\d.]+))?/); if(!m) return ""; if(m[4] !== undefined && +m[4] === 0) return "";
   return "#" + [m[1], m[2], m[3]].map(v => (+v).toString(16).padStart(2, "0")).join(""); };
 const nwxEsc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/ /g, "&nbsp;");
@@ -3150,125 +3166,222 @@ async function nwxSvgPng(svg){
   return {src:cv.toDataURL("image/png"), w, h};
 }
 
-/* DOM → HTML ที่ Word อ่านได้ · K = ตัวคูณขนาดอักษร · SC = ตัวคูณขนาดรูป */
-async function nwxWordBody(stage, K, SC, opt){
-  let LET = false, LH = false;                       /* LET = หนังสือ (ย่อหน้าแรก 2.5 ซม.) · LH = ระยะบรรทัด 1 เท่า */
-  const sp = v => Math.round((parseFloat(v) || 0) * 0.75 * 10) / 10, fs = v => Math.round((parseFloat(v) || 0) * 0.75 * K * 2) / 2;
-  const bdr = (cs, side) => { const w = parseFloat(cs["border" + side + "Width"]) || 0, st = cs["border" + side + "Style"]; if(!(w > 0) || st === "none" || st === "hidden") return "";
-    return `border-${side.toLowerCase()}:${Math.max(0.5, Math.round(w * 0.75 * 2) / 2)}pt ${st === "dotted" || st === "dashed" ? st : "solid"} ${nwxHex(cs["border" + side + "Color"]) || "#000000"};`; };
-  const box = (cs, noPad) => { let s = ["Top", "Right", "Bottom", "Left"].map(q => bdr(cs, q)).join("");
-    const bg = nwxHex(cs.backgroundColor); if(bg && bg !== "#ffffff") s += `background:${bg};`;
-    if(!noPad) ["Top", "Right", "Bottom", "Left"].forEach(q => { const v = parseFloat(cs["padding" + q]) || 0; if(v > 0.5) s += `padding-${q.toLowerCase()}:${LH ? Math.min(sp(v), q === "Top" || q === "Bottom" ? 1.5 : 4) : sp(v)}pt;`; });
-    return s; };
-  const txt = cs => { const z = fs(cs.fontSize); let s = `font-family:${NWX_FONT};${NWX_MSO}font-size:${z}pt;mso-bidi-font-size:${z}pt;`;
-    if((parseInt(cs.fontWeight, 10) || 400) >= 600) s += "font-weight:bold;mso-bidi-font-weight:bold;"; if(cs.fontStyle === "italic") s += "font-style:italic;mso-bidi-font-style:italic;";
-    s += `color:${nwxHex(cs.color) || "#000000"};`; const td = cs.textDecorationLine; if(td && td !== "none") s += `text-decoration:${td};`; return s; };
-  const align = cs => { const a = cs.textAlign; return a === "center" ? "center" : a === "right" || a === "end" ? "right" : a === "justify" ? "justify" : "left"; };
-  const lh = cs => { if(LH) return "line-height:100%;"; const l = parseFloat(cs.lineHeight), f = parseFloat(cs.fontSize); return l > 0 && f > 0 ? `line-height:${Math.round(Math.min(1.3, Math.max(1, l / f)) * 100)}%;` : ""; };
-  const pseudo = (el, w) => { try{ const c = getComputedStyle(el, w).content; if(c && c !== "none" && c !== "normal" && c !== '""') return nwxEsc(c.replace(/^["']|["']$/g, "")); }catch(e){} return ""; };
-  const skip = el => { const q = getComputedStyle(el); return /^(SCRIPT|STYLE|NOSCRIPT|BUTTON|INPUT|SELECT|TEXTAREA)$/.test(el.tagName) || q.display === "none" || q.visibility === "hidden" || q.position === "absolute" && !el.matches("svg,img")
-    || el.classList.contains("pgno") || el.classList.contains("pgsig"); };
-
-  async function kids(el){ let o = ""; for(const n of el.childNodes) o += await conv(n); return o; }
-
-  async function table(n, cs){
-    const W = n.getBoundingClientRect().width || 1; let o = `<table cellspacing="0" cellpadding="0" style="width:100%;border-collapse:collapse;${["Top", "Right", "Bottom", "Left"].map(q => bdr(cs, q)).join("")}">`;
-    for(const sec of n.children){ if(!/^(THEAD|TBODY|TFOOT)$/.test(sec.tagName)) continue;
-      for(const tr of sec.children){ if(tr.tagName !== "TR" || getComputedStyle(tr).display === "none") continue; const rbg = nwxHex(getComputedStyle(tr).backgroundColor); o += "<tr>";
-        for(const td of tr.children){ if(!/^(TD|TH)$/.test(td.tagName)) continue; const c = getComputedStyle(td), r = td.getBoundingClientRect(), tg = td.tagName.toLowerCase();
-          let st = box(c); const bg = nwxHex(c.backgroundColor) || rbg; if(bg && bg !== "#ffffff" && !/background:/.test(st)) st += `background:${bg};`;
-          const lum = h => { const v = [1, 3, 5].map(i => parseInt((h || "#ffffff").slice(i, i + 2), 16) / 255); return .3 * v[0] + .59 * v[1] + .11 * v[2]; };
-          const fixCol = lum(nwxHex(c.color)) > .75 && lum(bg || "#ffffff") > .6;
-          o += `<${tg} ${td.colSpan > 1 ? `colspan="${td.colSpan}" ` : ""}${td.rowSpan > 1 ? `rowspan="${td.rowSpan}" ` : ""}style="width:${Math.round(r.width / W * 100)}%;${st}vertical-align:${c.verticalAlign === "middle" ? "middle" : c.verticalAlign === "bottom" ? "bottom" : "top"};text-align:${align(c)};${txt(c)}${fixCol ? "color:#000000;" : ""}${lh(c)}">${(await kids(td)) || "&nbsp;"}</${tg}>`; }
-        o += "</tr>"; } }
-    return o + "</table>";
-  }
-
-  /* flex แถว / grid → ตาราง (ช่องละ ๑ รายการ) */
-  async function grid(n, cs){
-    const isGrid = /grid/.test(cs.display), items = [...n.children].filter(c => !skip(c)), W = n.getBoundingClientRect().width || 1;
-    const cols = isGrid ? Math.max(1, (cs.gridTemplateColumns || "").split(/\s+/).filter(v => /px|fr|%/.test(v)).length) : Math.max(1, items.length);
-    const tops = items.map(it => Math.round(it.getBoundingClientRect().top)), wrapRows = !isGrid && new Set(tops.map(t => Math.round(t / 4))).size > 1;      // flex-wrap: บางรายการตกลงบรรทัดถัดไป
-    const jc = cs.justifyContent, vy = /center/.test(cs.alignItems) ? "middle" : "top", rows = []; let row = [], used = 0;
-    if(wrapRows){ let cur = [], lastTop = null; items.forEach((it, i) => { if(lastTop !== null && tops[i] > lastTop + 3){ rows.push(cur.map(it2 => ({it:it2, span:1}))); cur = []; } cur.push(it); lastTop = tops[i]; }); if(cur.length) rows.push(cur.map(it2 => ({it:it2, span:1}))); }
-    else for(const it of items){ const q = getComputedStyle(it); let span = 1;
-      if(isGrid){ const m = /span\s+(\d+)/.exec(q.gridColumnStart); if(m) span = +m[1]; else if(/^-1/.test(q.gridColumnEnd)) span = cols - used; span = Math.max(1, Math.min(span, cols - used || cols)); }
-      if(used + span > cols){ rows.push(row); row = []; used = 0; } row.push({it, span}); used += span; if(used >= cols){ rows.push(row); row = []; used = 0; } }
-    if(!wrapRows && row.length) rows.push(row);
-    const gap = Math.max(parseFloat(cs.columnGap) || 0, 0);
-    let o = `<table cellspacing="0" cellpadding="0" style="width:100%;table-layout:fixed;border-collapse:collapse;${box(cs, true)}">`;
-    for(const r of rows){ o += "<tr>";
-      for(let k = 0; k < r.length; k++){ const {it, span} = r[k], q = getComputedStyle(it), rect = it.getBoundingClientRect(); let al = align(q);
-        if(!isGrid && jc === "space-between" && r.length > 1 && q.textAlign === "start") al = k === 0 ? "left" : k === r.length - 1 ? "right" : "center";
-        const RW = wrapRows ? r.reduce((u, z) => u + z.it.getBoundingClientRect().width + gap, 0) : W; o += `<td ${span > 1 ? `colspan="${span}" ` : ""}style="width:${Math.round((rect.width + gap) / RW * 100)}%;vertical-align:${vy};text-align:${al};${gap ? `padding-right:${sp(gap)}pt;` : ""}">${await conv(it)}</td>`; }
-      o += "</tr>"; }
-    return o + "</table>";
-  }
-
-  async function conv(n){
-    if(n.nodeType === 3){ const t = n.data.replace(/[ \t\r\n\f]+/g, " "); return nwxEsc(t); }
-    if(n.nodeType !== 1 || skip(n)) return "";
-    const tag = n.tagName, cs = getComputedStyle(n);
-    if(tag === "BR") return "<br>";
-    if(tag === "svg" || tag === "SVG"){ try{ const p = await nwxSvgPng(n); return `<img src="${p.src}" width="${Math.round(p.w * SC)}" height="${Math.round(p.h * SC)}">`; }catch(e){ return ""; } }
-    if(tag === "IMG"){ const r = n.getBoundingClientRect(); return `<img src="${n.src}" width="${Math.round(r.width * SC)}" height="${Math.round(r.height * SC)}">`; }
-    if(tag === "TABLE") return table(n, cs);
-    if((/flex/.test(cs.display) && !/column/.test(cs.flexDirection) || /grid/.test(cs.display)) && n.children.length) return grid(n, cs);
-    const inline = /^inline/.test(cs.display) && !n.matches(".dt"), inner = await kids(n), pre = pseudo(n, "::before"), post = pseudo(n, "::after");
-    if(n.matches(".dt") && !n.textContent.trim()){ const w = n.getBoundingClientRect().width; return `<span style="${txt(cs)}">${"…".repeat(Math.max(3, Math.round(w / 5)))}</span>`; }   // ช่องว่างให้เขียนมือ
-    if(inline) return `<span style="${txt(cs)}${(parseInt(cs.fontWeight, 10) || 400) >= 600 ? "" : ""}">${pre}${inner}${post}</span>`;
-    const li = cs.display === "list-item", cap = v => Math.min(LH ? 2 : 6, sp(v)), mtb = `margin-top:${cap(cs.marginTop)}pt;margin-bottom:${cap(cs.marginBottom)}pt;`, mlf = (parseFloat(cs.marginLeft) || 0) + (li ? 14 : 0) > 0.5 ? `margin-left:${sp((parseFloat(cs.marginLeft) || 0) + (li ? 14 : 0))}pt;` : "";
-    if(["Left", "Right"].some(q => parseFloat(cs["border" + q + "Width"]) > 0 && cs["border" + q + "Style"] !== "none"))          // กล่องมีขอบข้าง → ตาราง ๑ ช่อง (Word วาดขอบกล่องได้ครบกว่า)
-      return `<table cellspacing="0" cellpadding="0" style="width:100%;border-collapse:collapse;${mtb}"><tr><td style="${box(cs)}${txt(cs)}${lh(cs)}text-align:${align(cs)};vertical-align:top">${pre}${inner}${post}</td></tr></table>`;
-    return `<div style="${txt(cs)}${lh(cs)}text-align:${align(cs)};${LET && n.matches(".i2") ? "text-indent:2.5cm;" : ""}${mtb}${mlf}${box(cs)}">${li ? "• " : ""}${pre}${inner}${post}</div>`;
-  }
-
-  const brk = `<p style="margin:0;font-size:1pt;line-height:1pt;page-break-before:always">&nbsp;</p>`;
-  let o = "", i = 0; for(const pgEl of [...stage.children]){ if(i++) o += brk;
-    const pm = opt && opt.pageMode ? opt.pageMode(pgEl) : null; if(pm){ K = pm.K; LET = !!pm.let; LH = true; }
-    if(pm){ const pc = getComputedStyle(pgEl); o += `<div style="${txt(pc)}line-height:100%;text-align:left">${await kids(pgEl)}</div>`; }      /* หน้ากระดาษ: ไม่ใส่ padding ของจอ — ขอบมาจากตั้งค่าหน้า */
-    else o += await conv(pgEl); }
-  return o;
+/* ฝังฟอนต์ TH Sarabun New ลงในไฟล์ .docx (4 รูปแบบ · ไฟล์ฟอนต์อยู่ที่โฟลเดอร์ fonts/ — GPL) เพื่อให้เปิดบนเครื่องที่ไม่มีฟอนต์แล้วตัวอักษรและการจัดหน้าไม่เคลื่อน
+   ขั้นตอนตามข้อกำหนด OOXML: สร้าง GUID → นำ GUID กลับลำดับไบต์ → XOR กับ 32 ไบต์แรกของไฟล์ฟอนต์ → เก็บเป็น word/fonts/fontN.odttf */
+const NWX_FF = [["Regular", "THSarabunNew-Regular.ttf"], ["Bold", "THSarabunNew-Bold.ttf"], ["Italic", "THSarabunNew-Italic.ttf"], ["BoldItalic", "THSarabunNew-BoldItalic.ttf"]];
+let NWX_FBUF = null;
+async function nwxFonts(){
+  if(NWX_FBUF) return NWX_FBUF;
+  const bases = []; try{ bases.push(new URL("fonts/", location.href).href); }catch(e){}
+  bases.push("https:\/\/sarawut2206.github.io/NK-care/fonts/");
+  const out = {};
+  for(const [k, f] of NWX_FF){ let buf = null;
+    for(const b of bases){ try{ const r = await fetch(b + f); if(!r.ok) continue; const u = new Uint8Array(await r.arrayBuffer());
+      if(u.length > 50000 && u[0] === 0 && u[1] === 1 && u[2] === 0 && u[3] === 0){ buf = u; break; } }catch(e){} }
+    if(!buf) return null; out[k] = buf; }
+  return (NWX_FBUF = out);
+}
+const nwxGuid = () => { const h = Array.from({length:32}, () => Math.floor(Math.random() * 16).toString(16)).join("").toUpperCase(); return `{${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}}`; };
+function nwxObf(buf, guid){
+  const hex = guid.split("{").join("").split("}").join("").split("-").join(""), key = [];
+  for(let i = 0; i < 16; i++) key.push(parseInt(hex.substr(i * 2, 2), 16));
+  key.reverse(); const o = buf.slice(); for(let i = 0; i < 32; i++) o[i] ^= key[i % 16]; return o;
 }
 
+/* DOM → OOXML (.docx จริง ไม่ใช้ altChunk/HTML) · อ่านเรขาคณิตจากเวทีซ่อนที่จัดหน้าเหมือนตอนพิมพ์ แล้วเขียนเป็นย่อหน้า/ตาราง/รูป พร้อมฟอนต์และขนาดกำกับทุกส่วน
+   · ฟอนต์ละติน/ไทย/bidi = TH Sarabun New ทุก run · ขนาด sz+szCs ทุก run · ตารางความกว้างคงที่ (tblLayout fixed) · แต่ละเอกสาร = 1 section (เลขหน้าเริ่ม 1 ใหม่)
+   · Z = ตัวคูณความยาวตอนพิมพ์ (zoom) · K = ตัวคูณขนาดอักษร · SC = ตัวคูณรูป */
+const NX = {
+  w:"http:\/\/schemas.openxmlformats.org/wordprocessingml/2006/main", r:"http:\/\/schemas.openxmlformats.org/officeDocument/2006/relationships",
+  wp:"http:\/\/schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing", a:"http:\/\/schemas.openxmlformats.org/drawingml/2006/main", pic:"http:\/\/schemas.openxmlformats.org/drawingml/2006/picture",
+  pr:"http:\/\/schemas.openxmlformats.org/package/2006/relationships", ct:"http:\/\/schemas.openxmlformats.org/package/2006/content-types", wm:"application\/vnd.openxmlformats-officedocument.wordprocessingml"
+};
+const nxe = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const nxFN = '<w:rFonts w:ascii="TH Sarabun New" w:hAnsi="TH Sarabun New" w:eastAsia="TH Sarabun New" w:cs="TH Sarabun New"/>';
+
+async function nwxOoxmlBody(pages, o, media){
+  let K = o.K, Z = o.Z, SC = o.SC, LET = !!o.let, W = o.wTw;                    /* W = ความกว้างบรรทัดเป็นทวิป */
+  const lenPt = v => (parseFloat(v) || 0) * 0.75 * Z, tw = pt => Math.round(pt * 20), fsH = v => Math.max(2, Math.round((parseFloat(v) || 0) * 0.75 * K * 2));
+  const skip = el => { const q = getComputedStyle(el); return /^(SCRIPT|STYLE|NOSCRIPT|BUTTON|INPUT|SELECT|TEXTAREA)$/.test(el.tagName) || q.display === "none" || q.visibility === "hidden" || q.position === "absolute" && !el.matches("svg,img")
+    || el.classList.contains("pgno") || el.classList.contains("pgsig"); };
+  const hex = c => (nwxHex(c) || "").slice(1).toUpperCase();
+  const lum = h => { const v = [0, 2, 4].map(i => parseInt((h || "FFFFFF").slice(i, i + 2), 16) / 255); return .3 * v[0] + .59 * v[1] + .11 * v[2]; };
+  const bdrOne = (cs, side, tag) => { const w = parseFloat(cs["border" + side + "Width"]) || 0, st = cs["border" + side + "Style"]; if(!(w > 0) || st === "none" || st === "hidden") return "";
+    return `<w:${tag} w:val="${st === "dotted" ? "dotted" : st === "dashed" ? "dashed" : "single"}" w:sz="${Math.max(2, Math.min(96, Math.round(w * 0.75 * Z * 8)))}" w:space="0" w:color="${hex(cs["border" + side + "Color"]) || "000000"}"/>`; };
+  const pbdr = cs => { const b = ["Top:top", "Left:left", "Bottom:bottom", "Right:right"].map(q => { const [s, t] = q.split(":"); return bdrOne(cs, s, t).replace('w:space="0"', `w:space="${Math.min(31, Math.round(lenPt(cs["padding" + s]) || 1))}"`); }).join(""); return b ? `<w:pBdr>${b}</w:pBdr>` : ""; };
+  const shdOf = cs => { const bg = hex(cs.backgroundColor); return bg && bg !== "FFFFFF" ? `<w:shd w:val="clear" w:color="auto" w:fill="${bg}"/>` : ""; };
+  const pseudo = (el, w) => { try{ const c = getComputedStyle(el, w).content; if(c && c !== "none" && c !== "normal" && c !== '""') return c.replace(/^["']|["']$/g, ""); }catch(e){} return ""; };
+  let imgN = 0;
+
+  /* ---- run ---- */
+  const run = (t, cs, bgHex) => { if(!t) return ""; const sz = fsH(cs.fontSize), b = (parseInt(cs.fontWeight, 10) || 400) >= 600, it = cs.fontStyle === "italic";
+    let col = hex(cs.color) || "000000"; if(lum(col) > .75 && lum(bgHex || "FFFFFF") > .6) col = "000000";
+    const inl = /^inline/.test(cs.display), u = /underline/.test(cs.textDecorationLine || "") || (inl && (cs.borderBottomStyle === "solid" || cs.borderBottomStyle === "dotted") && parseFloat(cs.borderBottomWidth) > 0);
+    return `<w:r><w:rPr>${nxFN}${b ? "<w:b/><w:bCs/>" : ""}${it ? "<w:i/><w:iCs/>" : ""}<w:color w:val="${col}"/><w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/>${u ? '<w:u w:val="single"/>' : ""}</w:rPr><w:t xml:space="preserve">${nxe(t)}</w:t></w:r>`; };
+  const pic = async (src, wPx, hPx, ext) => { if(!/^data:image\/(png|jpe?g|gif)/.test(src)) return ""; const m = /^data:image\/(\w+);base64,(.*)$/.exec(src); if(!m) return "";
+    const e = m[1] === "jpeg" ? "jpg" : m[1]; let id = media.map[m[2].slice(0, 80) + m[2].length]; if(!id){ id = "rIdI" + (++media.n); media.map[m[2].slice(0, 80) + m[2].length] = id; media.files.push({id, name:`image${media.n}.${e}`, b64:m[2]}); }
+    const cx = Math.round(wPx * 0.75 * (Z === 1 ? SC : Z) * 12700), cy = Math.round(hPx * 0.75 * (Z === 1 ? SC : Z) * 12700), n = ++imgN;
+    return `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${n}" name="Picture ${n}"/><a:graphic><a:graphicData uri="${NX.pic}"><pic:pic><pic:nvPicPr><pic:cNvPr id="${n}" name="image${n}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${id}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`; };
+
+  /* ---- กลุ่ม inline → runs ---- */
+  async function runs(nodes, bgHex){
+    let x = "";
+    for(const n of nodes){
+      if(n.nodeType === 3){ const t = n.data.replace(/[ \t\r\n\f]+/g, " "); if(t && n.parentElement) x += run(t, getComputedStyle(n.parentElement), bgHex); continue; }
+      if(n.nodeType !== 1 || skip(n)) continue;
+      const tag = n.tagName, cs = getComputedStyle(n);
+      if(tag === "BR"){ x += "<w:r><w:br/></w:r>"; continue; }
+      if(tag === "svg" || tag === "SVG"){ try{ const p = await nwxSvgPng(n); x += await pic(p.src, p.w, p.h); }catch(e){} continue; }
+      if(tag === "IMG"){ const r = n.getBoundingClientRect(); x += await pic(n.src, r.width, r.height); continue; }
+      if((n.matches(".dt,.dot")) && !n.textContent.trim()){ const wpt = n.getBoundingClientRect().width * 0.75 * Z, sz = fsH(cs.fontSize) / 2; x += run("…".repeat(Math.max(3, Math.round(wpt / (sz * 0.55)))), cs, bgHex); continue; }
+      const pre = pseudo(n, "::before"), post = pseudo(n, "::after");
+      if(pre) x += run(pre, cs, bgHex);
+      x += await runs([...n.childNodes], bgHex);
+      if(post) x += run(post, cs, bgHex);
+    }
+    return x;
+  }
+  const isBlock = (n, cs) => !/^inline/.test(cs.display) || n.tagName === "TABLE";
+
+  /* ---- ย่อย่อหน้า ---- */
+  function pPr(owner, cs, ctx, extra){
+    const al = cs.textAlign === "center" ? "center" : cs.textAlign === "right" || cs.textAlign === "end" ? "right" : "left";
+    const mt = Math.max(0, Math.min(6, lenPt(cs.marginTop))), mb = Math.max(0, Math.min(6, lenPt(cs.marginBottom))), ti = LET && owner.matches && owner.matches(".i2") ? 2.5 / 2.54 * 72 : 0;
+    return `<w:pPr>${ctx.keep ? "<w:keepNext/>" : ""}${extra || ""}${ctx.bdr}${ctx.shd}<w:spacing w:before="${tw(mt)}" w:after="${tw(mb)}" w:line="240" w:lineRule="auto"/><w:ind w:left="${Math.max(0, ctx.l)}" w:right="${Math.max(0, ctx.r)}"${ti ? ` w:firstLine="${tw(ti)}"` : ""}/><w:jc w:val="${al}"/></w:pPr>`;
+  }
+  async function flow(owner, ocs, nodes, ctx){
+    if(!nodes.some(n => n.nodeType === 3 ? n.data.trim() : n.nodeType === 1 && !skip(n))) return "";
+    const bg = ctx.bgHex, rx = await runs(nodes, bg); if(!rx.trim()) return "";
+    return `<w:p>${pPr(owner, ocs, ctx, "")}${rx}</w:p>`;
+  }
+
+  /* ---- ตาราง ---- */
+  async function tableFromRows(rows, totalPx, ctx0, boxCs){
+    const edges = []; rows.forEach(r => r.cells.forEach(c => { edges.push(Math.round(c.x0)); edges.push(Math.round(c.x1)); }));
+    const E = [...new Set(edges)].sort((a, b) => a - b).reduce((u, v) => (u.length && v - u[u.length - 1] < 3 ? u : u.concat(v)), []);
+    const base = E[0], span = (E[E.length - 1] - base) || 1, ncol = E.length - 1; if(ncol < 1) return "";
+    const totTw = Math.min(W - Math.max(0, ctx0.l) - Math.max(0, ctx0.r), Math.round(totalPx * 0.75 * Z * 20)), grid = E.slice(0, -1).map((e, i) => Math.max(120, Math.round((E[i + 1] - e) / span * totTw)));
+    const colOf = x => { let b = 0, d = 1e9; E.forEach((e, i) => { if(Math.abs(e - x) < d){ d = Math.abs(e - x); b = i; } }); return b; };
+    const act = {}; let xml = `<w:tbl><w:tblPr><w:tblW w:w="${grid.reduce((a, b) => a + b, 0)}" w:type="dxa"/><w:tblInd w:w="${Math.max(0, ctx0.l)}" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="40" w:type="dxa"/><w:right w:w="40" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${grid.map(g => `<w:gridCol w:w="${g}"/>`).join("")}</w:tblGrid>`;
+    for(const r of rows){ const cells = r.cells.slice().sort((a, b) => a.x0 - b.x0); let col = 0, tr = `<w:tr><w:trPr><w:cantSplit/>${r.head ? "<w:tblHeader/>" : ""}</w:trPr>`;
+      const fill = (to) => { while(col < to){ if(act[col] > 0){ act[col]--; tr += `<w:tc><w:tcPr><w:tcW w:w="${grid[col]}" w:type="dxa"/><w:vMerge/></w:tcPr><w:p/></w:tc>`; col++; } else { let e = col; while(e < to && !(act[e] > 0)) e++; const wsum = grid.slice(col, e).reduce((a, b) => a + b, 0);
+          tr += `<w:tc><w:tcPr><w:tcW w:w="${wsum}" w:type="dxa"/>${e - col > 1 ? `<w:gridSpan w:val="${e - col}"/>` : ""}</w:tcPr><w:p><w:pPr><w:spacing w:before="0" w:after="0"/></w:pPr></w:p></w:tc>`; col = e; } } };
+      for(const c of cells){ const c0 = colOf(c.x0), c1 = Math.max(c0 + 1, colOf(c.x1)); fill(c0); if(col > c0) continue;
+        const wsum = grid.slice(c0, c1).reduce((a, b) => a + b, 0), vm = c.rowSpan > 1; if(vm) for(let k = c0; k < c1; k++) act[k] = c.rowSpan - 1;
+        tr += `<w:tc><w:tcPr><w:tcW w:w="${wsum}" w:type="dxa"/>${c1 - c0 > 1 ? `<w:gridSpan w:val="${c1 - c0}"/>` : ""}${vm ? '<w:vMerge w:val="restart"/>' : ""}${c.borders}${c.shd}${c.mar}<w:vAlign w:val="${c.va}"/></w:tcPr>${c.xml || "<w:p/>"}${/<\/w:tbl>$/.test(c.xml || "") ? "<w:p/>" : ""}</w:tc>`; col = c1; }
+      fill(ncol); xml += tr + "</w:tr>"; }
+    return xml + "</w:tbl>";
+  }
+  async function cellOf(td, rect, baseX0, rowBg){
+    const c = getComputedStyle(td), bg = hex(c.backgroundColor) || rowBg || "", sh = bg && bg !== "FFFFFF" ? `<w:shd w:val="clear" w:color="auto" w:fill="${bg}"/>` : "";
+    const b = [["Top", "top"], ["Left", "left"], ["Bottom", "bottom"], ["Right", "right"]].map(q => bdrOne(c, q[0], q[1])).join(""), mar = ["Top:top", "Left:left", "Bottom:bottom", "Right:right"].map(q => { const [s, t] = q.split(":"); return `<w:${t} w:w="${tw(lenPt(c["padding" + s]))}" w:type="dxa"/>`; }).join("");
+    const ctx = {l:0, r:0, bdr:"", shd:"", bgHex:bg || "FFFFFF", keep:false};
+    return {x0:rect.left, x1:rect.right, xml: await blocks(td, ctx), borders:b ? `<w:tcBorders>${b}</w:tcBorders>` : "", shd:sh, mar:`<w:tcMar>${mar}</w:tcMar>`, va:c.verticalAlign === "middle" ? "center" : c.verticalAlign === "bottom" ? "bottom" : "top", rowSpan:td.rowSpan || 1, colSpan:td.colSpan || 1};
+  }
+  async function tableOf(n, cs, ctx){
+    const rows = [], tr0 = n.getBoundingClientRect();
+    for(const sec of n.children){ if(!/^(THEAD|TBODY|TFOOT)$/.test(sec.tagName)) continue;
+      for(const tr of sec.children){ if(tr.tagName !== "TR" || getComputedStyle(tr).display === "none") continue; const rbg = hex(getComputedStyle(tr).backgroundColor), cells = [];
+        for(const td of tr.children){ if(!/^(TD|TH)$/.test(td.tagName)) continue; cells.push(await cellOf(td, td.getBoundingClientRect(), tr0.left, rbg)); }
+        rows.push({cells, head:sec.tagName === "THEAD"}); } }
+    return rows.length ? tableFromRows(rows, tr0.width, ctx, cs) : "";
+  }
+  async function gridOf(n, cs, ctx){
+    const isGrid = /grid/.test(cs.display), items = [...n.children].filter(c => !skip(c)), r0 = n.getBoundingClientRect(); if(!items.length) return "";
+    const rowsA = []; let cur = [], minB = 1e9;
+    items.forEach(it => { const rc = it.getBoundingClientRect(); if(cur.length && rc.top >= minB - 1){ rowsA.push(cur); cur = []; minB = 1e9; } cur.push(it); minB = Math.min(minB, rc.bottom); }); if(cur.length) rowsA.push(cur);
+    const rows = []; for(const ro of rowsA){ const cells = []; for(const it of ro){ const rc = it.getBoundingClientRect(), c = getComputedStyle(it), ct = {l:0, r:0, bdr:"", shd:"", bgHex:"FFFFFF", keep:false};
+        cells.push({x0:rc.left, x1:rc.right, xml: await blocks(it, ct), borders:"", shd:shdOf(c), mar:'<w:tcMar><w:top w:w="0" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="40" w:type="dxa"/></w:tcMar>', va:/center/.test(cs.alignItems) ? "center" : "top", rowSpan:1, colSpan:1}); }
+      rows.push({cells, head:false}); }
+    return tableFromRows(rows, r0.width, ctx, cs);
+  }
+
+  /* ---- block ---- */
+  async function blocks(el, ctx){
+    let x = "", buf = [];
+    const cs0 = getComputedStyle(el);
+    const flush = async () => { if(buf.length){ x += await flow(el, cs0, buf, ctx); buf = []; } };
+    for(const n of el.childNodes){
+      if(n.nodeType === 3){ buf.push(n); continue; }
+      if(n.nodeType !== 1 || skip(n)) continue;
+      const cs = getComputedStyle(n);
+      if(n.tagName === "IMG" || n.tagName === "svg" || n.tagName === "SVG"){ buf.push(n); continue; }
+      if(!isBlock(n, cs) && !(/^inline-(flex|grid)/.test(cs.display) && n.children.length)){ buf.push(n); continue; }
+      await flush();
+      if(n.tagName === "TABLE"){ x += await tableOf(n, cs, ctx) + '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="40" w:lineRule="exact"/></w:pPr></w:p>'; continue; }
+      if((/flex/.test(cs.display) && !/column/.test(cs.flexDirection) || /grid/.test(cs.display)) && n.children.length){ x += await gridOf(n, cs, ctx) + '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="40" w:lineRule="exact"/></w:pPr></w:p>'; continue; }
+      if(!n.textContent.trim() && !n.querySelector("img,svg,table")){ const hh = n.getBoundingClientRect().height * 0.75 * Z; if(hh > 3){ x += `<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="${tw(hh)}" w:lineRule="exact"/></w:pPr></w:p>`; } if(!parseFloat(cs.borderTopWidth) && !parseFloat(cs.borderBottomWidth)) continue; }
+      const li = cs.display === "list-item", sideB = ["Left", "Right"].some(q => parseFloat(cs["border" + q + "Width"]) > 0 && cs["border" + q + "Style"] !== "none");
+      const c2 = Object.assign({}, ctx), ml = lenPt(cs.marginLeft) + (li ? 14 * 0.75 * Z : 0), mr = lenPt(cs.marginRight);
+      const hasBox = sideB || ["Top", "Bottom"].some(q => parseFloat(cs["border" + q + "Width"]) > 0 && cs["border" + q + "Style"] !== "none") || shdOf(cs);
+      if(hasBox){ c2.bdr = pbdr(cs); c2.shd = shdOf(cs); c2.l = ctx.l + tw(ml + lenPt(cs.paddingLeft) + (parseFloat(cs.borderLeftWidth) || 0) * 0.75 * Z); c2.r = ctx.r + tw(mr + lenPt(cs.paddingRight) + (parseFloat(cs.borderRightWidth) || 0) * 0.75 * Z); c2.bgHex = hex(cs.backgroundColor) || ctx.bgHex; }
+      else { c2.l = ctx.l + tw(ml + lenPt(cs.paddingLeft)); c2.r = ctx.r + tw(mr + lenPt(cs.paddingRight)); }
+      if(li){ x += await flowBullet(n, cs, c2); continue; }
+      c2.keep = n.matches(".kt1,.ksec,.h,.kh2");
+      x += await blocks(n, c2);
+    }
+    await flush(); return x;
+  }
+  async function flowBullet(n, cs, ctx){
+    const inner = await blocks(n, ctx); const p = inner.indexOf("<w:r>"); if(p < 0) return inner;
+    return inner.slice(0, p) + run("• ", cs, ctx.bgHex) + inner.slice(p);
+  }
+
+  /* ---- หน้ากระดาษ ---- */
+  let out = "", first = true, prev = null;
+  for(const pg of pages){
+    const pm = o.pageMode ? o.pageMode(pg) : null; if(pm){ K = pm.K; Z = pm.K; SC = pm.K; LET = !!pm.let; }
+    const cs = getComputedStyle(pg), ctx = {l:0, r:0, bdr:"", shd:"", bgHex:"FFFFFF", keep:false};
+    if(!first && (prev.classList.contains("kb") || !pm)) out += '<w:p><w:pPr><w:pageBreakBefore/><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/></w:pPr></w:p>';       /* เหมือนตอนพิมพ์: เอกสารไหลต่อเนื่อง ตัดหน้าเฉพาะหลังหน้าที่ติดคลาส kb */
+    if(!pm){ ctx.l = tw(lenPt(cs.paddingLeft)); ctx.r = tw(lenPt(cs.paddingRight)); }
+    const body = await blocks(pg, ctx); first = false; prev = pg;
+    out += body || "<w:p/>";
+  }
+  return out;
+}
+
+/* ประกอบไฟล์ .docx */
 async function nwxDocx(html, base, o){
-  o = o || {}; await Promise.all([nwxLoad("hd"), nwxLoad("jz")]); const st = nwxStage(html), segs = [];
+  o = o || {}; await nwxLoad("jz"); const st = nwxStage(html), segs = [], media = {n:0, map:{}, files:[]};
   try{ await (document.fonts && document.fonts.ready);
-    const kind = el => !el.classList.contains("kpage") ? "plain" : el.classList.contains("kc") ? "con" : el.classList.contains("kd") ? "k14" : "let";
+    const kind = el => !el.classList.contains("kpage") ? "plain" : el.classList.contains("kl") ? "wide" : el.classList.contains("kc") ? "con" : el.classList.contains("kd") ? "k14" : "let";
     let cur = null;
     for(const el of [...st.children]){ const k = kind(el);
-      if(!cur || cur.k !== k || (k !== "plain" && el.classList.contains("k1"))){ cur = {k, els:[]}; segs.push(cur); }          /* เอกสารใหม่ = เริ่มส่วนใหม่ (เลขหน้าเริ่ม 1 ใหม่) */
+      if(!cur || cur.k !== k || (k !== "plain" && el.classList.contains("k1"))){ cur = {k, els:[]}; segs.push(cur); }          /* เอกสารใหม่ = section ใหม่ (เลขหน้าเริ่ม 1 ใหม่) */
       cur.els.push(el); }
-    for(const g of segs){ const pm = g.k === "plain" ? null : {K:g.k === "let" ? NWX_K16 : NWX_K14, let:g.k === "let"};
-      g.body = await nwxWordBody({children:g.els}, o.K || 1, o.SC || 0.85, {pageMode:pm ? () => pm : null}); }
+    for(const g of segs){ const kp = g.k !== "plain", Zk = g.k === "let" ? NWX_K16 : NWX_K14, wide = g.k === "wide";
+      g.m = kp ? {top:15, right:20, bottom:20, left:30} : {top:o.mt || 15, right:o.mr || 15, bottom:o.mb || 15, left:o.ml || 20};
+      g.wTw = Math.round(((wide ? 297 : 210) - g.m.left - g.m.right) * 56.7);
+      g.xml = await nwxOoxmlBody(g.els, {K:kp ? Zk : (o.K || 1), Z:kp ? Zk : 1, SC:o.SC || 0.85, let:g.k === "let", wTw:g.wTw, pageMode:kp ? () => ({K:Zk, let:g.k === "let"}) : null}, media); }
   } finally { st.remove(); }
-  const mm = v => Math.round(v * 56.7);
-  for(const g of segs){ const kp = g.k !== "plain";
-    g.m = kp ? {top:15, right:20, bottom:20, left:30} : {top:o.mt || 15, right:o.mr || 15, bottom:o.mb || 15, left:o.ml || 20};
-    const full = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${nwxEsc(base || "")}</title><style>body{font-family:${NWX_FONT};${NWX_MSO}font-size:${kp ? (g.k === "let" ? 16 : 14) : 11}pt;mso-bidi-font-size:${kp ? (g.k === "let" ? 16 : 14) : 11}pt}p{margin:0}</style></head><body>${g.body}</body></html>`;
-    const bl = htmlDocx.asBlob(full, {orientation:"portrait", margins:{top:mm(g.m.top), right:mm(g.m.right), bottom:mm(g.m.bottom), left:mm(g.m.left), header:mm(7), footer:mm(8), gutter:0}});
-    g.zip = await JSZip.loadAsync(bl); g.mht = await g.zip.file("word/afchunk.mht").async("string"); }
-  const NW_ = "http:\/\/schemas.openxmlformats.org/wordprocessingml/2006/main", NR_ = "http:\/\/schemas.openxmlformats.org/officeDocument/2006/relationships", NP_ = "http:\/\/schemas.openxmlformats.org/package/2006/relationships", NC_ = "http:\/\/schemas.openxmlformats.org/package/2006/content-types";
-  const XH = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>', FN = '<w:rFonts w:ascii="TH Sarabun New" w:hAnsi="TH Sarabun New" w:eastAsia="TH Sarabun New" w:cs="TH Sarabun New"/>';
-  const SP0 = '<w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/>', ns = `xmlns:w="${NW_}" xmlns:r="${NR_}"`;
-  const part = (tag, inner) => `${XH}<w:${tag} ${ns}>${inner}</w:${tag}>`, rp = z => `<w:rPr>${FN}<w:sz w:val="${z}"/><w:szCs w:val="${z}"/></w:rPr>`;
-  const z = segs[0].zip; z.remove("word/afchunk.mht");
-  z.file("word/styles.xml", `${XH}<w:styles ${ns}><w:docDefaults><w:rPrDefault><w:rPr>${FN}<w:sz w:val="32"/><w:szCs w:val="32"/><w:lang w:val="en-US" w:eastAsia="en-US" w:bidi="th-TH"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr>${SP0}</w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style></w:styles>`);
-  z.file("word/header_num.xml", part("hdr", `<w:p><w:pPr>${SP0}<w:jc w:val="center"/></w:pPr><w:fldSimple w:instr=" PAGE "><w:r>${rp(32)}<w:t>2</w:t></w:r></w:fldSimple></w:p>`));
-  z.file("word/header_empty.xml", part("hdr", "<w:p/>"));
-  z.file("word/footer_init.xml", part("ftr", `<w:p><w:pPr>${SP0}<w:jc w:val="right"/></w:pPr><w:r>${rp(28)}<w:t xml:space="preserve">ลงชื่อกำกับ ..............................</w:t></w:r></w:p>`));
-  z.file("word/footer_empty.xml", part("ftr", "<w:p/>"));
+  const mm = v => Math.round(v * 56.7), zip = new JSZip(), XH = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  const ns = `xmlns:w="${NX.w}" xmlns:r="${NX.r}" xmlns:wp="${NX.wp}" xmlns:a="${NX.a}" xmlns:pic="${NX.pic}"`, SP0 = '<w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/>';
+  const part = (tag, inner) => `${XH}<w:${tag} ${ns}>${inner}</w:${tag}>`, rp = z => `<w:rPr>${nxFN}<w:sz w:val="${z}"/><w:szCs w:val="${z}"/></w:rPr>`, rel = (id, t, tg) => `<Relationship Id="${id}" Type="${NX.r}/${t}" Target="${tg}"/>`;
   let body = "", rels = "", ct = "";
-  segs.forEach((g, i) => { const n = i + 1, kp = g.k !== "plain", fr = g.k === "con" ? "rIdFi" : "rIdFe";
-    z.file(`word/afchunk${n}.mht`, g.mht); rels += `<Relationship Id="htmlChunk${n}" Type="${NR_}/aFChunk" Target="/word/afchunk${n}.mht"/>`; ct += `<Override PartName="/word/afchunk${n}.mht" ContentType="message/rfc822"/>`;
-    const sect = `<w:sectPr><w:headerReference w:type="default" r:id="${kp ? "rIdHn" : "rIdHe"}"/><w:headerReference w:type="first" r:id="rIdHe"/><w:footerReference w:type="default" r:id="${fr}"/><w:footerReference w:type="first" r:id="${fr}"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="${mm(g.m.top)}" w:right="${mm(g.m.right)}" w:bottom="${mm(g.m.bottom)}" w:left="${mm(g.m.left)}" w:header="${mm(7)}" w:footer="${mm(8)}" w:gutter="0"/><w:pgNumType w:start="1"/>${kp ? "<w:titlePg/>" : ""}</w:sectPr>`;
-    body += `<w:altChunk r:id="htmlChunk${n}"/>` + (i < segs.length - 1 ? `<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/>${sect}</w:pPr></w:p>` : sect); });
-  rels += `<Relationship Id="rIdHn" Type="${NR_}/header" Target="/word/header_num.xml"/><Relationship Id="rIdHe" Type="${NR_}/header" Target="/word/header_empty.xml"/><Relationship Id="rIdFi" Type="${NR_}/footer" Target="/word/footer_init.xml"/><Relationship Id="rIdFe" Type="${NR_}/footer" Target="/word/footer_empty.xml"/><Relationship Id="rIdSt" Type="${NR_}/styles" Target="/word/styles.xml"/>`;
-  z.file("word/_rels/document.xml.rels", `${XH}<Relationships xmlns="${NP_}">${rels}</Relationships>`);
-  z.file("word/document.xml", `${XH}<w:document ${ns}><w:body>${body}</w:body></w:document>`);
-  const WM = "application\/vnd.openxmlformats-officedocument.wordprocessingml";
-  z.file("[Content_Types].xml", `${XH}<Types xmlns="${NC_}"><Default Extension="rels" ContentType="application\/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application\/xml"/><Override PartName="/word/document.xml" ContentType="${WM}.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="${WM}.styles+xml"/><Override PartName="/word/header_num.xml" ContentType="${WM}.header+xml"/><Override PartName="/word/header_empty.xml" ContentType="${WM}.header+xml"/><Override PartName="/word/footer_init.xml" ContentType="${WM}.footer+xml"/><Override PartName="/word/footer_empty.xml" ContentType="${WM}.footer+xml"/>${ct}</Types>`);
-  const blob = await z.generateAsync({type:"blob", mimeType:WM + ".document"});
+  segs.forEach((g, i) => { const kp = g.k !== "plain", fr = g.k === "con" ? "rIdFi" : "rIdFe", wide = g.k === "wide";
+    const sect = `<w:sectPr><w:headerReference w:type="default" r:id="${kp ? "rIdHn" : "rIdHe"}"/><w:headerReference w:type="first" r:id="rIdHe"/><w:footerReference w:type="default" r:id="${fr}"/><w:footerReference w:type="first" r:id="${fr}"/>${wide ? '<w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/>' : '<w:pgSz w:w="11906" w:h="16838"/>'}<w:pgMar w:top="${mm(g.m.top)}" w:right="${mm(g.m.right)}" w:bottom="${mm(g.m.bottom)}" w:left="${mm(g.m.left)}" w:header="${mm(7)}" w:footer="${mm(8)}" w:gutter="0"/><w:pgNumType w:start="1"/>${kp ? "<w:titlePg/>" : ""}</w:sectPr>`;
+    body += g.xml + (i < segs.length - 1 ? `<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/>${sect}</w:pPr></w:p>` : sect); });
+  zip.file("word/document.xml", `${XH}<w:document ${ns}><w:body>${body}</w:body></w:document>`);
+  zip.file("word/styles.xml", `${XH}<w:styles ${ns}><w:docDefaults><w:rPrDefault><w:rPr>${nxFN}<w:sz w:val="32"/><w:szCs w:val="32"/><w:lang w:val="en-US" w:eastAsia="en-US" w:bidi="th-TH"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr>${SP0}</w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style><w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/><w:uiPriority w:val="99"/><w:semiHidden/><w:tblPr><w:tblInd w:w="0" w:type="dxa"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="108" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style></w:styles>`);
+  zip.file("word/header_num.xml", part("hdr", `<w:p><w:pPr>${SP0}<w:jc w:val="center"/></w:pPr><w:fldSimple w:instr=" PAGE "><w:r>${rp(32)}<w:t>2</w:t></w:r></w:fldSimple></w:p>`));
+  zip.file("word/header_empty.xml", part("hdr", "<w:p/>"));
+  zip.file("word/footer_init.xml", part("ftr", `<w:p><w:pPr>${SP0}<w:jc w:val="right"/></w:pPr><w:r>${rp(28)}<w:t xml:space="preserve">ลงชื่อกำกับ ..............................</w:t></w:r></w:p>`));
+  zip.file("word/footer_empty.xml", part("ftr", "<w:p/>"));
+  rels += rel("rIdHn", "header", "header_num.xml") + rel("rIdHe", "header", "header_empty.xml") + rel("rIdFi", "footer", "footer_init.xml") + rel("rIdFe", "footer", "footer_empty.xml") + rel("rIdSt", "styles", "styles.xml") + rel("rIdSe", "settings", "settings.xml") + rel("rIdFt", "fontTable", "fontTable.xml");
+  media.files.forEach(f => { zip.file("word/media/" + f.name, f.b64, {base64:true}); rels += rel(f.id, "image", "media/" + f.name); });
+  const fonts = await nwxFonts(); let fx = "", fr = "";
+  if(fonts){ NWX_FF.forEach(([k], i) => { const guid = nwxGuid(), id = "rIdF" + (i + 1); zip.file(`word/fonts/font${i + 1}.odttf`, nwxObf(fonts[k], guid)); fr += rel(id, "font", `fonts/font${i + 1}.odttf`); fx += `<w:embed${k} r:id="${id}" w:fontKey="${guid}"/>`; });
+    zip.file("word/_rels/fontTable.xml.rels", `${XH}<Relationships xmlns="${NX.pr}">${fr}</Relationships>`); }
+  else toast("⚠ ฝังฟอนต์ไม่สำเร็จ (โหลดไฟล์ฟอนต์ไม่ได้ — ตรวจอินเทอร์เน็ต) ไฟล์ Word จะใช้ฟอนต์ในเครื่องที่เปิด");
+  zip.file("word/fontTable.xml", `${XH}<w:fonts ${ns}><w:font w:name="TH Sarabun New"><w:charset w:val="DE"/><w:family w:val="auto"/><w:pitch w:val="variable"/>${fx}</w:font></w:fonts>`);
+  zip.file("word/settings.xml", `${XH}<w:settings ${ns}>${fonts ? "<w:embedTrueTypeFonts/>" : ""}<w:themeFontLang w:val="th-TH" w:bidi="th-TH"/></w:settings>`);
+  zip.file("word/_rels/document.xml.rels", `${XH}<Relationships xmlns="${NX.pr}">${rels}</Relationships>`);
+  zip.file("_rels/.rels", `${XH}<Relationships xmlns="${NX.pr}"><Relationship Id="rId1" Type="${NX.r}/officeDocument" Target="word/document.xml"/></Relationships>`);
+  ct = `<Default Extension="rels" ContentType="application\/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application\/xml"/><Default Extension="odttf" ContentType="application\/vnd.openxmlformats-officedocument.obfuscatedFont"/><Default Extension="png" ContentType="image\/png"/><Default Extension="jpg" ContentType="image\/jpeg"/><Default Extension="gif" ContentType="image\/gif"/>`
+    + ["document:document.main", "styles:styles", "settings:settings", "fontTable:fontTable"].map(q => { const [f, t] = q.split(":"); return `<Override PartName="/word/${f}.xml" ContentType="${NX.wm}.${t}+xml"/>`; }).join("")
+    + ["header_num:header", "header_empty:header", "footer_init:footer", "footer_empty:footer"].map(q => { const [f, t] = q.split(":"); return `<Override PartName="/word/${f}.xml" ContentType="${NX.wm}.${t}+xml"/>`; }).join("");
+  zip.file("[Content_Types].xml", `${XH}<Types xmlns="${NX.ct}">${ct}</Types>`);
+  const blob = await zip.generateAsync({type:"blob", mimeType:NX.wm + ".document", compression:"DEFLATE"});
   nwxSave(blob, nwxName(base) + ".docx"); return blob;
 }
 
@@ -3896,8 +4009,9 @@ function nwAppsHTML(){
           <td class="l" style="white-space:normal">${gs.map(g => `${esc(g)} ${esc(nwNmOf(g))}`).join("<br>") || '<span class="hint">ยังไม่เลือก</span>'}</td><td class="l">${thDay(a.at)}</td>
           <td class="l">${ok ? thDay(a.dc) : `<input class="ce ced" type="date" data-napd="${esc(a.id)}" value="${esc(a.dc || "")}">`}</td>
           <td class="l" style="white-space:normal">${ok ? '<span class="pill grn">ลงทะเบียนสำเร็จ ' + thDay(a.doneAt) + "</span>" : chip(true, "คำขอ") + " " + chip(a.printedFull, "พิมพ์สัญญาเต็ม") + " " + chip(a.savedFull, "บันทึกสัญญาเต็ม")}</td>
-          <td style="white-space:nowrap">${ok ? `<button class="ghost sm" data-nap="pfull|${esc(a.id)}">พิมพ์สัญญา</button>`
-            : `<button class="ghost sm" data-nap="reapp|${esc(a.id)}" title="พิมพ์แบบคำขอ + หนังสือยินยอมผู้ค้ำอีกครั้ง">พิมพ์คำขอ</button> <button class="ghost sm" data-nap="pfull|${esc(a.id)}">พิมพ์สัญญาฉบับเต็ม</button> <button class="ghost sm" data-nap="sfull|${esc(a.id)}">บันทึกสัญญาฉบับเต็ม</button> <button class="del" data-nap="can|${esc(a.id)}" title="ยกเลิกคำขอนี้ (เลขที่สัญญากลับไปให้ใช้ใหม่)">×</button>`}</td></tr>`; }).join("")}</tbody></table></div>` : '<p class="hint">ยังไม่มีคำขอกู้ — คำนวณที่การ์ดด้านบนแล้วกด «บันทึกคำขอกู้»</p>'}`;
+          <td style="white-space:normal;min-width:250px">
+            <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px"><b class="hint" style="width:62px">คำขอ</b><button class="ghost sm" data-nap="reapp|${esc(a.id)}" title="พิมพ์ หรือเลือกปลายทาง «บันทึกเป็น PDF» — แบบคำขอ + หนังสือยินยอมผู้ค้ำ">พิมพ์ / PDF</button><button class="ghost sm" data-nap="wapp|${esc(a.id)}" title="ดาวน์โหลดเป็น Word (.docx) ฝังฟอนต์ TH Sarabun New">Word</button></div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px"><b class="hint" style="width:62px">สัญญาเต็ม</b><button class="ghost sm" data-nap="pfull|${esc(a.id)}" title="${ok ? "พิมพ์ หรือบันทึกเป็น PDF" : "พิมพ์ / PDF (ถือว่าอนุมัติแล้ว นับเป็นขั้นตอนพิมพ์สัญญาฉบับเต็ม)"}">พิมพ์ / PDF</button><button class="ghost sm" data-nap="wfull|${esc(a.id)}" title="ดาวน์โหลดเป็น Word (.docx) — ไม่นับเป็นขั้นตอนพิมพ์">Word</button>${ok ? "" : `<button class="ghost sm" data-nap="sfull|${esc(a.id)}">บันทึกสัญญาฉบับเต็ม</button> <button class="del" data-nap="can|${esc(a.id)}" title="ยกเลิกคำขอนี้ (เลขที่สัญญากลับไปให้ใช้ใหม่)">×</button>`}</div></td></tr>`; }).join("")}</tbody></table></div>` : '<p class="hint">ยังไม่มีคำขอกู้ — คำนวณที่การ์ดด้านบนแล้วกด «บันทึกคำขอกู้»</p>'}`;
 }
 
 function nwLoanCardHTML(k){
@@ -4179,7 +4293,8 @@ function nwConHTML(){
         || '<tr><td colspan="12" class="hint" style="text-align:left">ไม่มีผู้กู้ที่ยังมีหนี้</td></tr>'}</tbody></table></div>`;
 }
 /* เอกสารทะเบียนสัญญา (พิมพ์) — ๒๒ แถวต่อหน้า */
-function nwConRegDoc(){
+function nwConRegDoc(){ return nwLand(nwConRegDoc0()); }
+function nwConRegDoc0(){
   const R = nwConRows(), per = 999, pages = Math.max(1, Math.ceil(R.length / per)), today = nwToday();
   return Array.from({length:pages}, (_, i) => { const part = R.slice(i * per, (i + 1) * per);
     return pg(i + 1, pages, `${logo()}<div class="kt1">ทะเบียนสัญญาเงินกู้</div>
@@ -4594,7 +4709,8 @@ function nwGuarCheck(no, pk, i, v){
 function nwGuarAssign(no, pk, i, v){ if(!nwGuarCheck(no, pk, i, v)) return false; nwSetGuar(no, pk, i, v); return true; }
 
 /* ---------- เอกสารพิมพ์ ---------- */
-function nwGuarRegDoc(){
+function nwGuarRegDoc(){ return nwLand(nwGuarRegDoc0()); }
+function nwGuarRegDoc0(){
   const G = nwGuarData(), today = nwToday(), per = 999, pages1 = Math.max(1, Math.ceil(G.rows.length / per)), per2 = 999, pages2 = Math.max(1, Math.ceil(G.guars.length / per2)), tot = pages1 + pages2;
   const head = (t, n) => `${logo()}<div class="kt1">${t}</div><div class="kt2">${ORG}<br>โรงเรียนมัธยมวัดหนองแขม (กบข.นข.)</div>
     <div class="kmeta2"><span>สัญญาที่กำลังผ่อน ${G.st.n} ฉบับ (สามัญ ${G.st.sam} · ดูแลกัน ${G.st.dk}) · เพดานค้ำ ${G.gmax} สัญญา/คน</span><span>วันที่ ${thDate(today)}</span></div>`;
@@ -5004,11 +5120,15 @@ function drawNWLoanDash(){
   // คำขอกู้ → สัญญาฉบับเต็ม → ลงทะเบียน
   el.querySelectorAll("[data-napd]").forEach(i => i.addEventListener("change", () => { const a = nwApps().find(q => q.id === i.dataset.napd); if(a){ a.dc = i.value; save(); redraw(); } }));
   el.querySelectorAll("[data-nap]").forEach(b => b.onclick = () => { const [act, id] = b.dataset.nap.split("|"), a = nwApps().find(q => q.id === id); if(!a) return;
-    if(act === "reapp"){ nwPrint(nwAppApplyDoc(a)); return; }
+    const nmA = `แบบคำขอกู้เงิน-${nwNmOf(a.no)}-${a.code}`, nmF = `สัญญาเงินกู้-${nwNmOf(a.no)}-${a.code}`;
+    if(act === "reapp"){ nwPrint(nwAppApplyDoc(a), nmA); return; }
+    if(act === "wapp"){ nwxRun("แบบคำขอกู้ → Word", () => nwxDocx(nwAppApplyDoc(a), nmA)); return; }
+    if(act === "wfull" && a.status === "สำเร็จ"){ nwxRun("สัญญาฉบับเต็ม → Word", () => nwxDocx(nwAppFullDoc(a), nmF)); return; }
     if(act === "can"){ if(confirm(`ยกเลิกคำขอกู้ ${a.code} ของ ${nwNmOf(a.no)}?`)){ a.status = "ยกเลิก"; save(); redraw(); toast("ยกเลิกคำขอแล้ว"); } return; }
-    if(a.status === "สำเร็จ"){ if(act === "pfull") nwPrint(nwAppFullDoc(a)); return; }
+    if(a.status === "สำเร็จ"){ if(act === "pfull") nwPrint(nwAppFullDoc(a), nmF); return; }
     const why = nwAppWhyNotFull(a); if(why.length){ alert("ยังทำสัญญาฉบับเต็มไม่ได้:\n• " + why.join("\n• ") + "\n\nแก้ที่รายการคำขอ (วันที่ทำสัญญา) หรือบันทึกคำขอใหม่พร้อมเลือกผู้ค้ำ"); return; }
-    if(act === "pfull"){ if(!confirm(`พิมพ์สัญญาฉบับเต็ม ${a.code} ของ ${nwNmOf(a.no)}\n(ถือว่าอนุมัติแล้ว) ต่อไปกด «บันทึกสัญญาฉบับเต็ม» เพื่อลงทะเบียน`)) return; a.printedFull = true; save(); nwPrint(nwAppFullDoc(a)); }
+    if(act === "wfull"){ nwxRun("สัญญาฉบับเต็ม → Word", () => nwxDocx(nwAppFullDoc(a), nmF)); return; }
+    if(act === "pfull"){ if(!confirm(`พิมพ์สัญญาฉบับเต็ม ${a.code} ของ ${nwNmOf(a.no)}\n(ถือว่าอนุมัติแล้ว) ต่อไปกด «บันทึกสัญญาฉบับเต็ม» เพื่อลงทะเบียน`)) return; a.printedFull = true; save(); nwPrint(nwAppFullDoc(a), nmF); }
     else if(act === "sfull"){ if(!confirm(`บันทึกสัญญาฉบับเต็ม ${a.code}\n${nwNmOf(a.no)} · สินเชื่อ${a.prod} ${B(a.P0)} บาท · ${a.N} งวด\nวันที่ทำสัญญา ${thDay(a.dc)}`)) return; a.savedFull = true; save(); }
     if(a.printedFull && a.savedFull){ nwAppFinalize(a); save(); toast(`ลงทะเบียนการกู้สำเร็จ — ${a.code} · ไปบันทึกการจ่ายเงินกู้ในทะเบียนผู้กู้ (กู้เพิ่ม/กู้ทับ)`); }
     else toast(act === "pfull" ? "พิมพ์สัญญาฉบับเต็มแล้ว — รอกด «บันทึกสัญญาฉบับเต็ม»" : "บันทึกสัญญาฉบับเต็มแล้ว — รอกด «พิมพ์สัญญาฉบับเต็ม»");
@@ -8272,7 +8392,7 @@ function contractHTML(c, cap, withSch){
 
   /* ---------- หน้า 3 : ตารางผ่อน ---------- */
   const half = Math.ceil(s.rows.length/2);
-  const col = rs => `<table class="kt ktsch"><thead><tr><th>งวด</th><th>ชำระ</th><th>ดอกเบี้ย</th><th>หุ้น</th><th>เงินต้น</th><th>คงเหลือ</th></tr></thead><tbody>
+  const col = rs => `<table class="kt ktsch ktfull"><thead><tr><th>งวด</th><th>ชำระ</th><th>ดอกเบี้ย</th><th>หุ้น</th><th>เงินต้น</th><th>คงเหลือ</th></tr></thead><tbody>
     ${rs.map(r=>`<tr><td class="c">${r.k}</td><td class="n">${B(r.pay)}</td><td class="n">${B(r.int)}</td>
       <td class="n">${B(r.sh)}</td><td class="n">${B(r.pri)}</td><td class="n">${B(r.bal)}</td></tr>`).join("")}
     </tbody></table>`;
@@ -8281,7 +8401,7 @@ function contractHTML(c, cap, withSch){
     <div class="kmeta"><span>สัญญาเลขที่ ${esc(c.code)}</span><span>ผู้กู้ ${esc(m.name)}</span>
       <span>วงเงิน ${B(c.amt)} บาท · ${c.terms} งวด · ${P.method==="flat"?"Flat":"ลดต้นลดดอก"} 1%/เดือน</span></div>
     <div class="kh" style="margin-bottom:6px">เอกสารนี้เป็นส่วนหนึ่งของสัญญาเงินกู้เลขที่ข้างต้น และมีผลผูกพันเช่นเดียวกับข้อความในสัญญา</div>
-    <div class="ksch">${col(s.rows.slice(0,half))}${s.rows.length>half?col(s.rows.slice(half)):""}</div>
+    ${col(s.rows)}
     <div class="ktot">รวมดอกเบี้ย ${B(s.totInt)} · รวมเงินฝากหุ้น ${B(s.totSh)} · รวมเงินต้น ${B(s.totPri)} ·
       <b>รวมทั้งสิ้น ${B(s.totPay)} บาท</b></div>
     <div class="ksigs" style="margin-top:16px">
@@ -9052,7 +9172,7 @@ function docApply(o){
     <p class="kh">เมื่อประธานอนุมัติแล้ว ให้บันทึกคำขอนี้เข้าทะเบียนสัญญาในระบบ แล้วสั่งพิมพ์ชุดสัญญา (สัญญาเงินกู้ · สัญญาค้ำประกัน · หนังสือยินยอม · ตารางการชำระหนี้) เพื่อลงนามต่อไป</p>`;
 
   const half = Math.ceil(s.rows.length/2);
-  const col = rs => `<table class="kt ktsch"><thead><tr><th>งวด</th><th>ยอดส่ง</th><th>เงินต้น</th>
+  const col = rs => `<table class="kt ktsch ktfull"><thead><tr><th>งวด</th><th>ยอดส่ง</th><th>เงินต้น</th>
     <th>ดอกเบี้ย</th><th>หุ้นประจำ</th><th>หุ้นเพิ่ม</th><th>คงเหลือ</th></tr></thead><tbody>
     ${rs.map(r=>`<tr><td class="c">${r.t}</td><td class="n">${B(r.pay)}</td><td class="n">${B(r.pri)}</td>
       <td class="n">${B(r.int)}</td><td class="n">${B(r.base)}</td><td class="n">${B(r.extra)}</td>
@@ -9063,7 +9183,7 @@ function docApply(o){
       <span>ดอกเบี้ย ${(o.i*100).toFixed(2)}%/เดือน ${P.method==="flat"?"(Flat)":"(ลดต้นลดดอก)"}</span></div>
     <p class="kh" style="margin-bottom:6px"><b>ตารางนี้เป็นการประมาณการเพื่อประกอบการพิจารณาเท่านั้น</b> —
       ตารางที่ผูกพันตามสัญญาจะออกใหม่ตามวงเงินที่ประธานอนุมัติจริง และแนบท้ายสัญญาเงินกู้ (ภาคผนวก ก)</p>
-    <div class="ksch">${col(s.rows.slice(0,half))}${s.rows.length>half?col(s.rows.slice(half)):""}</div>
+    ${col(s.rows)}
     <div class="ktot">รวมดอกเบี้ย ${B(s.totInt)} · รวมหุ้นประจำ ${B(s.totBase)} · รวมหุ้นเพิ่ม ${B(s.totExtra)} ·
       รวมเงินต้น ${B(s.totPri)} · <b>รวมทั้งสิ้น ${B(s.totPay)} บาท</b></div>
     <div class="keybox" style="margin-top:9px"><b>ผู้ขอกู้รับทราบว่า</b>
