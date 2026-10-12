@@ -682,7 +682,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-141</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-143</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -5501,9 +5501,12 @@ function nwStatusDoc(){
 }
 /* ============ เอกสารสรุปภาพรวม กบข.นข. (เล่ม) — แนะนำกลุ่ม + กติกา + ขั้นตอน + ระบบ + ตัวเลขการเงินปัจจุบัน/คาดการณ์ ============
    เนื้อหาแนะนำมาจากข้อตกลงกลุ่มบุคคลฯ และค่าตั้งของโปรแกรม (PROD/BOARD/ค่าเพดานค้ำ) · ตัวเลขดึงจากทะเบียน ณ วันที่พิมพ์ (เฉพาะงวดที่ยืนยันแล้ว) */
-function nwBookDoc(){
-  const Z = nwStatusData(), O = Z.O, D = Z.D, C = D.C, today = nwToday(), pl = nwPFull(D.end).split(" ")[0], R = nwArrears(), G = nwGuarData();
-  const F = nwFcstData(3), curN = pNum(nwCurP()), pend = NW.fut().filter(r => pNum(r.p) <= curN).length, planned = NW.fut().filter(r => pNum(r.p) > curN).length;
+function nwBookDoc(blank){
+  /* blank = true → ฉบับแบบฟอร์ม: ตัวเลขการเงินเว้นเป็นจุดไข่ปลาให้เติมเอง (ใช้เมื่อไม่ได้เปิดจากทะเบียนจริง) */
+  const DOTS = '<span class="dt" style="min-width:90px"></span>', N0 = v => blank ? DOTS : B0(v), NB = v => blank ? DOTS : B(v), NC = v => blank ? DOTS : v;
+  const Z = blank ? {O:{n:0, nLoan:0, nSave:0, okP:0, arrP:0, yr:"", int69:0, n69:0, f69:"", l69:""}, ret:0, retN:0, outs:[]} : nwStatusData(), O = Z.O;
+  const D = blank ? {C:nwDashCfg(), shNow:0, dbNow:0, divS:0, divI:0, shBy:{sam:0, dk:0, free:0}, dbBy:{sam:0, dk:0}, LC:{n:0, amt:0}, end:nwCurP()} : Z.D, C = D.C, today = nwToday(), pl = nwPFull(D.end).split(" ")[0], R = blank ? [] : nwArrears(), G = blank ? {alerts:[], st:{over:0}} : nwGuarData();
+  const F = blank ? {months:[0, 1, 2].map(i => pFrom(pNum(nwCurP()) + 1 + i)), tot:[]} : nwFcstData(3), curN = pNum(nwCurP()), pend = blank ? 0 : NW.fut().filter(r => pNum(r.p) <= curN).length, planned = blank ? 0 : NW.fut().filter(r => pNum(r.p) > curN).length;
   const lv = k => R.filter(o => nwLv(o.missed) === k), arrTot = r2(R.reduce((u, o) => u + o.short, 0));
   const P1 = PROD["สามัญ"], P2 = PROD["ดูแลกัน"], gmax = nwGMax();
   const row2 = (a, b) => `<tr><td class="kk" style="width:34%">${a}</td><td>${b}</td></tr>`;
@@ -5512,14 +5515,14 @@ function nwBookDoc(){
   const NU = v => `<b class="f">${v}</b>`;
   const cover = `${logo()}<div class="kt1" style="font-size:22px;margin-top:10px">เอกสารสรุปภาพรวม กบข.นข.</div>
     <div class="kt2">${ORGF}<br>(กบข.นข.)</div>
-    <div class="kmeta2"><span>ข้อมูลตามทะเบียน ณ วันที่ ${thDate(today)}</span><span>งวดล่าสุด ${pl} พ.ศ. ${D.end.split("-")[0]}</span><span>สมาชิก ${O.n} คน</span></div>
+    <div class="kmeta2"><span>${blank ? "ข้อมูลตามทะเบียน ณ วันที่ ...../...../......." : "ข้อมูลตามทะเบียน ณ วันที่ " + thDate(today)}</span><span>งวดล่าสุด ${blank ? "…………" : pl + " พ.ศ. " + D.end.split("-")[0]}</span><span>สมาชิก ${NC(O.n)} คน</span></div>
     ${head("ภาพรวมโดยย่อ")}
     <table class="kt kw sum"><tbody>
-      <tr><td>ทุนสมาชิก (ทุนเรือนหุ้นสะสมรวม)</td><td class="n"><b>${B0(D.shNow)}</b> บาท</td></tr>
-      <tr><td>เงินให้สมาชิกกู้คงเหลือ (ผู้กู้ ${O.nLoan} คน)</td><td class="n"><b>${B0(D.dbNow)}</b> บาท</td></tr>
-      <tr><td>รายได้ดอกเบี้ยสะสม ปี ${O.yr}${O.n69 ? ` (${thPer(O.f69)} – ${thPer(O.l69)})` : ""}</td><td class="n"><b>${B0(O.int69)}</b> บาท</td></tr>
-      <tr><td>ผู้กู้ที่ชำระปกติ / อยู่ระหว่างติดตามหนี้</td><td class="n"><b>${O.okP}</b> / <b>${O.arrP}</b> คน</td></tr>
-      <tr><td>ประมาณเงินคืนสมาชิกสิ้นปี (ปันผลหุ้น + เฉลี่ยคืนดอกเบี้ย)</td><td class="n"><b>${B0(r2(D.divS + D.divI))}</b> บาท</td></tr>
+      <tr><td>ทุนสมาชิก (ทุนเรือนหุ้นสะสมรวม)</td><td class="n"><b>${N0(D.shNow)}</b> บาท</td></tr>
+      <tr><td>เงินให้สมาชิกกู้คงเหลือ (ผู้กู้ ${NC(O.nLoan)} คน)</td><td class="n"><b>${N0(D.dbNow)}</b> บาท</td></tr>
+      <tr><td>รายได้ดอกเบี้ยสะสม ปี ${blank ? "……." : O.yr}${O.n69 ? ` (${thPer(O.f69)} – ${thPer(O.l69)})` : ""}</td><td class="n"><b>${N0(O.int69)}</b> บาท</td></tr>
+      <tr><td>ผู้กู้ที่ชำระปกติ / อยู่ระหว่างติดตามหนี้</td><td class="n"><b>${NC(O.okP)}</b> / <b>${NC(O.arrP)}</b> คน</td></tr>
+      <tr><td>ประมาณเงินคืนสมาชิกสิ้นปี (ปันผลหุ้น + เฉลี่ยคืนดอกเบี้ย)</td><td class="n"><b>${N0(r2(D.divS + D.divI))}</b> บาท</td></tr>
     </tbody></table>
     ${head("สารบัญ")}
     ${li(["๑ ข้อมูลทั่วไปและคณะกรรมการ", "๒ ผลิตภัณฑ์เงินกู้และเงินฝากหุ้น", "๓ กติกาสำคัญตามข้อตกลง", "๔ ขั้นตอนการดำเนินงานประจำ", "๕ ระบบโปรแกรมและเอกสารที่ออกได้", "๖ สถานะการเงินปัจจุบันและคาดการณ์ล่วงหน้า", "๗ งานที่ต้องติดตาม"])}
@@ -5571,32 +5574,33 @@ function nwBookDoc(){
       "<b>ฐานข้อมูลสมาชิก / ทะเบียนคุมผู้ค้ำ / ชุดฟ้องร้อง:</b> ข้อมูลบุคคล OCR บัตร การค้ำ และแฟ้มคดีรายสัญญา",
       "<b>มาตรฐานเอกสาร:</b> A4 ฟอนต์ TH Sarabun New หนังสือ 16 pt สัญญา 14 pt · พิมพ์ได้ทั้งกระดาษ PDF และ Word (ฝังฟอนต์)"])}`;
   const stat = `${head("๖ สถานะการเงินปัจจุบันและคาดการณ์ล่วงหน้า")}
-    <p class="kh">ตัวเลข ณ วันที่ ${thDay(today)} (เฉพาะรายการที่ยืนยันรับเงินแล้ว ไม่รวมที่ลงล่วงหน้า/รอยืนยัน)</p>
+    <p class="kh">${blank ? "ตัวเลข ณ วันที่ ...../...../....... (กรอกจากทะเบียน — หรือกดพิมพ์เล่มจากโปรแกรมเพื่อให้ดึงตัวเลขเอง)" : "ตัวเลข ณ วันที่ " + thDay(today) + " (เฉพาะรายการที่ยืนยันรับเงินแล้ว ไม่รวมที่ลงล่วงหน้า/รอยืนยัน)"}</p>
     <table class="kt kw sum"><tbody>
-      <tr><td>สมาชิกทั้งหมด (ไม่รวมผู้ลาออก)</td><td class="n"><b>${O.n}</b> คน · ผู้กู้ ${O.nLoan} · ผู้ฝาก ${O.nSave}</td></tr>
-      <tr><td>ทุนเรือนหุ้นสะสมรวม</td><td class="n"><b>${B(D.shNow)}</b> บาท</td></tr>
-      <tr><td>&nbsp;&nbsp;แยกประเภท: สามัญ / ดูแลกัน / ฝากหุ้นอื่น</td><td class="n">${B0(D.shBy.sam)} / ${B0(D.shBy.dk)} / ${B0(D.shBy.free)} บาท</td></tr>
-      <tr><td>เงินกู้คงเหลือรวม</td><td class="n"><b>${B(D.dbNow)}</b> บาท</td></tr>
-      <tr><td>&nbsp;&nbsp;แยกประเภท: สามัญ / ดูแลกัน</td><td class="n">${B0(D.dbBy.sam)} / ${B0(D.dbBy.dk)} บาท</td></tr>
-      <tr><td>ปล่อยกู้สะสมตามสัญญา (${D.LC.n} สัญญาที่ยังมีหนี้)</td><td class="n">${B0(D.LC.amt)} บาท</td></tr>
-      <tr><td>รายได้ดอกเบี้ยสะสม ปี ${O.yr}</td><td class="n"><b>${B(O.int69)}</b> บาท${O.n69 ? ` · เฉลี่ยเดือนละ ${B0(O.int69 / O.n69)}` : ""}</td></tr>
-      <tr><td>ประมาณเงินคืนสมาชิกสิ้นปี</td><td class="n">ปันผลหุ้น ${B0(D.divS)} + เฉลี่ยคืน ${B0(D.divI)} = <b>${B0(r2(D.divS + D.divI))}</b> บาท</td></tr>
-      <tr><td>การคืนทุนสมาชิกที่ลาออก</td><td class="n">${Z.ret > 0 ? `${Z.retN || Z.outs.length} ราย · ${B0(Z.ret)} บาท` : "—"}</td></tr>
+      <tr><td>สมาชิกทั้งหมด (ไม่รวมผู้ลาออก)</td><td class="n"><b>${NC(O.n)}</b> คน · ผู้กู้ ${NC(O.nLoan)} · ผู้ฝาก ${NC(O.nSave)}</td></tr>
+      <tr><td>ทุนเรือนหุ้นสะสมรวม</td><td class="n"><b>${NB(D.shNow)}</b> บาท</td></tr>
+      <tr><td>&nbsp;&nbsp;แยกประเภท: สามัญ / ดูแลกัน / ฝากหุ้นอื่น</td><td class="n">${N0(D.shBy.sam)} / ${N0(D.shBy.dk)} / ${N0(D.shBy.free)} บาท</td></tr>
+      <tr><td>เงินกู้คงเหลือรวม</td><td class="n"><b>${NB(D.dbNow)}</b> บาท</td></tr>
+      <tr><td>&nbsp;&nbsp;แยกประเภท: สามัญ / ดูแลกัน</td><td class="n">${N0(D.dbBy.sam)} / ${N0(D.dbBy.dk)} บาท</td></tr>
+      <tr><td>ปล่อยกู้สะสมตามสัญญา (${NC(D.LC.n)} สัญญาที่ยังมีหนี้)</td><td class="n">${N0(D.LC.amt)} บาท</td></tr>
+      <tr><td>รายได้ดอกเบี้ยสะสม ปี ${blank ? "……." : O.yr}</td><td class="n"><b>${NB(O.int69)}</b> บาท${O.n69 ? ` · เฉลี่ยเดือนละ ${N0(O.int69 / O.n69)}` : ""}</td></tr>
+      <tr><td>ประมาณเงินคืนสมาชิกสิ้นปี</td><td class="n">ปันผลหุ้น ${N0(D.divS)} + เฉลี่ยคืน ${N0(D.divI)} = <b>${N0(r2(D.divS + D.divI))}</b> บาท</td></tr>
+      <tr><td>การคืนทุนสมาชิกที่ลาออก</td><td class="n">${blank ? DOTS + " ราย · " + DOTS + " บาท" : Z.ret > 0 ? `${Z.retN || Z.outs.length} ราย · ${N0(Z.ret)} บาท` : "—"}</td></tr>
     </tbody></table>
     <div class="ksec2">คาดการณ์ ${F.months.length} เดือนข้างหน้า (รวมยอดที่ลงล่วงหน้าไว้ + คำนวณตามงวดละ)</div>
     <table class="kt kw"><thead><tr><th class="l">เดือน</th><th>ชำระรวมที่คาด</th><th>ดอกเบี้ย</th><th>ปล่อยกู้ใหม่</th><th>หนี้สิ้นเดือน</th><th>หุ้นสิ้นเดือน</th></tr></thead><tbody>
-      ${F.tot.map(t => `<tr><td class="l">${thPer(t.p)}</td><td class="n">${B0(t.m)}</td><td class="n">${B0(t.int)}</td><td class="n">${t.loan ? B0(t.loan) : "—"}</td><td class="n">${B0(t.debt)}</td><td class="n">${B0(t.shares)}</td></tr>`).join("")}</tbody></table>
+      ${blank ? F.months.map(q => `<tr><td class="l">${thPer(q)}</td><td class="n">${DOTS}</td><td class="n">${DOTS}</td><td class="n">${DOTS}</td><td class="n">${DOTS}</td><td class="n">${DOTS}</td></tr>`).join("") : F.tot.map(t => `<tr><td class="l">${thPer(t.p)}</td><td class="n">${B0(t.m)}</td><td class="n">${B0(t.int)}</td><td class="n">${t.loan ? B0(t.loan) : "—"}</td><td class="n">${B0(t.debt)}</td><td class="n">${B0(t.shares)}</td></tr>`).join("")}</tbody></table>
 
     ${head("๗ งานที่ต้องติดตาม")}
     <table class="kt kw"><tbody>
-      <tr><td>ผู้กู้ค้างชำระ</td><td class="n"><b>${R.length}</b> สัญญา · ยอดค้างรวม ${B0(arrTot)} บาท (1–2 งวด ${lv(1).length} · 3–5 งวด ${lv(2).length} · 6 งวดขึ้นไป ${lv(3).length})</td></tr>
-      <tr><td>แจ้งเตือนทะเบียนคุมผู้ค้ำ</td><td class="n"><b>${G.alerts.length}</b> รายการ (ค้ำเกินเพดาน ${G.st.over} คน)</td></tr>
-      <tr><td>รอยืนยันรับเงิน (ถึงงวดแล้ว)</td><td class="n"><b>${pend}</b> รายการ</td></tr>
-      <tr><td>ลงล่วงหน้าไว้ (ยังไม่ถึงงวด)</td><td class="n"><b>${planned}</b> รายการ</td></tr>
+      <tr><td>ผู้กู้ค้างชำระ</td><td class="n"><b>${NC(R.length)}</b> สัญญา · ยอดค้างรวม ${N0(arrTot)} บาท (1–2 งวด ${NC(lv(1).length)} · 3–5 งวด ${NC(lv(2).length)} · 6 งวดขึ้นไป ${NC(lv(3).length)})</td></tr>
+      <tr><td>แจ้งเตือนทะเบียนคุมผู้ค้ำ</td><td class="n"><b>${NC(G.alerts.length)}</b> รายการ (ค้ำเกินเพดาน ${NC(G.st.over)} คน)</td></tr>
+      <tr><td>รอยืนยันรับเงิน (ถึงงวดแล้ว)</td><td class="n"><b>${NC(pend)}</b> รายการ</td></tr>
+      <tr><td>ลงล่วงหน้าไว้ (ยังไม่ถึงงวด)</td><td class="n"><b>${NC(planned)}</b> รายการ</td></tr>
     </tbody></table>
     <div class="ksigs" style="grid-template-columns:1fr 1fr;margin-top:14px">${sigOf("กรรมการฝ่ายการเงิน", FIN())}${sigOf("ประธานกลุ่มบุคคล", CHAIR())}</div>
-    <p class="kh" style="margin-top:8px;text-align:center">จัดทำเมื่อ ${thDay(today)} จากทะเบียนในโปรแกรม</p>`;
-  return pg(1, 3, cover, "").replace('class="kpage k1', 'class="kpage k1 kb') + pg(2, 3, body, "").replace('class="kpage', 'class="kpage kb') + pg(3, 3, stat, "");
+    <p class="kh" style="margin-top:8px;text-align:center">${blank ? "จัดทำเมื่อ ...../...../......." : "จัดทำเมื่อ " + thDay(today) + " จากทะเบียนในโปรแกรม"}</p>`;
+  const out = pg(1, 3, cover, "").replace('class="kpage k1', 'class="kpage k1 kb') + pg(2, 3, body, "").replace('class="kpage', 'class="kpage kb') + pg(3, 3, stat, "");
+  return blank ? out.split('class="n"').join('class="n" style="white-space:normal"').split('min-width:90px').join('min-width:56px') : out;
 }
 
 function drawNWOverview(){
