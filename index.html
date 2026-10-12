@@ -335,9 +335,11 @@ th.svcol{background:#FFF4D6!important}
 .ksig .sp{height:34px}
 .kpage .ul{margin:2px 0 4px 30px}
 
+/* ตัวอักษรในเอกสาร (หนังสือ/สัญญา/แบบฟอร์ม) เป็นสีดำทั้งหมด ทั้งบนจอ พิมพ์ Word และรูป */
+.kpage,.kpage *{color:#000!important}
 /* ---------- ตัวอย่างบนจอให้อ่านง่าย (เฉพาะจอ — การพิมพ์ใช้มาตรฐานเอกสารพิมพ์ด้านล่าง) ---------- */
 @media screen{
-  :not(.nwstage)>.kpage{font-family:"Sarabun","IBM Plex Sans Thai",sans-serif;font-size:15px;line-height:1.7;color:#111827}
+  :not(.nwstage)>.kpage{font-family:"Sarabun","IBM Plex Sans Thai",sans-serif;font-size:15px;line-height:1.7;color:#000}
   :not(.nwstage)>.kpage p{text-align:left;margin:7px 0}
   :not(.nwstage)>.kpage .i2{color:#111827;margin-left:0;text-indent:9mm}
   :not(.nwstage)>.kpage .kt1{font-size:19px;margin-top:6px}
@@ -673,7 +675,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-131</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-132</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
