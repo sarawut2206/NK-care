@@ -673,7 +673,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-130</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-131</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -2482,20 +2482,25 @@ const NW = {
   everyone(){ nwMig(); return (S.nw && S.nw.people) || []; },
   people(){ return NW.everyone().filter(x=>!x.out); },              // ไม่รวมคนที่ลาออก
   person(no){ return NW.everyone().find(x=>x.no===no) || null; },
-  all(){ if(!S.nw) S.nw = {people:[], rows:[], v:2}; nwMig(); if(!Array.isArray(S.nw.rows)) S.nw.rows = []; return S.nw.rows; },
+  raw(){ if(!S.nw) S.nw = {people:[], rows:[], v:2}; nwMig(); if(!Array.isArray(S.nw.rows)) S.nw.rows = []; return S.nw.rows; },   // ทุกแถว รวมที่ลงล่วงหน้า
+  all(){ const c = pNum(nwCurP()); return NW.raw().filter(r => pNum(r.p) <= c); },          // เฉพาะงวดที่ถึงแล้ว (ที่ทุกยอดปัจจุบันใช้)
+  fut(){ const c = pNum(nwCurP()); return NW.raw().filter(r => pNum(r.p) > c); },           // ลงล่วงหน้า (ยังไม่ถึงงวด)
   rows(no){ return NW.all().filter(r=>r.no===no).sort(LG.byP); },                          // ทุกบัญชีของคนนี้
   rowsA(a){ return NW.all().filter(r=>r.no===a.no && r.prod===a.prod).sort(LG.byP); },       // เฉพาะบัญชีย่อยนี้
-  row(no,p,prod){ return NW.all().find(r=>r.no===no && r.p===p && r.prod===prod) || null; },
-  has(no,p){ return NW.all().some(r=>r.no===no && r.p===p); },                              // งวดนี้มีบันทึกอะไรสักบัญชี
+  rowsAll(a){ return NW.raw().filter(r=>r.no===a.no && r.prod===a.prod).sort(LG.byP); },     // รวมล่วงหน้า
+  futA(a){ return NW.fut().filter(r=>r.no===a.no && r.prod===a.prod).sort(LG.byP); },
+  row(no,p,prod){ return NW.raw().find(r=>r.no===no && r.p===p && r.prod===prod) || null; },
+  has(no,p){ return NW.raw().some(r=>r.no===no && r.p===p); },                              // งวดนี้มีบันทึกอะไรสักบัญชี
   set(no,p,prod,patch){
-    let r = NW.row(no,p,prod); if(!r){ r = {no, p, prod}; NW.all().push(r); }
+    let r = NW.row(no,p,prod); if(!r){ r = {no, p, prod}; NW.raw().push(r); }
     Object.keys(patch).forEach(k=>{ const v = patch[k]; if(v===""||v==null||v===false) delete r[k]; else r[k] = v; });
     r.ts = Date.now(); return r;
   },
-  drop(no,p,prod){ S.nw.rows = NW.all().filter(r=>!(r.no===no && r.p===p && r.prod===prod)); }
+  drop(no,p,prod){ S.nw.rows = NW.raw().filter(r=>!(r.no===no && r.p===p && r.prod===prod)); }
 };
 function nwAcct(x, k){
   const A = (x.acc && x.acc[k]) || {}, ac = x.acc || {};
+  if(A.pend && pNum(nwCurP()) >= pNum(A.pend.p)){ Object.assign(A, A.pend.set); delete A.pend; }          // ถึงงวดที่ 1 ของสัญญาใหม่แล้ว: ใช้ค่าตั้งใหม่ (งวดละ/หุ้น/งวดที่ 1)
   const used = (+(ac.sam && ac.sam.share0) || 0) + (+(ac.dk && ac.dk.share0) || 0);
   return {no:x.no, name:x.name, prod:k, x, debt0: k==="free" ? 0 : (+A.debt0||0),
     share0: k==="free" ? Math.max(0, r2((+x.share0||0) - used)) : (+A.share0||0),
@@ -2527,7 +2532,7 @@ const nwOk = r => !has(r.m) || Math.abs(num(r.m) - num(r.int) - num(r.pri) - nwS
 /* ยอด ณ ก่อนงวด p ของบัญชีย่อยนี้ */
 function nwBefore(a, p){
   let debt = a.debt0, shares = a.share0;
-  NW.rowsA(a).filter(r=>r.p<p).forEach(r=>{ debt = nwStep(debt, r); shares = +(shares + nwShN(r)).toFixed(2); });
+  NW.rowsAll(a).filter(r=>r.p<p).forEach(r=>{ debt = nwStep(debt, r); shares = +(shares + nwShN(r)).toFixed(2); });
   return {debt:+debt.toFixed(2), shares:+shares.toFixed(2)};
 }
 /* สถานะของบัญชีย่อยหนึ่งบัญชี */
@@ -2563,23 +2568,25 @@ function nwState(x){
    ไม่ได้บันทึกอะไร — เป็นแค่การแสดงผล · ตัวเลขจริงมาจากที่คุณกรอกเท่านั้น */
 const NW_MAXR = 72;                                             // ไม่เกิน 72 งวด (เพิ่มต่อได้ทีละ 12)
 const nwHz = a => Math.max(NW_MAXR, +a.hz || NW_MAXR);
-function nwPlan(a){
-  const rs = NW.rowsA(a).filter(r => !r.relief), L = rs[rs.length - 1];
+function nwPlan(a, withFut){
+  const rs = (withFut ? NW.rowsAll(a) : NW.rowsA(a)).filter(r => !r.relief), L = rs[rs.length - 1];
   // หุ้นประจำ/หุ้นเพิ่ม: ถ้ายังไม่ได้ตั้ง «หุ้นเพิ่มเดือนละ» (shxM) ใช้ตามแถวล่าสุดที่บันทึก ทั้งสองช่องคู่กัน
   // (ใบสรุปให้หุ้นเป็นยอดรวมช่องเดียว ถ้าเอามาบวกกับหุ้นเพิ่มของแถวล่าสุดจะนับซ้ำ)
   let sh = +a.shM || 0, shx = has(a.shxM) ? +a.shxM : 0;
   if(!has(a.shxM) && L && (num(L.sh) || num(L.shx))){ sh = num(L.sh); shx = num(L.shx); }
   else if(!sh && L){ sh = num(L.sh); }
-  return {m: +a.inst || (L ? num(L.m) : 0), sh, shx, sv: +a.svM || 0};
+  return {m: (withFut && L && num(L.m)) ? num(L.m) : (+a.inst || (L ? num(L.m) : 0)), sh, shx, sv: +a.svM || 0};
 }
 function nwTimeline(a, project){
-  const rs = NW.rowsA(a), byP = {}; rs.forEach(r => byP[r.p] = r);
-  const pl = nwPlan(a), ss = nwStarts(a), hzN = pNum(ss[ss.length - 1]) + nwHz(a) - 1;
-  const a0 = pNum(P_ANCHOR), lastN = rs.length ? Math.max(a0 - 1, pNum(rs[rs.length - 1].p)) : a0 - 1;
+  const rs = NW.rowsA(a), fr = NW.futA(a), byP = {}, fut = {}; rs.forEach(r => byP[r.p] = r); fr.forEach(r => fut[r.p] = r);
+  const pl = nwPlan(a, true), ss = nwStarts(a), hzN = pNum(ss[ss.length - 1]) + nwHz(a) - 1;
+  const a0 = pNum(P_ANCHOR), lastN = rs.length ? Math.max(a0 - 1, pNum(rs[rs.length - 1].p)) : a0 - 1, lastF = fr.length ? pNum(fr[fr.length - 1].p) : 0;
   const out = []; let debt = a.debt0, shares = a.share0, stop = false, payoff = null, over = null;
-  for(let n = a0; n <= Math.max(project ? hzN : 0, lastN); n++){
+  for(let n = a0; n <= Math.max(project ? hzN : 0, lastN, lastF); n++){
     const p = pFrom(n), r = byP[p];
     if(r){ debt = nwStep(debt, r); shares = r2(shares + nwShN(r)); out.push({p, r, debt, shares}); continue; }
+    const fx = fut[p];
+    if(fx){ debt = nwStep(debt, fx); shares = r2(shares + nwShN(fx)); out.push({p, r:fx, fut:true, debt, shares}); continue; }       // ลงล่วงหน้าไว้แล้ว — ใช้เลขที่ลงไว้
     if(!project) continue;
     if(n <= lastN){ out.push({p, gap:true, debt, shares}); continue; }               // ข้ามไปแล้ว ไม่ได้บันทึก — ไม่นับว่าจ่าย
     if(stop || n > hzN) continue;
@@ -2596,8 +2603,8 @@ function nwTimeline(a, project){
       out.push({p, proj:{m:r2(pl.sh + pl.shx + pl.sv), int:0, pri:0, sh:pl.sh, shx:pl.shx, sv:pl.sv, bal:0}, debt:0, shares, saver:true});
     }
   }
-  if(project && debt > 0.005 && !stop && lastN < hzN){
-    const k = hzN - lastN, rows = out.filter(o => o.r), d0 = rows.length ? rows[rows.length - 1].debt : a.debt0;
+  if(project && debt > 0.005 && !stop && Math.max(lastN, lastF) < hzN){
+    const k = hzN - Math.max(lastN, lastF), rows = out.filter(o => o.r), d0 = rows.length ? rows[rows.length - 1].debt : a.debt0;
     const need = r2(d0 * RATE / (1 - Math.pow(1 + RATE, -k)) + pl.sh + pl.shx);        // ไม่รวมสะสมเพิ่ม (สมัครใจ)
     over = {rem:debt, hz:nwHz(a), need};
   }
@@ -2627,7 +2634,7 @@ function nwImport(file, html){
   const list = parseOpening(html);
   if(!list.length){ alert("ไม่พบใบสรุปรายคนในไฟล์นี้ — ต้องเป็นไฟล์ใบสรุปชำระรายเดือนที่มีรหัสสมาชิก หุ้นสะสม และหนี้คงค้าง"); return; }
   const nB = list.filter(r=>r.debt>0.005).length;
-  const kept = NW.on() ? NW.all().length : 0;
+  const kept = NW.on() ? NW.raw().length : 0;
   if(!confirm(`พบ ${list.length} คน · ผู้กู้ ${nB} · ผู้ฝาก ${list.length-nB}\n`
     + `หุ้นรวม ${B(list.reduce((a,r)=>a+r.share,0))} บาท · หนี้รวม ${B(list.reduce((a,r)=>a+r.debt,0))} บาท\n`
     + `เป็นยอด ณ สิ้น ธ.ค.68 แล้วเริ่มบันทึกต่อตั้งแต่ ม.ค.69\n\n`
@@ -2642,7 +2649,7 @@ function nwImport(file, html){
   S.nw = {v:2, asOf:"2568-12", file, at:new Date().toISOString().slice(0,10),
     people: list.map(r => prev[r.no] ? Object.assign({}, prev[r.no], {hist:hist(r)}) : fresh(r))     // คนเดิมคงยอดที่ตั้ง/แยกไว้ เปลี่ยนเฉพาะประวัติใบสรุป
       .concat(NW.everyone().filter(x => !inFile.has(x.no))).sort(byNo),
-    rows: NW.on() ? NW.all() : []};
+    rows: NW.on() ? NW.raw() : []};
   S.nsel = {}; S.nf = null;
   all();
   toast(`เริ่มทะเบียนจากใบสรุปแล้ว ${list.length} คน`);
@@ -2728,7 +2735,7 @@ function rgApply(x, a, g){
 function ceChain(a, fromP){
   if(a.prod === "free") return;
   let debt = nwBefore(a, fromP).debt;
-  NW.rowsA(a).filter(r => r.p >= fromP).forEach(r => {
+  NW.rowsAll(a).filter(r => r.p >= fromP).forEach(r => {
     if(r.refi){ r.loan = r2(r.refi.N - (debt - num(r.pri))); debt = r.refi.N; r.bal = debt; }
     else { debt = r2(debt - num(r.pri) + num(r.loan)); r.bal = debt; }
   });
@@ -2792,8 +2799,9 @@ function nwRegisterTable(a, editable){
     : `<td class="n">${num(val) || !dash ? (bold ? `<b>${B(num(val))}</b>` : B(num(val))) : "—"}</td>`;
   const rowHTML = o => {
     if(o.r){ const r = o.r, ok = !loan || nwOk(r), late = r.d && r.d > nwWin(r.p).to ? ` <span class="pill amb" style="font-size:10px">ช้า ${nwDays(nwWin(r.p).to, r.d)} วัน</span>` : "";
-      return `<tr${E?` data-nr="${esc(r.p)}" style="cursor:pointer${S.nf&&S.nf.p===r.p&&S.nf.prod===a.prod?";background:var(--faint)":""}"`:""}>
-      <td class="l"><b>${nwNoLbl(a, r.p)}</b> · ${thPer(r.p)}</td>
+      const fut = !!o.fut, fp = fut ? ` <span class="pill" style="font-size:10px;background:#E8F1FF;border-color:#9DB8E8;color:#1F3A68" title="ลงล่วงหน้า — ยังไม่นับในยอดปัจจุบัน/ใบสรุป จะนับเองเมื่อถึงงวด (เปิดโอนวันที่ 25 ของเดือนก่อน)">ลงล่วงหน้า</span>` : "";
+      return `<tr${E?` data-nr="${esc(r.p)}" style="cursor:pointer${S.nf&&S.nf.p===r.p&&S.nf.prod===a.prod?";background:var(--faint)":fut?";background:#F3F8FF":""}"`:""}>
+      <td class="l"><b>${nwNoLbl(a, r.p)}</b> · ${thPer(r.p)}${fp}</td>
       <td class="l">${E ? `<input class="ce ced" type="date" data-ce="${r.p}|d" value="${esc(r.d||"")}">${late}` : (r.d ? thDay(r.d) + late : "—")}</td>
       ${loan ? nc(r.p,"m",r.m,"",true) + nc(r.p,"int",r.int) + nc(r.p,"pri",r.pri) : ""}
       ${nc(r.p,"sh",r.sh) + nc(r.p,"shx",r.shx,"",false,true) + nc(r.p,"sv",r.sv,"",false,true)}
@@ -2825,6 +2833,7 @@ function nwRegisterTable(a, editable){
     ${T.over ? `<tr><td colspan="${cols}" class="l" style="color:var(--danger)">⚠ ครบงวดที่ ${T.over.hz} แล้วยังเหลือหนี้ ${B(T.over.rem)} —
       ถ้าต้องการให้หมดภายในงวดที่ ${T.over.hz} ต้องส่งงวดละประมาณ <b>${B(T.over.need)}</b> (รวมหุ้น)</td></tr>` : ""}
     ${!T.rows.length ? `<tr><td colspan="${cols}" class="hint" style="text-align:left">ยังไม่ได้บันทึกตั้งแต่ ม.ค.69</td></tr>` : ""}
+    ${T.rows.some(o => o.fut) ? `<tr><td colspan="${cols}" class="hint" style="text-align:left">แถวสีฟ้า «ลงล่วงหน้า» = ลงไว้ก่อนถึงงวด (เช่น สัญญาใหม่ที่ปล่อยกู้หลังปิดงวดนี้) — <b>ยังไม่นับในยอดหนี้/หุ้นปัจจุบันและใบสรุป</b> นับเข้าเองอัตโนมัติเมื่อถึงงวด · ใช้ดูวงเงินกู้และหุ้นที่คาดการณ์แต่ละเดือน</td></tr>` : ""}
   </tbody></table>`;
 }
 
@@ -3623,6 +3632,7 @@ function drawNW(kind){
     const p = b.dataset.nd, old = NW.row(x.no, p, a.prod);
     if(!confirm(`ลบ ${NW_ACCS[a.prod]} เดือน ${thPer(p)} ของ ${x.name}?` + (old && old.refi ? "\n\nรายการนี้เป็นการกู้ทับ — ลบแล้วคืนงวดที่ 1 / งวดละ / หุ้น เป็นค่าก่อนกู้ทับด้วย" : ""))) return;
     if(old && old.refi){ const A = nwAccRef(x, a.prod), pv = old.refi.prev || {};
+      if(A.pend && A.pend.p === old.refi.start) delete A.pend;
       A.starts = (pv.starts || []).slice();
       ["inst", "shM", "shxM"].forEach(k => { if(has(pv[k])) A[k] = pv[k]; else delete A[k]; }); }
     NW.drop(x.no, p, a.prod); save(); if(S.nf && S.nf.p===p && S.nf.prod===a.prod) S.nf = null; drawNW(kind); toast("ลบแล้ว");
@@ -3709,6 +3719,36 @@ function dashTop(list, k, color){
       <span class="ds-bar"><i style="width:${(o.st[k] / mx * 100).toFixed(1)}%;background:${color}"></i></span><b>${B0(o.st[k])}</b></div>`).join("") : '<p class="hint">ยังไม่มีข้อมูล</p>';
 }
 
+/* ============ คาดการณ์รายเดือน (ล่วงหน้า) — รวมแถวที่ลงไว้ล่วงหน้า + ที่คำนวณตามงวดละ · ใช้ดูเงินเข้า วงเงินกู้ และหุ้นแต่ละเดือน ============ */
+function nwFcstData(h){
+  const cur = pNum(nwCurP()), months = Array.from({length:h}, (_, i) => pFrom(cur + 1 + i)), tot = months.map(p => ({p, m:0, int:0, pri:0, dep:0, loan:0, debt:0, shares:0, nF:0, nC:0}));
+  const base = {debt:0, shares:0}, planned = [];
+  NW.people().forEach(x => nwAccts(x).forEach(a => {
+    const st = nwStateA(a); base.debt += st.debt; base.shares += st.shares;
+    const T = nwTimeline(a, true), by = {}; T.rows.forEach(o => { if(pNum(o.p) > cur && !o.warn && !o.gap) by[o.p] = o; });
+    let dbt = st.debt, sh = st.shares;
+    months.forEach((p, i) => { const o = by[p], t = tot[i];
+      if(o){ const v = o.r || o.proj || {}, m = o.r ? (num(v.m) || r2(num(v.int) + num(v.pri) + nwSh(v))) : num(v.m);
+        t.m += m; t.int += num(v.int); t.pri += num(v.pri); t.dep += nwSh(v); t.loan += o.r ? num(v.loan) : 0; if(o.r) t.nF++; else t.nC++; dbt = o.debt; sh = o.shares; }
+      t.debt += dbt; t.shares += sh; });
+    const fr = NW.futA(a); if(fr.length) planned.push({x, a, n:fr.length, from:fr[0].p, to:fr[fr.length - 1].p, loan:r2(fr.reduce((u, r) => u + num(r.loan), 0)), lp:(fr.find(r => num(r.loan) > 0) || {}).p || ""}); }));
+  tot.forEach(t => ["m", "int", "pri", "dep", "loan", "debt", "shares"].forEach(k => t[k] = r2(t[k])));
+  return {months, tot, base:{debt:r2(base.debt), shares:r2(base.shares)}, planned};
+}
+function nwFcstHTML(){
+  const h = [6, 12, 24].includes(+((S.nw && S.nw.dash) || {}).fh) ? +S.nw.dash.fh : 12, F = nwFcstData(h), mx = Math.max(1, ...F.tot.map(t => t.m));
+  return `<div class="card" style="margin-top:12px"><div class="bar" style="margin:0 0 8px"><div class="ds-ttl" style="margin:0">คาดการณ์รายเดือนล่วงหน้า — เงินเข้า วงเงินกู้ และหุ้น</div>
+      <label class="hint" style="margin-left:auto;display:flex;align-items:center;gap:6px">ดูล่วงหน้า <select id="ds_fh">${[6, 12, 24].map(v => `<option value="${v}" ${v === h ? "selected" : ""}>${v} เดือน</option>`).join("")}</select></label></div>
+    <p class="hint" style="margin:0 0 8px">รวมแถวที่ <b>ลงล่วงหน้า</b> ไว้ในทะเบียน (เช่น สัญญาใหม่ที่ปล่อยกู้หลังปิดงวด) กับยอดที่ <b>คำนวณ</b>ตามงวดละของแต่ละบัญชี · ยอดปัจจุบันตอนนี้ (ไม่รวมล่วงหน้า): หนี้ <b>${B0(F.base.debt)}</b> · หุ้นสะสม <b>${B0(F.base.shares)}</b> บาท</p>
+    <div class="tbl" style="max-height:420px"><table><thead><tr><th class="l">เดือน</th><th>ชำระรวมที่คาด</th><th>ดอกเบี้ย</th><th>เงินต้น</th><th>ฝากหุ้นเข้า</th><th>ปล่อยกู้ใหม่ (ลงล่วงหน้า)</th><th>หนี้คงเหลือสิ้นเดือน</th><th>หุ้นสะสมสิ้นเดือน</th><th class="l">ที่มา</th></tr></thead><tbody>
+      ${F.tot.map(t => `<tr><td class="l"><b>${thPer(t.p)}</b></td><td class="amt"><b>${B0(t.m)}</b><div style="height:4px;background:#E6EBF5;border-radius:2px;margin-top:2px"><i style="display:block;height:4px;width:${(t.m / mx * 100).toFixed(1)}%;background:#1F3A68;border-radius:2px"></i></div></td>
+        <td class="amt">${B0(t.int)}</td><td class="amt">${B0(t.pri)}</td><td class="amt">${B0(t.dep)}</td><td class="amt">${t.loan ? `<b style="color:#B4452B">${B0(t.loan)}</b>` : "—"}</td><td class="amt">${B0(t.debt)}</td><td class="amt">${B0(t.shares)}</td>
+        <td class="l"><span class="hint">ลงไว้ ${t.nF} · คำนวณ ${t.nC}</span></td></tr>`).join("")}</tbody></table></div>
+    ${F.planned.length ? `<div class="eyebrow" style="margin-top:10px">รายการที่ลงล่วงหน้าไว้ในทะเบียน (ยังไม่นับในยอดปัจจุบัน — นับเองเมื่อถึงงวด)</div>
+      <div class="tbl" style="max-height:220px"><table><thead><tr><th class="l">สมาชิก</th><th class="l">บัญชี</th><th>งวดที่ลงไว้</th><th class="l">ช่วงเดือน</th><th>ปล่อยกู้ใหม่</th><th class="l">เดือนที่ปล่อย</th></tr></thead><tbody>
+        ${F.planned.map(q => `<tr><td class="l"><span class="no">${esc(q.x.no)}</span><b>${esc(q.x.name)}</b></td><td class="l">${NW_ACCS[q.a.prod]}</td><td class="amt">${q.n}</td><td class="l">${thPer(q.from)} – ${thPer(q.to)}</td><td class="amt">${q.loan ? B(q.loan) : "—"}</td><td class="l">${q.lp ? thPer(q.lp) : "—"}</td></tr>`).join("")}</tbody></table></div>` : `<p class="hint" style="margin:8px 0 0">ยังไม่มีรายการลงล่วงหน้า — ลงได้ที่ทะเบียนผู้กู้: พิมพ์ในแถวเดือนที่ยังไม่ถึง หรือ «นำเข้าตารางผ่อน» ที่งวดที่ 1 เป็นเดือนหน้า</p>`}</div>`;
+}
+
 function drawNWDash(){
   const el = $("tab23"); if(!el) return;
   if(tab !== 23){ el.innerHTML = ""; return; }
@@ -3755,6 +3795,8 @@ function drawNWDash(){
       <div class="ds-dr est"><span>ประมาณทั้งปี (ถ้ายอดหุ้นคงที่ และดอกเบี้ยรายเดือนเท่าเดิม) : หุ้น ${B0(D.divSY)} + เฉลี่ยคืน ${B0(D.divIY)}</span><div class="ds-bar2"><i style="width:${(divY / mx * 100).toFixed(1)}%;background:#9AA6BC"></i></div><b>${B0(divY)}</b></div></div>
     <p class="hint" style="margin:6px 0 0">เป็นตัวเลขประมาณการจากที่กรอกไว้ ณ ตอนนี้ — ตัวเลขจริงขึ้นกับมติที่ประชุมและยอดสิ้นปี · ตรงกับผลรวมของแท็บ «ใบสรุป + ปันผล» เมื่อเลือกช่วงและอัตราเดียวกัน</p></div>
 
+  ${nwFcstHTML()}
+
   <div class="ds-g2">
     <div class="card"><div class="ds-ttl">10 อันดับ ทุนเรือนหุ้นสะสมสูงสุด</div>${dashTop(D.ser, "shares", DSH.sh)}</div>
     <div class="card"><div class="ds-ttl">10 อันดับ เงินกู้คงเหลือสูงสุด</div>${dashTop(D.ser, "debt", DSH.dbt)}</div>
@@ -3766,6 +3808,7 @@ function drawNWDash(){
   $("ds_rs").onchange = e => set({rs:Math.max(0, +e.target.value || 0)});
   $("ds_ri").onchange = e => set({ri:Math.max(0, +e.target.value || 0)});
   $("ds_adj").onchange = e => set({adj:e.target.checked});
+  if($("ds_fh")) $("ds_fh").onchange = e => set({fh:+e.target.value});
 }
 
 /* ============ เว็บใหม่: ใบสรุปชำระรายเดือน + สรุปปันผล ============
@@ -5739,8 +5782,8 @@ function niCheck(rows, rate, loan0){
 /* แถวที่จะลงทะเบียน: งวด 9 (ม.ค.69) ถึงงวดปัจจุบัน */
 function niPlan(x, I){
   const firstN = pNum(I.first), lo = pNum(P_ANCHOR), hi = pNum(nwCurP());
-  return I.rows.map(r=>({r, p: pFrom(firstN + r.n - 1)})).filter(o=>pNum(o.p) >= lo && pNum(o.p) <= hi && (!I.until || pNum(o.p) < pNum(I.until)))
-    .map(o=>({...o, has: !!NW.row(x.no, o.p, I.prod)}));
+  return I.rows.map(r=>({r, p: pFrom(firstN + r.n - 1)})).filter(o=>pNum(o.p) >= lo && (!I.until || pNum(o.p) < pNum(I.until)))
+    .map(o=>({...o, has: !!NW.row(x.no, o.p, I.prod), fut: pNum(o.p) > hi}));
 }
 
 /* ตารางนี้คือสัญญาใหม่ที่กู้ทับหนี้เดิมหรือไม่ — เริ่มหลังงวดที่ 1 ของสัญญาปัจจุบัน และยอดกู้ใหม่ (คงเหลือ + เงินต้นงวดที่ 1) ไม่เท่าหนี้เดิม */
@@ -5785,14 +5828,14 @@ function niHTML(x){
     ${(() => { const rf = niRefi(x, I); return rf ? `<p class="hint" style="margin:0 0 6px"><span class="pill">🔁 กู้ทับ — สัญญาใหม่</span> เริ่ม <b>${thPer(I.first)}</b> ยอดกู้ใหม่ <b>${B(rf.N)}</b> ปิดหนี้เดิม ${B(rf.before)} → ได้รับส่วนต่าง <b>${B(rf.loan)}</b> · งวดที่ 1 ของสัญญาใหม่ = ${thPer(I.first)} (สัญญาเดิมยังนับตามเดิม)</p>` : ""; })()}
     <p class="hint" style="margin:0 0 6px">${I.byPrev ? `✓ สัญญาใหม่เริ่มต่อจากสัญญาก่อนหน้า (${thPer(I.first)})` : I.byStart ? `✓ ใช้งวดที่ 1 ที่คุณกำหนดไว้ (${thPer(I.first)})${I.auto ? ` — ตรงกับยอดคงเหลือที่มีอยู่ ${I.auto} งวด` : ""}` : I.byLabel ? `✓ ใช้ชื่อเดือนที่ระบุในตาราง${I.auto ? ` — ตรงกับยอดคงเหลือที่มีอยู่ ${I.auto} งวด` : ""}`
       : I.auto ? `✓ จับคู่อัตโนมัติจากยอดคงเหลือ — ตรงกับยอดที่มีอยู่ ${I.auto} งวด` : '⚠ จับคู่จากยอดคงเหลือไม่ได้ — เลือกเองว่างวดที่ 1 ของตารางคือเดือนไหน'}
-      · จะเติมเดือน ${thPer(P_ANCHOR)} ถึง ${thPer(nwCurP())} · เลือกเดือนของงวดที่ 1 ได้เอง (ระบบจำไว้เป็นงวดที่ 1 ของสัญญา) · แก้ตัวเลขได้ทุกช่อง</p>
+      · จะเติมเดือน ${plan.length ? thPer(plan[0].p) : thPer(P_ANCHOR)} ถึง ${plan.length ? thPer(plan[plan.length - 1].p) : thPer(nwCurP())}${plan.some(o => o.fut) ? ` (งวดหลัง ${thPer(nwCurP())} = <b>ลงล่วงหน้า</b> ยังไม่นับในยอดปัจจุบัน นับเองเมื่อถึงงวด)` : ""} · เลือกเดือนของงวดที่ 1 ได้เอง (ระบบจำไว้เป็นงวดที่ 1 ของสัญญา) · แก้ตัวเลขได้ทุกช่อง</p>
     <div class="tbl" style="max-height:380px"><table><thead><tr><th>ตาราง</th><th class="l">งวดโอน</th>
       ${NI_COLS.map(([,l])=>`<th>${l}</th>`).join("")}<th class="l">ตรวจ</th></tr></thead><tbody>
       ${plan.map(({r,p,has:h})=>`<tr${h && !I.over?' style="opacity:.55"':""}><td>${r.n}</td>
-        <td class="l"><b>${thPer(p)}</b>${h?` <span class="pill" style="font-size:10px">${I.over?"เขียนทับ":"มีแล้ว ข้าม"}</span>`:""}</td>
+        <td class="l"><b>${thPer(p)}</b>${h?` <span class="pill" style="font-size:10px">${I.over?"เขียนทับ":"มีแล้ว ข้าม"}</span>`:""}${pNum(p) > pNum(nwCurP()) ? ' <span class="pill" style="font-size:10px;background:#E8F1FF;border-color:#9DB8E8;color:#1F3A68">ล่วงหน้า</span>' : ""}</td>
         ${NI_COLS.map(([k])=>`<td><input type="number" step="0.01" min="0" data-ni="${r.n}|${k}" value="${r[k]!=null?r[k]:""}" style="width:108px;padding:4px 6px;font-size:12.5px;text-align:right"></td>`).join("")}
         <td class="l">${(chk[r.n]||[]).length ? (chk[r.n]).map(m=>`<span class="pill red" style="font-size:10px">${m}</span>`).join(" ") : '<span class="pill grn">✓</span>'}</td></tr>`).join("")
-        || `<tr><td colspan="9" class="hint" style="text-align:left">ไม่มีงวดในช่วง ${thPer(P_ANCHOR)} – ${thPer(nwCurP())} — ตรวจว่า «งวดที่ 1 ของสัญญานี้ เริ่มเดือน» ถูกเดือนไหม</td></tr>`}
+        || `<tr><td colspan="9" class="hint" style="text-align:left">ไม่มีงวดตั้งแต่ ${thPer(P_ANCHOR)} เป็นต้นไป — ตรวจว่า «งวดที่ 1 ของสัญญานี้ เริ่มเดือน» ถูกเดือนไหม</td></tr>`}
     </tbody></table></div>
     <div class="bar" style="margin-top:8px;flex-wrap:wrap">
       <label class="rlf"><input type="checkbox" id="ni_over" ${I.over?"checked":""}> เขียนทับงวดที่บันทึกไว้แล้ว</label>
@@ -5928,14 +5971,16 @@ function bindNi(x, kind){
       const rw = NW.set(x.no, p, I.prod, patch);
       if(rf && p === I.first) rw.refi = {N:rf.N, start:I.first, prev:{starts:prevStarts, inst:prevA.inst, shM:prevA.shM, shxM:prevA.shxM}};      // ลบรายการนี้ = คืนค่าก่อนกู้ทับ
     });
-    const A = nwAccRef(x, I.prod);
-    if(rf){ A.starts = prevStarts.concat([I.first]); if(has(I.meta.inst)) A.inst = +I.meta.inst; }                  // กู้ทับ: เพิ่มสัญญาใหม่ต่อท้าย งวดที่ 1 ใหม่ + งวดละใหม่
-    else A.starts = (A.starts || []).slice(0, -1).concat([I.first]);                // ตารางที่นำเข้าบอกว่างวดที่ 1 ของสัญญาปัจจุบันคือเดือนนี้
-    if(I.def && has(I.meta.sh)){ A.shM = +I.meta.sh; A.shxM = has(I.meta.shx) ? +I.meta.shx : 0; }
-    if(!rf && has(I.meta.inst) && !A.inst) A.inst = +I.meta.inst;
+    const A = nwAccRef(x, I.prod), nv = {}, futStart = pNum(I.first) > pNum(nwCurP());
+    if(rf){ nv.starts = prevStarts.concat([I.first]); if(has(I.meta.inst)) nv.inst = +I.meta.inst; }                  // กู้ทับ: เพิ่มสัญญาใหม่ต่อท้าย งวดที่ 1 ใหม่ + งวดละใหม่
+    else nv.starts = (A.starts || []).slice(0, -1).concat([I.first]);                // ตารางที่นำเข้าบอกว่างวดที่ 1 ของสัญญาปัจจุบันคือเดือนนี้
+    if(I.def && has(I.meta.sh)){ nv.shM = +I.meta.sh; nv.shxM = has(I.meta.shx) ? +I.meta.shx : 0; }
+    if(!rf && has(I.meta.inst) && !A.inst) nv.inst = +I.meta.inst;
+    if(futStart) A.pend = {p:I.first, set:nv}; else Object.assign(A, nv);          // สัญญาที่เริ่มหลังงวดปัจจุบัน: ค่าตั้งใหม่ (งวดละ/หุ้น/งวดที่ 1) มีผลเมื่อถึงงวดที่ 1 — ตอนนี้ยอดปัจจุบันยังใช้ค่าเดิม
     S.niAfter = {no:x.no, p:pFrom(pNum(I.first) + Math.max(...I.rows.map(r => r.n)))};          // สัญญาถัดไปในชุดเดียวกัน (ถ้าไม่ระบุเดือน) เริ่มต่อจากนี้
     S.nf = null; save();
-    toast(rf ? `กู้ทับ: บันทึกสัญญาใหม่ ${todo.length} งวดของ ${x.no} แล้ว — ยอดกู้ ${B(rf.N)} งวดที่ 1 = ${thPer(I.first)}` : `บันทึกตามตารางผ่อน ${todo.length} งวดของ ${x.no} แล้ว`);
+    const nF = todo.filter(o => pNum(o.p) > pNum(nwCurP())).length, tf = nF ? ` · ลงล่วงหน้า ${nF} งวด (ยังไม่นับในยอดปัจจุบัน)` : "";
+    toast((rf ? `กู้ทับ: บันทึกสัญญาใหม่ ${todo.length} งวดของ ${x.no} แล้ว — ยอดกู้ ${B(rf.N)} งวดที่ 1 = ${thPer(I.first)}` : `บันทึกตามตารางผ่อน ${todo.length} งวดของ ${x.no} แล้ว`) + tf);
     niDone(kind);
   };
 }
@@ -5961,9 +6006,9 @@ function bindNwOut(kind){
   document.querySelectorAll("[data-nrs]").forEach(b=>b.onclick = () => { const x = NW.person(b.dataset.nrs); if(!x) return;
     delete x.out; save(); drawNW(kind); toast(`กู้คืน ${x.name} แล้ว`); });
   document.querySelectorAll("[data-ndel]").forEach(b=>b.onclick = () => { const x = NW.person(b.dataset.ndel); if(!x) return;
-    const n = NW.rows(x.no).length;
+    const n = NW.raw().filter(r => r.no === x.no).length;
     if(!confirm(`ลบ ${x.no} ${x.name} ถาวร?\nรวมรายการที่บันทึกไว้ ${n} งวด — ลบแล้วกู้คืนไม่ได้ (ยกเว้นจากไฟล์สำรอง JSON)`)) return;
-    S.nw.people = NW.everyone().filter(p=>p !== x); S.nw.rows = NW.all().filter(r=>r.no !== x.no);
+    S.nw.people = NW.everyone().filter(p=>p !== x); S.nw.rows = NW.raw().filter(r=>r.no !== x.no);
     save(); drawNW(kind); toast("ลบถาวรแล้ว"); });
 }
 
@@ -9044,6 +9089,20 @@ const DOCS_REQ = [
   ["สำเนาบัตรประจำตัวประชาชนของผู้รับผลประโยชน์", "เฉพาะกรณีระบุผู้รับผลประโยชน์ตามข้อ 6.5", 0],
 ];
 
+/* ภาระปัจจุบันของผู้ขอกู้ (ใบขอกู้ส่วนที่ 3) — ดึงจากทะเบียน ณ วันนี้ (เฉพาะงวดที่ถึงแล้ว ไม่รวมที่ลงล่วงหน้า) */
+function nwBurden(no){
+  const x = NW.person(no); if(!x || !NW.on()) return null;
+  const st = nwState(x), accs = nwAccts(x).filter(a => a.prod !== "free"), open = accs.filter(a => nwStateA(a).debt > 0.005);
+  const G = nwGuarData(), g = G.guars.find(q => q.no === no);
+  const curN = pNum(nwCurP()), lastDue = nwDue(pFrom(curN)) ? curN : curN - 1; let missAll = 0;
+  accs.forEach(a => { const byP = {}; NW.rowsA(a).forEach(r => byP[r.p] = r); let d = a.debt0;
+    for(let n = pNum(P_ANCHOR); n <= lastDue; n++){ const r = byP[pFrom(n)], before = d; if(r) d = nwStep(d, r);
+      if(before > 0.005 && !(r && (num(r.m) > 0.005 || r.relief))) missAll++; } });
+  const status = st.missed > 0 ? `<b style="color:#B3261E">ค้างชำระ ${st.missed} งวดติดต่อกัน</b>` + (missAll > st.missed ? ` · ผิดนัดสะสม ${missAll} งวด` : "")
+    : missAll > 0 ? `ไม่มีงวดค้างขณะนี้ · เคยผิดนัด ${missAll} งวด (นับตั้งแต่ ม.ค.69)` : (st.last || open.length ? "ชำระตรงเวลา ไม่เคยผิดนัด (นับตั้งแต่ ม.ค.69)" : "ยังไม่มีประวัติการชำระในทะเบียนใหม่");
+  return {shares:st.shares, debt:st.debt, nOpen:open.length, parts:open.map(a => `${NW_ACCS[a.prod]} ${B(nwStateA(a).debt)}`), gN:g ? g.n : 0, gDebt:g ? g.debt : 0, status, asOf:nwToday()};
+}
+
 function docApplyConsents(o, d){
   const P = PROD[o.prod] || PROD["สามัญ"], tmp = {no:o.no, prod:o.prod, mode:"calc", amt:o.P0, terms:o.N, inst:o.M, shareM:o.B, d:d || "", code:o.code || "", g1:o.g1 || "", g2:o.g2 || ""};
   let out = ""; for(let i = 1; i <= Math.min(2, P.guar || 0); i++) out += docConsent(tmp, i, true);
@@ -9058,6 +9117,7 @@ function docApply(o){
   const tmp = {prod:o.prod, mode:"calc", amt:o.P0, terms:o.N, inst:o.M, shareM:o.B};
   const s = schedule(tmp), cap = Math.ceil((o.P0 + s.totInt)/1000)*1000;
   const need = DOCS_REQ.filter(x=>x[2]!==2 || P.guar>0);
+  let bu = null; try{ bu = nwBurden(o.no); }catch(e){ bu = null; }
 
   const p1 = `${logo()}<div class="kt1">แบบคำขอกู้เงิน — สินเชื่อ${o.prod}</div>
     <div class="kt2">${ORG}<br>โรงเรียนมัธยมวัดหนองแขม (กบข.นข.)</div>
@@ -9093,14 +9153,14 @@ function docApply(o){
     </tbody></table>
 
     <div class="ksec">ส่วนที่ 3 · ภาระปัจจุบันของผู้ขอกู้
-      <span class="kh">(กรรมการฝ่ายการเงินตรวจสอบจากทะเบียนคุมและสมุดบัญชีจริง แล้วกรอกด้วยลายมือ — ผู้ขอกู้ไม่ต้องกรอก)</span></div>
+      <span class="kh">(${bu ? `ดึงจากทะเบียน ณ วันที่ ${thDay(bu.asOf)} — กรรมการฝ่ายการเงินตรวจกับสมุดบัญชีจริงก่อนอนุมัติ` : "กรรมการฝ่ายการเงินตรวจสอบจากทะเบียนคุมและสมุดบัญชีจริง แล้วกรอกด้วยลายมือ — ผู้ขอกู้ไม่ต้องกรอก"})</span></div>
     <table class="kt sum"><tbody>
-      <tr><td>ทุนเรือนหุ้นสะสมปัจจุบัน</td><td class="n"><span class="dt" style="min-width:150px"></span> บาท</td></tr>
-      <tr><td>หนี้คงเหลือกับ กบข.นข. ก่อนกู้ครั้งนี้</td><td class="n"><span class="dt" style="min-width:150px"></span> บาท</td></tr>
-      <tr><td>จำนวนสัญญาที่ยังไม่ปิด</td><td class="n"><span class="dt" style="min-width:150px"></span> ฉบับ</td></tr>
-      <tr><td>ภาระค้ำประกันที่รับไว้ให้ผู้อื่น</td><td class="n"><span class="dt" style="min-width:55px"></span> ราย ·
-        หนี้คงเหลือรวม <span class="dt" style="min-width:105px"></span> บาท</td></tr>
-      <tr class="hl"><td><b>สถานะการชำระย้อนหลัง</b></td><td class="n"><span class="dt" style="min-width:150px"></span></td></tr>
+      <tr><td>ทุนเรือนหุ้นสะสมปัจจุบัน</td><td class="n">${bu ? `<b class="f">${B(bu.shares)}</b>` : '<span class="dt" style="min-width:150px"></span>'} บาท</td></tr>
+      <tr><td>หนี้คงเหลือกับ กบข.นข. ก่อนกู้ครั้งนี้</td><td class="n">${bu ? `<b class="f">${B(bu.debt)}</b>` : '<span class="dt" style="min-width:150px"></span>'} บาท${bu && bu.parts.length > 1 ? `<div class="kh">${bu.parts.map(esc).join(" · ")}</div>` : ""}</td></tr>
+      <tr><td>จำนวนสัญญาที่ยังไม่ปิด</td><td class="n">${bu ? `<b class="f">${bu.nOpen}</b>` : '<span class="dt" style="min-width:150px"></span>'} ฉบับ</td></tr>
+      <tr><td>ภาระค้ำประกันที่รับไว้ให้ผู้อื่น</td><td class="n">${bu ? `<b class="f">${bu.gN}</b>` : '<span class="dt" style="min-width:55px"></span>'} ราย ·
+        หนี้คงเหลือรวม ${bu ? `<b class="f">${B(bu.gDebt)}</b>` : '<span class="dt" style="min-width:105px"></span>'} บาท</td></tr>
+      <tr class="hl"><td><b>สถานะการชำระย้อนหลัง</b></td><td class="n">${bu ? bu.status : '<span class="dt" style="min-width:150px"></span>'}</td></tr>
     </tbody></table>
     <p class="kh">เกณฑ์พิจารณา: สัญญาข้อ 6.4 — คณะกรรมการอาจระงับสิทธิ์การกู้ของสมาชิกที่มีประวัติผิดนัดเกิน 3 ครั้งภายใน 24 เดือน</p>
 
