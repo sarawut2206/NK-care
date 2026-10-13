@@ -699,7 +699,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-154</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-155</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -1032,7 +1032,7 @@ function warnHTML(c, kind, no, d, days){
     <p class="i2">บัดนี้ปรากฏว่า ${kind==="guar"?"ผู้กู้":"ท่าน"}<b>ผิดนัดชำระหนี้รวม ${nMiss} งวด</b> (${lv}) ตามรายละเอียดดังนี้</p>
     ${tbl}
     <p class="i2" style="margin-top:7px"><b>ยอดที่ต้องชำระเพื่อระงับการดำเนินคดี</b> — ตามสัญญาข้อ 3.4
-      กำหนดว่าต้องชำระครบทุกส่วนที่ถึงกำหนด ได้แก่ เงินต้น ดอกเบี้ย ดอกเบี้ยผิดนัด เงินฝากหุ้นค้างงวด และค่าธรรมเนียมที่เกิดขึ้น</p>
+      กำหนดว่าต้องชำระครบทุกส่วนที่ถึงกำหนด ได้แก่ เงินต้น ดอกเบี้ย ดอกเบี้ยผิดนัด เงินฝากหุ้นค้างงวด และค่าใช้จ่ายตามจริงที่จ่ายไป (ถ้ามี)</p>
     ${money}
     <div class="warnbox2"><b>ข้อกำหนดที่เกี่ยวข้องซึ่งขอให้ท่านทราบ</b>
       <ul class="ul">
@@ -4092,8 +4092,8 @@ function nwArrears(){
       const p = pFrom(n), r = byP[p], before = d; if(r) d = nwStep(d, r);
       if(before <= 0.005) continue;
       if(r && (num(r.m) > 0.005 || r.relief)){ rows.length = 0; continue; }                 // จ่ายแล้ว / ผ่อนผัน = เริ่มนับใหม่ (เหมือนสถานะในทะเบียน)
-      const exp = Math.min(inst, r2(before * (1 + RATE) + pl.sh + pl.shx));
-      rows.push({p, exp, got:0, short:exp, kind:"ไม่มีรายการชำระ"});
+      const exp = Math.min(inst, r2(before * (1 + RATE) + pl.sh + pl.shx)), itr = r2(before * RATE), shr = r2(Math.min(pl.sh + pl.shx, Math.max(0, exp - itr))), pri = r2(Math.max(0, exp - itr - shr));
+      rows.push({p, exp, got:0, short:exp, pri, kind:"ไม่มีรายการชำระ"});          // pri = ส่วนเงินต้นของงวดที่ค้าง (ใช้คิดดอกเบี้ยผิดนัด — ไม่คิดจากดอกเบี้ย/เงินหุ้น)
     }
     if(rows.length && st.missed > 0) out.push({x, a, st, inst, rows, short: r2(rows.reduce((u, w) => u + w.short, 0)), missed: st.missed, debt: st.debt, pk: NLP[a.prod]});
   }));
@@ -4238,6 +4238,7 @@ function nwTrackHTML(R){
       <div class="stat"><div class="k">ค้าง 3–5 งวด</div><div class="v" style="color:${cnt(2) ? "var(--red)" : "var(--ink)"}">${cnt(2)}</div><div class="hint">แจ้งผู้ค้ำ ร่วมรับผิด 20%</div></div>
       <div class="stat"><div class="k">ค้าง 6 งวดขึ้นไป</div><div class="v" style="color:${cnt(3) ? "var(--red)" : "var(--ink)"}">${cnt(3)}</div><div class="hint">ผู้ค้ำร่วมรับผิด 50% ขึ้นไป</div></div>
       <div class="stat"><div class="k">ยอดค้างรวม</div><div class="v" style="color:${tot ? "var(--red)" : "var(--ink)"}">${B0(tot)} <small>บาท</small></div></div></div>
+    ${nwDunBanner()}
     <div class="bar" style="margin:0 0 6px"><span class="hint">เรียงจากค้างนานที่สุด · นับตั้งแต่ ม.ค.69 เฉพาะงวดที่เลยกำหนดแล้วและไม่มีรายการชำระ ติดต่อกันถึงงวดล่าสุด (ตรงกับ «ค้าง n งวด» ในทะเบียน) · จ่ายแล้วเริ่มนับใหม่ · งวดที่ติ๊ก «ผ่อนผัน» หรือหักหุ้นชดเชยแล้วไม่นับ</span>
       <button class="ghost sm" id="nt_csv" style="margin-left:auto">ส่งออก CSV</button></div>
     <div class="tbl" style="max-height:420px"><table><thead><tr><th class="l">สมาชิก</th><th class="l">สัญญา</th><th>ค้าง</th><th class="l">งวดที่ขาด</th><th>ยอดค้าง</th><th>หนี้คงเหลือ</th><th class="l">ผู้ค้ำ</th><th></th></tr></thead><tbody>
@@ -4256,7 +4257,7 @@ function nwTrackHTML(R){
         <div><label>เลขที่หนังสือ</label><input data-ntk="no" value="${esc(T.no)}" placeholder="กบข.นข. 69/…"></div>
         <div><label>ลงวันที่</label><input type="date" data-ntk="d" value="${esc(T.d)}"></div>
         <div><label>ให้ชำระภายใน (วัน)</label><input type="number" data-ntk="days" value="${T.days}"></div>
-        <div><label>ค่าทวงถามต่อเดือน (บาท) — ว่าง = ตามระเบียบ</label><input type="number" step="0.01" min="0" data-ntk="fee" value="${esc(T.fee)}" placeholder="5% ไม่เกิน 100 × 2 ครั้ง = สูงสุด 200"></div>
+        <div><label>ค่าส่งหนังสือตามจริง (บาท/งวดที่ค้าง) — ว่าง = ไม่คิด</label><input type="number" step="0.01" min="0" data-ntk="fee" value="${esc(T.fee)}" placeholder="ไม่คิดค่าทวงถามอัตโนมัติ"></div>
         ${T.kind === "ack" ? `<div><label>รับสภาพหนี้: ผ่อนค้างเพิ่มเดือนละ (บาท) — ว่าง = ชำระครั้งเดียว</label><input type="number" step="0.01" min="0" data-ntk="ack" value="${esc(T.ack || "")}"></div>` : ""}</div>
       ${T.kind === "ack" ? (() => { const so = R.find(o => key(o) === T.sel); if(!so) return ""; const md = nwDunCalc(so, T.d, T.fee).maxDl;
         return `<p class="hint" style="margin:6px 0 0">${md > 90 ? `<span class="pill grn">ค้างนานสุด ${md} วัน — เกิน 90 วัน ออกหนังสือรับสภาพหนี้ได้ตามข้อตกลง</span>` : `<span class="pill amb">ค้างนานสุด ${md} วัน — ยังไม่เกิน 90 วัน</span> ตามข้อตกลงใช้เมื่อค้างเกิน 90 วัน`} · ผู้กู้ ผู้ค้ำ และพยาน ๒ คน ลงนามท้ายหนังสือ (พยานดึงจากสัญญาถ้ากรอกไว้) · ยอดต่าง ๆ คำนวณจากวันที่ ลงวันที่ ที่เลือก</p>`; })() : ""}
@@ -4268,13 +4269,26 @@ function nwTrackHTML(R){
       <div id="nt_doc"></div></div>` : ""}`;
 }
 
-/* ค่าทวงถาม: ค้างเกิน 5 วัน ร้อยละ 5 ของยอดงวด ไม่เกิน 100 บาท/ครั้ง ไม่เกิน 2 ครั้ง/เดือน (หมวด 5/1 ข้อ 2.4) · ดอกเบี้ยผิดนัด 1.2%/เดือน จากยอดค้างของงวดที่ค้างเกิน 90 วัน (ข้อ 2.1) */
+/* ค่าทวงถาม/ดอกเบี้ยผิดนัด (ตามประกาศแก้ไขข้อตกลง ฉบับที่ 1 — ลดความเสี่ยงเกินเพดานดอกเบี้ย 15%/ปี ม.654)
+   • ไม่คิดค่าทวงถามอัตราร้อยละอัตโนมัติ — ใส่ได้เฉพาะค่าใช้จ่ายส่งหนังสือที่จ่ายจริง (feeIn)
+   • ดอกเบี้ยผิดนัด: ค้างเกิน 90 วัน คิดเพิ่มจาก «เงินต้นที่ค้าง» เท่านั้น (ไม่ทบ/ไม่คิดจากดอกเบี้ยและเงินหุ้น) อัตรา = เพดานรวมต่อเดือน − ดอกเบี้ยปกติ 1% (เพดาน 1.25%/เดือน = 15%/ปี → เพิ่ม 0.25%) นับทีละ 30 วัน */
+function nwDunCfg(){
+  const d = (S.nw && S.nw.dun) || {}, cap = has(d.cap) && +d.cap > 0 ? +d.cap : 1.25, ord = RATE * 100, extra = r2(Math.max(0, cap - ord));
+  return {cap, ord, extra, yCap:r2(cap * 12), yTot:r2((ord + extra) * 12)};
+}
+function nwDunBanner(){
+  const c = nwDunCfg(), over = c.cap * 12 > 15 + 1e-9, full = !over && c.yCap >= 14.99;
+  return `<div class="keybox" style="margin:0 0 8px;font-size:13px;border-left:4px solid ${over ? "var(--red)" : full ? "var(--amber,#C4570F)" : "var(--green)"}">
+    <b>ดอกเบี้ยรวมสำหรับเงินต้นที่ค้าง: ปกติ ${c.ord.toFixed(2)}%/เดือน + ผิดนัดเพิ่ม ${c.extra.toFixed(2)}%/เดือน = ${(c.ord + c.extra).toFixed(2)}%/เดือน (${c.yTot.toFixed(2)}% ต่อปี)</b>
+    ${over ? ` — <b style="color:var(--red)">เกินเพดาน 15% ต่อปี (ม.654) ดอกเบี้ยอาจตกเป็นโมฆะ ลดอัตราเพดานลง</b>` : full ? " — ชนเพดาน 15% ต่อปีพอดี ห้ามเพิ่มค่าธรรมเนียมหรือดอกเบี้ยอื่นในเงินต้นเดียวกัน" : " — ต่ำกว่าเพดาน 15% ต่อปี"}
+    · ไม่คิดค่าทวงถามอัตราร้อยละ · คิดผิดนัดจากเงินต้นที่ค้างเท่านั้น (ตั้งเพดานที่แท็บ ชุดฟ้องร้อง)</div>`;
+}
 function nwDunCalc(o, d, feeIn){
-  const dd = d || nwToday(), flat = has(feeIn) && feeIn !== "" ? num(feeIn) : null;
+  const dd = d || nwToday(), flat = has(feeIn) && feeIn !== "" ? num(feeIn) : null, cf = nwDunCfg();
   const rx = o.rows.map(w => { const dl = nwDays(nwDate5(w.p), dd);
-    return {...w, dl, fee: dl > 5 ? (flat !== null ? flat : r2(Math.min(100, w.exp * 0.05) * 2)) : 0, pen: dl > 90 ? r2(w.short * 0.012 * Math.ceil((dl - 90) / 30)) : 0}; });
+    return {...w, dl, fee: dl > 5 && flat !== null ? flat : 0, pen: dl > 90 ? r2(num(w.pri) * cf.extra / 100 * Math.ceil((dl - 90) / 30)) : 0}; });
   const fee = r2(rx.reduce((u, w) => u + w.fee, 0)), pen = r2(rx.reduce((u, w) => u + w.pen, 0));
-  return {dd, rx, fee, pen, total: r2(o.short + fee + pen), maxDl: rx.reduce((u, w) => Math.max(u, w.dl), 0)};
+  return {dd, rx, fee, pen, total: r2(o.short + fee + pen), maxDl: rx.reduce((u, w) => Math.max(u, w.dl), 0), cf};
 }
 
 /* หนังสือเตือน — ดัดแปลงจากระบบเก่า ใช้ตัวเลขจากทะเบียนใหม่ · ข้อมูลสัญญา/ผู้ค้ำดึงจากสัญญาเดิมถ้ามี */
@@ -4287,13 +4301,13 @@ function nwWarnDoc(o, kind, no, d, days, feeIn){
   const lv = n >= 12 ? "ค้างเกิน 12 งวด" : n >= 6 ? "ค้าง 6 งวดขึ้นไป" : n >= 3 ? "ค้าง 3 งวดขึ้นไป" : `ค้าง ${n} งวด`;
   const T = {warn:"หนังสือแจ้งเตือนการค้างชำระหนี้", guar:"หนังสือแจ้งผู้ค้ำประกันกรณีผู้กู้ผิดนัดชำระหนี้", final:"หนังสือบอกกล่าวทวงถามครั้งสุดท้าย (ก่อนดำเนินคดี)"}[kind];
   const to = kind === "guar" ? (gs.length ? gs : [{no:"", name:"…………"}]) : [{no:m.no, name:m.name}];
-  const tbl = `<table class="kt"><thead><tr><th class="l">งวด</th><th>ยอดที่ต้องชำระ</th><th>รับชำระจริง</th><th>คงค้าง</th><th>ค้างมาแล้ว (วัน)</th><th>ค่าทวงถาม</th><th>ดอกเบี้ยผิดนัด</th></tr></thead><tbody>
+  const tbl = `<table class="kt"><thead><tr><th class="l">งวด</th><th>ยอดที่ต้องชำระ</th><th>รับชำระจริง</th><th>คงค้าง</th><th>ค้างมาแล้ว (วัน)</th><th>ค่าใช้จ่ายส่งหนังสือ</th><th>ดอกเบี้ยผิดนัด</th></tr></thead><tbody>
     ${rx.map(w => `<tr><td class="l">${thPer(w.p)}</td><td class="n">${B(w.exp)}</td><td class="n">${B(w.got)}</td><td class="n"><b>${B(w.short)}</b></td><td class="n">${w.dl}</td><td class="n">${w.fee ? B(w.fee) : "—"}</td><td class="n">${w.pen ? B(w.pen) : "—"}</td></tr>`).join("")}
     <tr class="hl"><td class="l"><b>รวม</b></td><td class="n">—</td><td class="n">—</td><td class="n"><b>${B(o.short)}</b></td><td class="n">—</td><td class="n"><b>${B(fee)}</b></td><td class="n"><b>${B(pen)}</b></td></tr></tbody></table>`;
   const money = `<table class="kt sum"><tbody>
     <tr><td>ยอดค้างชำระสะสม (เงินต้น + ดอกเบี้ย + เงินฝากหุ้นค้างงวด)</td><td class="n">${B(o.short)}</td></tr>
-    <tr><td>ค่าทวงถาม (ข้อตกลง หมวด 5/1 ข้อ 2.4 — ร้อยละ 5 ของยอดงวด ไม่เกิน 100 บาท/ครั้ง ไม่เกิน 2 ครั้ง/เดือน · เฉพาะงวดที่ค้างเกิน 5 วัน)</td><td class="n">${B(fee)}</td></tr>
-    <tr><td>ดอกเบี้ยผิดนัด 1.20%/เดือน จากยอดค้างชำระ เฉพาะงวดที่ค้างเกิน 90 วัน (ข้อตกลง หมวด 5/1 ข้อ 2.1)</td><td class="n">${B(pen)}</td></tr>
+    ${fee > 0 ? `<tr><td>ค่าใช้จ่ายส่งหนังสือที่จ่ายจริง (มีหลักฐาน — ไม่เรียกเก็บเป็นอัตราร้อยละ)</td><td class="n">${B(fee)}</td></tr>` : ""}
+    <tr><td>ดอกเบี้ยผิดนัดเพิ่ม ${nwDunCfg().extra}%/เดือน คิดจากเงินต้นที่ค้างชำระเท่านั้น เฉพาะงวดที่ค้างเกิน 90 วัน (รวมกับดอกเบี้ยปกติแล้วไม่เกิน ${nwDunCfg().cap}%/เดือน = 15% ต่อปี)</td><td class="n">${B(pen)}</td></tr>
     <tr class="hl"><td><b>รวมยอดที่ต้องชำระเพื่อระงับการดำเนินคดี (ข้อ 3.4)</b></td><td class="n"><b>${B(total)}</b></td></tr>
     <tr><td>เงินต้นคงเหลือตามสัญญา ณ วันที่ออกหนังสือ</td><td class="n">${B(o.debt)}</td></tr></tbody></table>`;
   return to.map(who => { const wp = prof(who.no);
@@ -4308,13 +4322,13 @@ function nwWarnDoc(o, kind, no, d, days, feeIn){
       ${c0 ? `วงเงิน <b>${B(c0.amt)}</b> บาท ผ่อนชำระ <b>${c0.terms}</b> งวด ` : ""}งวดละ <b>${B(o.inst)}</b> บาท โดยกำหนดชำระภายในวันที่ 5 ของทุกเดือน นั้น</p>
     <p class="i2">บัดนี้ปรากฏว่า ${kind === "guar" ? "ผู้กู้" : "ท่าน"}<b>ผิดนัดชำระหนี้รวม ${n} งวด</b> (${lv}) ตามรายละเอียดดังนี้</p>
     ${tbl}
-    <p class="i2" style="margin-top:7px"><b>ยอดที่ต้องชำระเพื่อระงับการดำเนินคดี</b> — ตามสัญญาข้อ 3.4 กำหนดว่าต้องชำระครบทุกส่วนที่ถึงกำหนด ได้แก่ เงินต้น ดอกเบี้ย ดอกเบี้ยผิดนัด เงินฝากหุ้นค้างงวด และค่าธรรมเนียมที่เกิดขึ้น</p>
+    <p class="i2" style="margin-top:7px"><b>ยอดที่ต้องชำระเพื่อระงับการดำเนินคดี</b> — ตามสัญญาข้อ 3.4 กำหนดว่าต้องชำระครบทุกส่วนที่ถึงกำหนด ได้แก่ เงินต้น ดอกเบี้ย ดอกเบี้ยผิดนัด เงินฝากหุ้นค้างงวด และค่าใช้จ่ายตามจริงที่จ่ายไป (ถ้ามี)</p>
     ${money}
     <div class="warnbox2"><b>ข้อกำหนดที่เกี่ยวข้องซึ่งขอให้ท่านทราบ</b><ul class="ul">
       <li><b>ข้อ 2.3</b> การชำระไม่ครบตามยอดงวดหรือองค์ประกอบที่กำหนด <b>ให้ถือว่ายังคงผิดนัด</b> แม้ผู้ให้กู้จะรับชำระบางส่วนไว้ก็ตาม</li>
       <li><b>ข้อ 2.2</b> การชำระบางส่วนจะระงับความเป็นผิดนัดได้ <b>ต่อเมื่อคณะกรรมการบริหารอนุมัติเป็นหนังสือ</b> เท่านั้น</li>
       <li><b>ข้อ 2.4</b> ห้ามนำเงินฝากสะสมมาหักลบกับยอดหนี้ที่ค้างชำระ (เว้นแต่คณะกรรมการมีมติ)</li>
-      <li><b>ข้อ 3.2</b> ค้างเกิน 90 วัน คิดดอกเบี้ยผิดนัด 1.20% ต่อเดือน (14.4% ต่อปี) จากยอดค้างชำระ</li>
+      <li><b>ข้อ 3.2</b> ค้างเกิน 90 วัน คิดดอกเบี้ยผิดนัดเพิ่ม ${nwDunCfg().extra}% ต่อเดือน จากเงินต้นที่ค้างชำระเท่านั้น (รวมกับดอกเบี้ยปกติแล้วไม่เกิน 15% ต่อปี)</li>
       <li><b>ข้อ 4.2</b> ${kind === "guar" ? "ท่านในฐานะผู้ค้ำ" : "ผู้ค้ำประกันของท่าน"}จะเริ่มร่วมรับผิดเมื่อค้าง 3 งวด (20% ของยอดรายเดือน เฉพาะเดือนที่ 2–3), 6 งวด (50% เฉพาะเดือนที่ 4–6) และ 12 งวด (สูงสุด 80% ของหนี้คงเหลือ)${c0 ? ` ภายใต้วงเงินรับผิดสูงสุด <b>${B(capOf(c0))}</b> บาท` : ""}</li>
       <li><b>ข้อ 3.3</b> หากผิดนัดเกิน 1 ปีติดต่อกัน ผู้ให้กู้มีสิทธิยกระดับเป็นคดีตามหมวด 7 ของข้อตกลง</li></ul></div>
     <p class="i2">จึงเรียนมาเพื่อ${kind === "guar" ? "โปรดทราบ และขอความร่วมมือท่านในการติดตามให้ผู้กู้ชำระหนี้ ตามหน้าที่ของผู้ค้ำประกันในสัญญาข้อ 4.1" : `ขอให้ท่าน<b>ชำระหนี้ที่ค้างทั้งหมดจำนวน ${B(total)} บาท ภายในวันที่ ${dl}</b>`}
@@ -4333,13 +4347,13 @@ function nwAckDoc(o, no, d, days, feeIn, inst){
   const dl = d ? (() => { const t = new Date(d); t.setDate(t.getDate() + days); return thDate(t.toISOString().slice(0, 10)); })() : "…………";
   const per = +inst > 0 ? +inst : 0, months = per ? Math.ceil(total / per) : 0, p0 = d ? nwIsoPer(d) : "", pStart = p0 ? pFrom(pNum(p0) + 1) : "", pEnd = pStart ? pFrom(pNum(pStart) + months - 1) : "";
   const who = `${esc(m.name)} (สมาชิกเลขที่ ${m.no})`;
-  const tbl = `<table class="kt"><thead><tr><th class="l">งวด</th><th>ยอดที่ต้องชำระ</th><th>รับชำระจริง</th><th>คงค้าง</th><th>ค้างมาแล้ว (วัน)</th><th>ค่าทวงถาม</th><th>ดอกเบี้ยผิดนัด</th></tr></thead><tbody>
+  const tbl = `<table class="kt"><thead><tr><th class="l">งวด</th><th>ยอดที่ต้องชำระ</th><th>รับชำระจริง</th><th>คงค้าง</th><th>ค้างมาแล้ว (วัน)</th><th>ค่าใช้จ่ายส่งหนังสือ</th><th>ดอกเบี้ยผิดนัด</th></tr></thead><tbody>
     ${rx.map(w => `<tr><td class="l">${thPer(w.p)}</td><td class="n">${B(w.exp)}</td><td class="n">${B(w.got)}</td><td class="n"><b>${B(w.short)}</b></td><td class="n">${w.dl}</td><td class="n">${w.fee ? B(w.fee) : "—"}</td><td class="n">${w.pen ? B(w.pen) : "—"}</td></tr>`).join("")}
     <tr class="hl"><td class="l"><b>รวม</b></td><td class="n">—</td><td class="n">—</td><td class="n"><b>${B(o.short)}</b></td><td class="n">—</td><td class="n"><b>${B(fee)}</b></td><td class="n"><b>${B(pen)}</b></td></tr></tbody></table>`;
   const money = `<table class="kt sum"><tbody>
     <tr><td>ยอดค้างชำระสะสม (เงินต้น + ดอกเบี้ย + เงินฝากหุ้นค้างงวด)</td><td class="n">${B(o.short)}</td></tr>
-    <tr><td>ค่าทวงถาม (ข้อตกลง หมวด 5/1 ข้อ 2.4)</td><td class="n">${B(fee)}</td></tr>
-    <tr><td>ดอกเบี้ยผิดนัด 1.20%/เดือน เฉพาะงวดที่ค้างเกิน 90 วัน (ข้อ 2.1)</td><td class="n">${B(pen)}</td></tr>
+    ${fee > 0 ? `<tr><td>ค่าใช้จ่ายส่งหนังสือที่จ่ายจริง (มีหลักฐาน)</td><td class="n">${B(fee)}</td></tr>` : ""}
+    <tr><td>ดอกเบี้ยผิดนัดเพิ่ม ${nwDunCfg().extra}%/เดือน คิดจากเงินต้นที่ค้างเท่านั้น เฉพาะงวดที่ค้างเกิน 90 วัน (รวมดอกเบี้ยปกติแล้วไม่เกิน 15% ต่อปี)</td><td class="n">${B(pen)}</td></tr>
     <tr class="hl"><td><b>รวมยอดหนี้ค้างชำระที่ผู้กู้รับสภาพ ณ วันที่ทำหนังสือ</b></td><td class="n"><b>${B(total)}</b></td></tr>
     <tr><td>เงินต้นคงเหลือตามสัญญา (ยังไม่ถึงกำหนดชำระ ผู้กู้ยังคงต้องผ่อนชำระตามสัญญาเดิม)</td><td class="n">${B(o.debt)}</td></tr></tbody></table>`;
   const sigG = gs.length ? gs.map((g, i) => sigOf(`ผู้ค้ำประกัน${gs.length > 1 ? "คนที่ " + (i + 1) : ""}`, g.name)).join("") : sigOf("ผู้ค้ำประกัน", "");
@@ -4358,7 +4372,7 @@ function nwAckDoc(o, no, d, days, feeIn, inst){
       และยอมรับสภาพหนี้ตามมาตรา 193/14 แห่งประมวลกฎหมายแพ่งและพาณิชย์ ซึ่งมีผลให้อายุความสะดุดหยุดลงและเริ่มนับใหม่ นับแต่วันที่ลงนามในหนังสือนี้</p>
     <p class="i2"><b>ข้อ 4 การชำระหนี้</b> — ${per
       ? `ผู้กู้ตกลงผ่อนชำระยอดหนี้ค้างตามข้อ 3 เพิ่มเติมเดือนละ <b>${B(per)} บาท</b> (ประมาณ <b>${months}</b> เดือน ตั้งแต่งวด <b>${thPer(pStart)}</b> ถึงงวด <b>${thPer(pEnd)}</b> หรือจนกว่าจะครบถ้วน) พร้อมกับการชำระงวดปกติตามสัญญาเดิมภายในวันที่ 5 ของทุกเดือน
-         โดยค่าทวงถามและดอกเบี้ยผิดนัดยังคงคิดต่อไปตามข้อตกลงจนกว่าจะชำระครบ`
+         โดยดอกเบี้ยผิดนัด (คิดจากเงินต้นที่ค้างเท่านั้น และรวมดอกเบี้ยปกติแล้วไม่เกิน 15% ต่อปี) ยังคงคิดต่อไปจนกว่าจะชำระครบ`
       : `ผู้กู้ตกลงชำระยอดหนี้ค้างตามข้อ 3 ทั้งจำนวนภายในวันที่ <b>${dl}</b> และผ่อนชำระงวดปกติตามสัญญาเดิมต่อไปภายในวันที่ 5 ของทุกเดือน`}
       การชำระให้ชำระที่กรรมการฝ่ายการเงินของกลุ่มบุคคลหรือผ่านบัญชีของกลุ่มบุคคล และให้ออกใบเสร็จรับเงินทุกครั้ง</p>
     <p class="i2"><b>ข้อ 5 ผลของการผิดนัดตามหนังสือนี้</b> — หากผู้กู้ผิดนัดชำระงวดใดตามข้อ 4 ผู้ให้กู้มีสิทธิดำเนินการตามหมวดที่ 7 ของข้อตกลง รวมถึงเรียกให้ผู้ค้ำประกันร่วมรับผิดตามสัญญาค้ำประกัน
@@ -5079,8 +5093,8 @@ const LIT_HOW = ["ไปรษณีย์ลงทะเบียนตอบ�
 const LIT_LEGAL = [
   {id:"plaintiff", t:"รูปแบบโจทก์ — ข้อตกลงให้อำนาจคณะกรรมการวาระปัจจุบันฟ้องในนามคณะกรรมการ (หมวด 1 ข้อ 4–5, หมวด 7) แต่กลุ่มไม่เป็นนิติบุคคล ถามทนายว่าฟ้องในนามนี้ได้เลยหรือควรให้กรรมการฟ้องในนามบุคคล + แนบมติรายคดี"},
   {id:"sect", t:"ข้อตกลงอ้างมาตรา 1074–1088 แห่ง ป.พ.พ. เป็นฐานของกลุ่ม — ให้ทนายตรวจว่าถูกต้องหรือไม่"},
-  {id:"cap15", t:"ดอกเบี้ยรวมค่าธรรมเนียมทุกอย่างต้องไม่เกิน 15% ต่อปี (ม.654) — ค่าทวงถาม 5% และเงินหุ้นเพิ่มอาจถูกมองเป็นดอกเบี้ยแฝง"},
-  {id:"compound", t:"ห้ามทบต้นดอกเบี้ย (ม.655–656) — ดอกเบี้ยผิดนัดควรคิดจากเงินต้นค้างเท่านั้น (โปรแกรมคิดจากยอดค้างทั้งงวด)"},
+  {id:"cap15", t:"ดอกเบี้ยรวมค่าธรรมเนียมทุกอย่างต้องไม่เกิน 15% ต่อปี (ม.654) — โปรแกรมเลิกคิดค่าทวงถามร้อยละ 5 และจำกัดดอกเบี้ยผิดนัดให้รวมดอกเบี้ยปกติไม่เกิน 15% แล้ว แต่ข้อตกลง/สัญญาฉบับเดิมที่ยังไม่แก้ไขยังมีข้อความเดิม และเงินหุ้นเพิ่มอาจถูกมองเป็นดอกเบี้ยแฝง — ถามทนายพร้อมประกาศฉบับแก้ไข"},
+  {id:"compound", t:"ห้ามทบต้นดอกเบี้ย (ม.655–656) — โปรแกรมคิดดอกเบี้ยผิดนัดจากเงินต้นค้างเท่านั้นแล้ว (ไม่คิดจากดอกเบี้ย/เงินหุ้น) — ถามทนายว่าดอกเบี้ยปกติที่ค้างในแต่ละงวดไม่ถือเป็นการทบต้น"},
   {id:"guarpct", t:"ผู้ค้ำรับผิด 20% / 50% / 80% ตามข้อตกลง ต่างจากหลักค้ำประกัน (ม.680–681) — เลือกฟ้องเต็มจำนวนหรือตามสัดส่วน"},
   {id:"notice", t:"ข้อความ «ดำเนินคดีทันทีโดยไม่ต้องแจ้งล่วงหน้า» — ปฏิบัติจริงต้องมีหนังสือทวงถามก่อนเสมอ"},
   {id:"limit", t:"อายุความ: เงินต้น 10 ปี · ดอกเบี้ยค้างชำระ 5 ปี (ม.193/33) — ไม่ควรปล่อยค้างนาน"},
@@ -5159,7 +5173,7 @@ function nwLitDoc(cs){
     <table class="kt sum kw"><tbody>
       <tr><td>สัญญาเงินกู้ เลขที่ ${esc(c && c.code) || "…………"} ลงวันที่ ${c && c.d ? litShort(c.d) : "…………"} · วงเงิน ${c ? B(c.amt) : "…………"} บาท · ${c ? c.terms : "…"} งวด · งวดละ ${B(o.inst)} บาท</td><td class="n">—</td></tr>
       <tr><td>ค้างชำระ ${o.rows.length} งวด (เงินต้น + ดอกเบี้ย + เงินฝากหุ้นค้างงวด) · ค้างนานสุด ${cs.maxDl} วัน</td><td class="n">${B(o.short)}</td></tr>
-      <tr><td>ดอกเบี้ยผิดนัด 1.20%/เดือน (เฉพาะงวดที่ค้างเกิน 90 วัน)</td><td class="n">${B(cs.D.pen)}</td></tr>
+      <tr><td>ดอกเบี้ยผิดนัดเพิ่ม ${nwDunCfg().extra}%/เดือน จากเงินต้นที่ค้างเท่านั้น (เฉพาะงวดที่ค้างเกิน 90 วัน · รวมดอกเบี้ยปกติแล้วไม่เกิน 15%/ปี)</td><td class="n">${B(cs.D.pen)}</td></tr>
       ${L.feeIn ? `<tr><td>ค่าทวงถาม (เลือกรวมในยอดเรียกร้อง)</td><td class="n">${B(cs.D.fee)}</td></tr>` : ""}
       <tr class="hl"><td><b>ยอดเรียกร้อง ณ วันที่ทำใบปะหน้า</b>${L.feeIn ? "" : " (ไม่รวมค่าทวงถาม)"}</td><td class="n"><b>${B(cs.claim)}</b></td></tr>
       <tr><td>เงินต้นคงเหลือตามสัญญา ณ วันนี้ · ผู้ค้ำร่วมรับผิดตามข้อตกลง: ${litShare(o.missed, o.debt)}</td><td class="n">${B(o.debt)}</td></tr></tbody></table>
@@ -5203,12 +5217,51 @@ function nwLitResDoc(cs){
   return pg(1, 1, body, "");
 }
 
+/* ---------- ประกาศ/ข้อตกลงฉบับแก้ไขเพิ่มเติม (ฉบับที่ 1) + ใบลงนามรับทราบและยินยอม ---------- */
+const nwAnn = () => { const L = nwLit(); return L.ann || (L.ann = {no:"", meetNo:"", meetD:"", pct:"", annD:"", effD:"", cost:true, past:"waive"}); };
+function nwAnnRoster(){
+  const bor = {}, gua = {};
+  nwConRows().forEach(r => { (bor[r.x.no] = bor[r.x.no] || []).push(NLP[r.k]); nwGuarOf(r.x.no, NLP[r.k]).forEach(g => { if(g) (gua[g] = gua[g] || []).push(r.x.no); }); });
+  return NW.people().map(x => { const role = [];
+    if(bor[x.no]) role.push("ผู้กู้ (" + bor[x.no].join(" + ") + ")"); if(gua[x.no]) role.push("ผู้ค้ำประกัน"); if(!role.length) role.push("สมาชิก");
+    return {x, role:role.join(" · "), isB:!!bor[x.no], isG:!!gua[x.no]}; }).sort((u, v) => (v.isB || v.isG) - (u.isB || u.isG) || String(u.x.no).localeCompare(String(v.x.no), "th", {numeric:true}));
+}
+function nwAnnDoc(only){
+  const A = nwAnn(), cf = nwDunCfg(), dot = (v, w) => v ? `<b>${esc(v)}</b>` : "…".repeat(w || 8), dd = v => v ? `<b>${thDate(v)}</b>` : "………………………………";
+  const R = nwAnnRoster(), nB = R.filter(r => r.isB).length, nG = R.filter(r => r.isG && !r.isB).length;
+  const pastTxt = A.past === "credit" ? "ค่าทวงถามที่ผู้ให้กู้ได้รับไปแล้วก่อนวันใช้บังคับ ให้นำไปหักชำระเงินต้นของผู้กู้รายนั้น และค่าทวงถามที่ยังค้างชำระให้ยกเลิกทั้งหมด"
+    : A.past === "refund" ? "ค่าทวงถามที่ผู้ให้กู้ได้รับไปแล้วก่อนวันใช้บังคับ ให้คืนแก่ผู้กู้รายนั้น และค่าทวงถามที่ยังค้างชำระให้ยกเลิกทั้งหมด" : "ค่าทวงถามที่ยังค้างชำระก่อนวันใช้บังคับ ให้ยกเลิกทั้งหมด ไม่เรียกเก็บอีก";
+  const notice = `${logo()}<div class="kt1">ประกาศกลุ่มบุคคลเพื่อบริหารจัดการเงินของข้าราชการครูและบุคลากรโรงเรียนมัธยมวัดหนองแขม (กบข.นข.)<br>เรื่อง ข้อตกลงฉบับแก้ไขเพิ่มเติม (ฉบับที่ 1) พ.ศ. 2569</div>
+    <div class="kmeta2"><span>ประกาศที่ ${dot(A.no, 6)}/2569</span><span>ประกาศ ณ วันที่ ${dd(A.annD)}</span></div>
+    <p class="i2">โดยที่สมควรแก้ไขเพิ่มเติม${AGREE} (ต่อไปนี้เรียกว่า “ข้อตกลงเดิม”) ในส่วนที่เกี่ยวกับดอกเบี้ย ค่าใช้จ่าย และค่าปรับในการให้กู้ยืม ให้ชัดเจน เป็นธรรมแก่สมาชิก และสอดคล้องกับประมวลกฎหมายแพ่งและพาณิชย์ มาตรา 654, 655 และพระราชบัญญัติห้ามเรียกดอกเบี้ยเกินอัตรา พ.ศ. 2475</p>
+    <p class="i2">อาศัยมติที่ประชุมใหญ่สมาชิก ครั้งที่ ${dot(A.meetNo, 4)} เมื่อวันที่ ${dd(A.meetD)} ซึ่งมีสมาชิกสนับสนุนร้อยละ ${dot(A.pct, 4)} (ไม่น้อยกว่าร้อยละ 75 ตามหมวด 10 ของข้อตกลงเดิม) และตามข้อ 6.1 ของสัญญาเงินกู้ คณะกรรมการบริหารจึงออกประกาศดังต่อไปนี้</p>
+    <p class="i2"><b>ข้อ 1 วันใช้บังคับ</b> — ประกาศนี้ใช้บังคับตั้งแต่วันที่ ${dd(A.effD)} เป็นต้นไป และใช้กับสัญญาเงินกู้และสัญญาค้ำประกันที่ทำไว้แล้วก่อนวันดังกล่าวด้วย ทั้งนี้ ตามข้อ 6.3 ของสัญญาเงินกู้ให้แจ้งผู้กู้และผู้ค้ำประกันล่วงหน้าไม่น้อยกว่า 60 วัน เว้นแต่ผู้กู้และผู้ค้ำประกันได้ลงนามยินยอมในใบลงนามท้ายประกาศนี้แล้ว ให้มีผลตั้งแต่วันที่ลงนาม เพราะเป็นการแก้ไขที่เป็นคุณแก่ผู้กู้</p>
+    <p class="i2"><b>ข้อ 2 ยกเลิกค่าทวงถามอัตราร้อยละ</b> — ให้ยกเลิกข้อกำหนดเรื่องค่าทวงถามร้อยละ 5 ของยอดงวด (ข้อตกลงเดิม หมวด 5/1 ข้อ 2.4 และข้อ 3.1 [ตรวจเลขข้อให้ตรงต้นฉบับ]) รวมถึงข้อความในสัญญาเงินกู้และสัญญาค้ำประกันที่อ้างถึงค่าทวงถามดังกล่าว ผู้ให้กู้ไม่เรียกเก็บค่าทวงถามเป็นอัตราร้อยละอีกต่อไป ${A.cost ? "เว้นแต่ค่าใช้จ่ายที่ผู้ให้กู้ต้องจ่ายจริงในการส่งหนังสือทวงถาม (เช่น ค่าไปรษณีย์ลงทะเบียนตอบรับ) ซึ่งเรียกคืนได้เฉพาะตามจำนวนที่จ่ายจริงพร้อมหลักฐาน โดยไม่ถือเป็นรายได้ของกลุ่มบุคคล" : "และไม่เรียกเก็บค่าใช้จ่ายอื่นใดในการทวงถาม"}</p>
+    <p class="i2"><b>ข้อ 3 ดอกเบี้ยผิดนัดชำระ</b> — ผู้กู้ที่ผิดนัดชำระงวดใดเกิน 90 วัน ให้คิดดอกเบี้ยผิดนัดจาก <b>เงินต้นที่ค้างชำระของงวดนั้นเท่านั้น</b> ไม่คิดจากดอกเบี้ย เงินฝากหุ้น หรือค่าใช้จ่ายอื่น และไม่ทบดอกเบี้ยเข้าเป็นต้นเงิน (มาตรา 655) ทั้งนี้ ดอกเบี้ยตามปกติรวมกับดอกเบี้ยผิดนัดสำหรับเงินต้นส่วนที่ค้าง ต้องไม่เกินร้อยละ ${cf.cap} ต่อเดือน (ร้อยละ ${cf.yCap} ต่อปี) กล่าวคือ ดอกเบี้ยผิดนัดเพิ่มได้ไม่เกินร้อยละ ${cf.extra} ต่อเดือนของเงินต้นที่ค้าง ให้ใช้แทนข้อกำหนดเรื่องดอกเบี้ยผิดนัดร้อยละ 1.20 ต่อเดือนในข้อตกลงเดิม (หมวด 5/1 ข้อ 2.1 และข้อ 3.2)</p>
+    <p class="i2"><b>ข้อ 4 เพดานดอกเบี้ยรวม</b> — ดอกเบี้ยและประโยชน์ตอบแทนอื่นใดที่ผู้ให้กู้ได้รับจากผู้กู้เนื่องจากการกู้ยืม เมื่อรวมกันแล้วต้องไม่เกินร้อยละ 15 ต่อปีของเงินต้น หากส่วนใดเกินเพดานดังกล่าว ให้ถือว่าไม่มีผลบังคับในส่วนที่เกิน และให้นำส่วนที่ได้รับเกินไปหักชำระเงินต้น</p>
+    <p class="i2"><b>ข้อ 5 เงินฝากหุ้น</b> — เงินฝากหุ้นประจำและหุ้นเพิ่มเป็นเงินสะสมของสมาชิกเอง เป็นกรรมสิทธิ์ของสมาชิก มีสิทธิได้รับปันผลตามมติที่ประชุมใหญ่ และขอคืนเมื่อพ้นสมาชิกภาพตามข้อตกลงเดิม ไม่ใช่ดอกเบี้ย ค่าธรรมเนียม หรือค่าตอบแทนการให้กู้ของผู้ให้กู้</p>
+    <p class="i2"><b>ข้อ 6 การปรับอัตราดอกเบี้ย</b> — การปรับอัตราดอกเบี้ยตามข้อ 2.8 ของสัญญาเงินกู้ ต้องไม่ทำให้ดอกเบี้ยตามปกติเกินร้อยละ 1.25 ต่อเดือน (ร้อยละ 15 ต่อปี) และไม่ทำให้ดอกเบี้ยรวมตามข้อ 3 เกินเพดานดังกล่าว</p>
+    <p class="i2"><b>ข้อ 7 ค่าทวงถามที่เกิดก่อนวันใช้บังคับ</b> — ${pastTxt}</p>
+    <p class="i2"><b>ข้อ 8 ข้อกำหนดอื่น</b> — ข้อความใดในข้อตกลงเดิม สัญญาเงินกู้ และสัญญาค้ำประกัน ที่ขัดหรือแย้งกับประกาศนี้ ให้ใช้ข้อความตามประกาศนี้ ส่วนข้อกำหนดอื่นที่ไม่ขัดหรือแย้ง ให้ยังคงใช้บังคับต่อไปทุกประการ ประกาศนี้ไม่ใช่การยกเลิกข้อตกลงเดิมทั้งฉบับ และไม่กระทบสิทธิของผู้ให้กู้ที่เกิดขึ้นแล้วตามกฎหมาย</p>
+    <p class="i2"><b>ข้อ 9 การรับทราบและยินยอม</b> — ให้ผู้กู้ ผู้ค้ำประกัน และสมาชิก ลงลายมือชื่อรับทราบและยินยอมในใบลงนามท้ายประกาศนี้ ผู้กู้และผู้ค้ำประกันของสัญญาที่มีอยู่แล้วให้ถือว่ายินยอมให้แก้ไขสัญญาตามข้อ 6.1 ของสัญญาเงินกู้และข้อ 4.1 ของสัญญาค้ำประกันด้วย</p>
+    <p style="text-align:center;margin-top:12px">ประกาศ ณ วันที่ ${dd(A.annD)}</p>
+    <div class="ksigs" style="grid-template-columns:1fr;max-width:300px;margin:6px auto 0">${sigOf("ประธานคณะกรรมการบริหาร", CHAIR())}</div>
+    <p class="kh" style="margin-top:8px">ร่างเพื่อให้ทนายความตรวจก่อนประกาศใช้ — ต้องผ่านมติที่ประชุมใหญ่ตามหมวด 10 และแจ้งผู้กู้/ผู้ค้ำล่วงหน้าตามข้อ 6.3</p>`;
+  const roster = `${logo()}<div class="kt1">ใบลงนามรับทราบและยินยอม<br>ตามประกาศ กบข.นข. เรื่อง ข้อตกลงฉบับแก้ไขเพิ่มเติม (ฉบับที่ 1) พ.ศ. 2569</div>
+    <p class="i2">ข้าพเจ้าตามรายชื่อข้างล่างนี้ ได้อ่านและเข้าใจประกาศฉบับดังกล่าว (ประกาศที่ ${dot(A.no, 6)}/2569 ลงวันที่ ${dd(A.annD)}) โดยตลอดแล้ว ขอรับทราบและ<b>ยินยอม</b>ให้แก้ไขข้อตกลงกลุ่มบุคคล สัญญาเงินกู้ และสัญญาค้ำประกัน (ถ้ามี) ตามที่ประกาศนั้น ทุกประการ</p>
+    <p class="kh">ผู้กู้ ${nB} คน · ผู้ค้ำประกัน ${nG} คน (ที่ไม่ได้เป็นผู้กู้) · สมาชิกทั้งหมด ${R.length} คน</p>
+    <table class="kt kw" style="width:100%"><thead><tr><th style="width:5%">ที่</th><th style="width:7%">เลขที่</th><th class="l" style="width:30%">ชื่อ – สกุล</th><th class="l" style="width:18%">ฐานะ</th><th class="l" style="width:28%">ลายมือชื่อ</th><th style="width:12%">วันที่</th></tr></thead><tbody>
+      ${R.map((r, i) => `<tr><td class="c">${i + 1}</td><td class="c">${esc(r.x.no)}</td><td class="l">${esc(r.x.name)}</td><td class="l">${esc(r.role)}</td><td style="height:9mm">&nbsp;</td><td>&nbsp;</td></tr>`).join("")}</tbody></table>
+    <div class="ksigs" style="grid-template-columns:1fr 1fr;max-width:460px;margin:12px auto 0">${sigOf("ผู้รับลายมือชื่อ", FIN())}${sigOf("ประธานคณะกรรมการ", CHAIR())}</div>`;
+  return only === "roster" ? pg(1, 1, roster, "") : pg(1, 1, notice, "") + pg(1, 1, roster, "");
+}
+
 /* ---------- หน้าจอ ---------- */
 function drawNWLit(){
   const el = $("tab29"); if(!el) return;
   if(tab !== 29){ el.innerHTML = ""; return; }
   if(!NW.on()){ el.innerHTML = nwStartHTML("ชุดฟ้องร้อง"); bindNwImport(); return; }
-  const C = nwLitData(), LG = nwLit().legal, today = nwToday();
+  const C = nwLitData(), LG = nwLit().legal, today = nwToday(), AN = nwAnn();
   if(!C.some(q => q.key === S.litSel)) S.litSel = C[0] ? C[0].key : "";
   const sel = C.find(q => q.key === S.litSel);
   const n90 = C.filter(q => q.maxDl > 90).length, n1y = C.filter(q => q.o.missed >= 12).length, nLate = C.filter(q => q.nLate > 0).length, nReady = C.filter(q => q.pct === 100).length;
@@ -5239,8 +5292,8 @@ function drawNWLit(){
         <div class="stat"><div class="k">ค้างชำระ</div><div class="v">${o.missed} <small>งวด</small></div><div class="hint">นานสุด ${sel.maxDl} วัน${o.missed >= 12 ? " · เข้าเกณฑ์ข้อ 3.3" : ""}</div></div>
         <div class="stat"><div class="k">เงินต้นคงเหลือ</div><div class="v">${B0(o.debt)} <small>บาท</small></div><div class="hint">ผู้ค้ำร่วมรับผิด: ${litShare(o.missed, o.debt)}</div></div>
         <div class="stat" style="border-top-color:${sel.pct === 100 ? "var(--green)" : "var(--gold)"}"><div class="k">ความพร้อมเอกสาร</div><div class="v">${sel.pct}%</div><div class="hint">${sel.done} / ${sel.items.length} รายการ</div></div></div>
-      <div class="keybox" style="margin:8px 0;font-size:13px"><b>ค่าทวงถาม ${B(sel.D.fee)} บาท</b> — โปรแกรมคำนวณตามข้อตกลง แต่แนะนำ <b>ไม่รวมในยอดเรียกร้อง</b> เพราะอาจถูกมองเป็นดอกเบี้ยแฝงเกิน 15% ต่อปี (ดู «ประเด็นถามทนาย»)
-        <label class="rlf" style="margin-left:10px"><input type="checkbox" data-lfc="${k}|feeIn" ${L.feeIn ? "checked" : ""}> รวมค่าทวงถามในยอดเรียกร้อง</label></div>
+      <div class="keybox" style="margin:8px 0;font-size:13px"><b>ค่าใช้จ่ายส่งหนังสือ ${B(sel.D.fee)} บาท</b> — โปรแกรมไม่คิดค่าทวงถามอัตราร้อยละอัตโนมัติแล้ว (มีเฉพาะที่ใส่เองตามจริง) แนะนำ <b>ไม่รวมในยอดเรียกร้อง</b> จนกว่าทนายยืนยัน (ดู «ประเด็นถามทนาย»)
+        <label class="rlf" style="margin-left:10px"><input type="checkbox" data-lfc="${k}|feeIn" ${L.feeIn ? "checked" : ""}> รวมค่าใช้จ่ายส่งหนังสือในยอดเรียกร้อง</label></div>
       <div class="eyebrow" style="margin-top:6px">รายการเอกสาร/เงื่อนไข</div>
       <div class="tbl"><table><thead><tr><th style="width:44px">ผ่าน</th><th class="l">รายการ</th><th class="l">สถานะ / กฎหมาย</th></tr></thead><tbody>
         ${grp.map(g => `<tr><td colspan="3" class="l" style="background:#F4F1EA;font-weight:700">${esc(g)}</td></tr>` + sel.items.filter(q => q.g === g).map(q => `<tr><td class="c">${q.auto ? (q.ok ? '<span class="pill grn">✓</span>' : '<span class="pill amb">✗</span>') : `<input type="checkbox" data-lck="${k}|${q.id}" ${q.ok ? "checked" : ""}>`}</td>
@@ -5288,12 +5341,34 @@ function drawNWLit(){
       <div class="tbl" style="max-height:420px"><table><thead><tr><th class="l">ผู้กู้</th><th class="l">สัญญา</th><th>ค้าง</th><th>ยอดเรียกร้อง</th><th class="l">ผู้ค้ำ / บอกกล่าว 90 วัน</th><th>ความพร้อม</th><th class="l">ขั้นตอน</th></tr></thead><tbody>
         ${C.map(caseRow).join("") || '<tr><td colspan="7" class="hint" style="text-align:left">ไม่มีลูกหนี้ค้างชำระ</td></tr>'}</tbody></table></div></div>
     ${casePanel}
+    <div class="card" style="margin-top:10px" id="nl_ann"><div class="eyebrow">ประกาศแก้ไขข้อตกลง (ฉบับที่ 1) + ใบลงนามยินยอมของสมาชิก<span class="hint" style="font-weight:400"> — ลดความเสี่ยงดอกเบี้ยเกิน 15% (ม.654)</span></div>
+      <div class="keybox" style="margin:0 0 8px;font-size:13px"><b>ขั้นตอนที่ควรทำ (ตามข้อตกลง):</b> ① ประชุมใหญ่ลงมติแก้ไข สมาชิกสนับสนุน ≥ 75% (หมวด 10) ② คณะกรรมการออกประกาศนี้ ③ แจ้งผู้กู้/ผู้ค้ำล่วงหน้า ≥ 60 วัน (สัญญา ข้อ 6.3) หรือให้ลงนามยินยอมเพื่อมีผลทันที ④ เก็บใบลงนามทุกคนเข้าแฟ้ม ⑤ ตั้งแต่วันมีผล หนังสือเตือน/ยอดเรียกร้องของโปรแกรมใช้กติกาใหม่ (ไม่คิดค่าทวงถามร้อยละ · ผิดนัดคิดจากเงินต้นค้างเท่านั้น · รวมไม่เกิน 15%)<br>
+        <b>แนะนำ:</b> ออกเป็น «ฉบับแก้ไขเพิ่มเติม» เฉพาะข้อที่ปัญหา ไม่ยกเลิกข้อตกลงเดิมทั้งฉบับ (ไม่งั้นอำนาจกรรมการ สิทธิทวงหนี้/ฟ้อง และข้อผูกพันผู้ค้ำจะขาดฐาน) · ให้ลงชื่อ «รับทราบและยินยอม» ไม่ใช่แค่รับทราบ</div>
+      <div class="pf">
+        <div><label>ประกาศที่</label><input data-ann="no" value="${esc(AN.no)}" placeholder="เช่น 1"></div>
+        <div><label>ประชุมใหญ่ครั้งที่</label><input data-ann="meetNo" value="${esc(AN.meetNo)}"></div>
+        <div><label>วันที่ประชุมใหญ่</label><input type="date" data-ann="meetD" value="${esc(AN.meetD)}"></div>
+        <div><label>สมาชิกสนับสนุน (%)</label><input type="number" min="0" max="100" data-ann="pct" value="${esc(AN.pct)}"></div>
+        <div><label>ประกาศ ณ วันที่</label><input type="date" data-ann="annD" value="${esc(AN.annD)}"></div>
+        <div><label>มีผลใช้บังคับตั้งแต่</label><input type="date" data-ann="effD" value="${esc(AN.effD)}"></div>
+        <div><label>ค่าทวงถามที่เก็บไปแล้ว</label><select data-ann="past"><option value="waive" ${AN.past === "waive" ? "selected" : ""}>ไม่คืน — ยกเลิกเฉพาะที่ค้าง</option><option value="credit" ${AN.past === "credit" ? "selected" : ""}>นำไปหักชำระเงินต้น</option><option value="refund" ${AN.past === "refund" ? "selected" : ""}>คืนให้ผู้กู้</option></select></div>
+        <div><label>เพดานดอกเบี้ยรวม (%/เดือน)</label><input type="number" step="0.01" min="0" data-dun="cap" value="${nwDunCfg().cap}" title="1.25 = 15% ต่อปี (เพดานตามกฎหมาย) · ใช้คำนวณดอกเบี้ยผิดนัดในโปรแกรมด้วย"></div>
+        <div style="align-self:end"><label class="rlf" style="margin:0"><input type="checkbox" data-ann="cost" ${AN.cost ? "checked" : ""}> เรียกคืนค่าส่งหนังสือตามจริง</label></div></div>
+      ${nwDunBanner()}
+      <div class="bar" style="margin-top:6px;flex-wrap:wrap"><button id="an_print">🖨 พิมพ์ประกาศ + ใบลงนาม</button><button class="ghost" id="an_word">Word</button><button class="ghost" id="an_roster">พิมพ์เฉพาะใบลงนาม</button>
+        <span class="hint">ใบลงนามรายชื่อสมาชิก ${nwAnnRoster().length} คน (ผู้กู้ · ผู้ค้ำ · สมาชิก) — ร่างเพื่อให้ทนายตรวจก่อนใช้จริง</span></div></div>
     <div class="card" style="margin-top:10px"><div class="eyebrow">ประเด็นที่ต้องถามทนายก่อนฟ้อง<span class="hint" style="font-weight:400">ติ๊กเมื่อปรึกษาทนายและได้ข้อสรุปแล้ว</span></div>
-      ${feeN ? `<div class="keybox" style="margin:6px 0;border-left:4px solid var(--red);font-size:13px"><b style="color:var(--red)">โปรแกรมคำนวณค่าทวงถามให้ ${feeN} สัญญา รวม ${B(feeAll)} บาท</b> — ยังไม่ควรเรียกจนกว่าทนายยืนยัน (ยอดเรียกร้องในแดชบอร์ดนี้ไม่รวมค่าทวงถามเป็นค่าเริ่มต้น)</div>` : ""}
+      ${feeN ? `<div class="keybox" style="margin:6px 0;border-left:4px solid var(--red);font-size:13px"><b style="color:var(--red)">มีค่าใช้จ่ายที่ใส่เอง ${feeN} สัญญา รวม ${B(feeAll)} บาท</b> — ยังไม่ควรเรียกจนกว่าทนายยืนยัน (ยอดเรียกร้องในแดชบอร์ดนี้ไม่รวมเป็นค่าเริ่มต้น)</div>` : ""}
       <div class="tbl"><table><tbody>${LIT_LEGAL.map(q => `<tr><td style="width:44px" class="c"><input type="checkbox" data-lgl="${q.id}" ${LG[q.id] && LG[q.id].ok ? "checked" : ""}></td><td class="l" style="white-space:normal">${esc(q.t)}</td><td class="l"><input data-lgn="${q.id}" value="${esc((LG[q.id] && LG[q.id].note) || "")}" placeholder="ข้อสรุป/หมายเหตุ" style="width:100%"></td></tr>`).join("")}</tbody></table></div>
       <p class="hint" style="margin:8px 0 0">ไม่ใช่คำปรึกษาทางกฎหมาย — ใช้เป็นรายการตรวจก่อนปรึกษาทนาย · รายละเอียดอยู่ในไฟล์ «_อ่านก่อน» ในโฟลเดอร์ 09</p></div></div>
     <div class="nwdoc" id="nwdoc"></div>`;
   const redraw = () => { const y = window.scrollY; drawNWLit(); window.scrollTo(0, y); };
+  el.querySelectorAll("[data-ann]").forEach(i => i.addEventListener("change", () => { const A = nwAnn(); A[i.dataset.ann] = i.type === "checkbox" ? i.checked : i.value; save(); if(i.type === "checkbox" || i.tagName === "SELECT") redraw(); }));
+  el.querySelectorAll("[data-dun]").forEach(i => i.addEventListener("change", () => { S.nw.dun = Object.assign({}, S.nw.dun || {}, {[i.dataset.dun]:i.value === "" ? "" : Math.max(0, +i.value || 0)}); save(); redraw(); }));
+  if($("an_print")) $("an_print").onclick = () => nwPrint(nwAnnDoc(), "ประกาศแก้ไขข้อตกลง-ฉบับที่1");
+  if($("an_roster")) $("an_roster").onclick = () => nwPrint(nwAnnDoc("roster"), "ใบลงนามยินยอม-ประกาศแก้ไขข้อตกลง");
+  if($("an_word")) $("an_word").onclick = () => nwxRun("ประกาศแก้ไขข้อตกลง → Word", () => nwxDocx(nwAnnDoc(), "ประกาศแก้ไขข้อตกลง-ฉบับที่1"));
+
   const keyOf = s => s.split("|").slice(0, 2).join("|");
   el.querySelectorAll("[data-lsel],[data-lopen]").forEach(b => b.onclick = ev => { if(ev.target.closest("input,select,button") && !b.dataset.lopen) return; S.litSel = b.dataset.lsel || b.dataset.lopen; redraw(); const t = $("lt_case"); if(t) t.scrollIntoView({behavior:"smooth", block:"start"}); });
   el.querySelectorAll("[data-lck]").forEach(i => i.addEventListener("change", () => { const [no, a, id] = i.dataset.lck.split("|"), c = nwLitC(no + "|" + a); if(i.checked) c.ck[id] = true; else delete c.ck[id]; save(); redraw(); }));
@@ -8968,7 +9043,7 @@ function docLoan(c){
     <p class="i">3.1 หากเกิน 5 วันนับแต่ถึงกำหนดชำระ ให้เรียกเก็บค่าธรรมเนียมทวงถาม 5% ของยอดงวดที่ถึงกำหนด แต่ไม่เกิน 100 บาท/ครั้ง และไม่เกิน 2 ครั้ง/เดือน (ไม่รวมอยู่ในดอกเบี้ยผิดนัด)</p>
     <p class="i">3.2 หากผู้กู้ผิดนัดเกิน 90 วัน ให้คิดดอกเบี้ยผิดนัด 1.20% ต่อเดือน (14.4% ต่อปี) จากยอดค้างชำระ</p>
     <p class="i">3.3 หากผู้กู้ผิดนัดเกิน 1 ปีติดต่อกัน และยังไม่ชำระครบถ้วน (รวมเงินต้น ดอกเบี้ย และเงินฝากหุ้นค้างงวด) ผู้ให้กู้มีสิทธิยกระดับเป็นคดี ตามหมวด 7 ของข้อตกลง ภายหลังได้บอกกล่าวตามข้อ 3.5 แล้ว</p>
-    <p class="i">3.4 การชำระเพื่อระงับการดำเนินคดี ต้องชำระครบทุกส่วนที่ถึงกำหนด ได้แก่ เงินต้น ดอกเบี้ย ดอกเบี้ยผิดนัด เงินฝากหุ้นค้างงวด และค่าธรรมเนียมที่เกิดขึ้น</p>
+    <p class="i">3.4 การชำระเพื่อระงับการดำเนินคดี ต้องชำระครบทุกส่วนที่ถึงกำหนด ได้แก่ เงินต้น ดอกเบี้ย ดอกเบี้ยผิดนัด เงินฝากหุ้นค้างงวด และค่าใช้จ่ายตามจริงที่จ่ายไป (ถ้ามี)</p>
     <p class="i">3.5 <b>การบอกกล่าว/การแจ้งผู้ค้ำ</b> ผู้ให้กู้จะออกหนังสือแจ้งเตือนอย่างน้อยหนึ่งครั้งภายใน 90 วันนับแต่ผิดนัดครั้งแรก และส่งบอกกล่าวทวงถามฉบับยืนยันก่อนฟ้องคดีอีกครั้งตามควร กรณีผู้ค้ำประกัน ให้ส่งหนังสือแจ้งแก่ผู้ค้ำภายใน 90 วัน นับแต่ผิดนัดครั้งแรก การส่งไปยังที่อยู่หรือช่องทางล่าสุดที่ผู้ค้ำแจ้งไว้ ให้ถือว่าได้แจ้งแล้ว</p>
     <div class="h">ข้อ 4. ความรับผิดชอบของผู้ค้ำประกัน</div>
     <p class="i">4.1 ผู้ค้ำประกันมีหน้าที่ร่วมติดตามผู้กู้ให้ชำระหนี้ และรับผิดชอบบางส่วนหากผู้กู้ผิดนัด โดยต้องดำเนินการตามมาตรการที่กำหนดเพื่อป้องกันการผิดชำระ</p>`;
