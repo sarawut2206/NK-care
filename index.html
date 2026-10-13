@@ -736,7 +736,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-171</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-172</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -756,14 +756,16 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <b class="ng" data-g="mo" title="ทะเบียนผู้กู้ · ผู้ฝาก · ใบเสร็จรายเดือน"><span class="grp-ic">📒</span>รับชำระรายเดือน</b>
   <b class="ng" data-g="ln" title="กู้ยืม + ติดตามหนี้ · ทะเบียนสัญญา · ผู้ค้ำ · ชุดฟ้องร้อง"><span class="grp-ic">🏦</span>สินเชื่อและหนี้</b>
   <b class="ng" data-g="ac" title="ใบสรุป + ปันผล · ค่าใช้จ่ายดำเนินงาน"><span class="grp-ic">🧮</span>บัญชีและปันผล</b>
+  <b class="ng" data-g="sim" title="แผนและจำลอง · เป้าหมายทุน · แผนปล่อยกู้ · หุ้นค้ำกู้ · หุ้นระยะยาว"><span class="grp-ic">🎯</span>แผนและจำลอง</b>
   <b class="ng" data-g="mb" title="ฐานข้อมูลสมาชิก"><span class="grp-ic">👥</span>สมาชิก</b>
   <b id="oldbtn" class="oldbtn" title="เมนูทั้งหมดของระบบเดิม"><span class="grp-ic">🗂️</span>ระบบเก่า <span id="oldar">▾</span></b>
 </div>
 <div class="wrap navsub" id="navsub">
   <div class="ngs" data-g="ov"><b data-t="23" class="on"><span class="grp-ic">📊</span>แดชบอร์ด</b><b data-t="26"><span class="grp-ic">📄</span>สรุปภาพรวม ๑ หน้า</b></div>
   <div class="ngs" data-g="mo" hidden><b data-t="20"><span class="grp-ic">📗</span>ทะเบียนผู้กู้</b><b data-t="21"><span class="grp-ic">📘</span>ทะเบียนผู้ฝาก</b><b data-t="24"><span class="grp-ic">🖨</span>ใบเสร็จรายเดือน</b></div>
-  <div class="ngs" data-g="ln" hidden><b data-t="25"><span class="grp-ic">🏦</span>กู้ยืม + ติดตามหนี้</b><b data-t="30"><span class="grp-ic">📑</span>ทะเบียนสัญญากู้</b><b data-t="28"><span class="grp-ic">🛡️</span>ทะเบียนคุมผู้ค้ำ</b><b data-t="29"><span class="grp-ic">⚖️</span>ชุดฟ้องร้อง</b><b data-t="32"><span class="grp-ic">🧮</span>จำลองหุ้นค้ำกู้</b></div>
-  <div class="ngs" data-g="ac" hidden><b data-t="22"><span class="grp-ic">🧾</span>ใบสรุป + ปันผล</b><b data-t="31"><span class="grp-ic">💸</span>ค่าใช้จ่ายดำเนินงาน</b><b data-t="33"><span class="grp-ic">🌱</span>จำลองหุ้นระยะยาว</b></div>
+  <div class="ngs" data-g="ln" hidden><b data-t="25"><span class="grp-ic">🏦</span>กู้ยืม + ติดตามหนี้</b><b data-t="30"><span class="grp-ic">📑</span>ทะเบียนสัญญากู้</b><b data-t="28"><span class="grp-ic">🛡️</span>ทะเบียนคุมผู้ค้ำ</b><b data-t="29"><span class="grp-ic">⚖️</span>ชุดฟ้องร้อง</b></div>
+  <div class="ngs" data-g="ac" hidden><b data-t="22"><span class="grp-ic">🧾</span>ใบสรุป + ปันผล</b><b data-t="31"><span class="grp-ic">💸</span>ค่าใช้จ่ายดำเนินงาน</b></div>
+  <div class="ngs" data-g="sim" hidden><b data-t="34"><span class="grp-ic">🎯</span>แผนและจำลองให้ถึงเป้า</b></div>
   <div class="ngs" data-g="mb" hidden><b data-t="27"><span class="grp-ic">👥</span>ฐานข้อมูลสมาชิก</b></div>
 </div>
 <div class="wrap">
@@ -798,8 +800,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
 <section id="tab29"></section>
 <section id="tab30"></section>
 <section id="tab31"></section>
-<section id="tab32"></section>
-<section id="tab33"></section>
+<section id="tab34"></section>
 <section id="tab10"></section>
 <section id="tab11"></section>
 <section id="tab12"></section>
@@ -3994,9 +3995,38 @@ function nwLendHTML(){
       ${rows.map(r => `<tr><td class="l">${thPer(r.p)}${r.fc ? ' <span class="pill amb">คาดการณ์</span>' : ""}</td><td class="amt">${B0(r.lent)}</td><td class="amt">${B0(r.add)}</td><td class="amt"><b>${B0(r.cap)}</b></td><td class="amt">${B0(r.rt)}</td><td class="amt" style="color:${r.cap >= r.rt ? "#0F6B4A" : "#B4452B"}">${r.cap >= r.rt ? "+" : "−"}${B0(Math.abs(r.cap - r.rt))}</td></tr>`).join("")}</tbody></table></div></div></details>
     <p class="hint" style="margin:8px 0 0">💡 <b>ปล่อยเร็ว ได้ผลเร็ว:</b> สัญญาที่ปล่อยทีหลังส่งหุ้นได้น้อยงวดก่อนสิ้นแผน (เดือนสุดท้ายได้ 0) · ⚠️ เงื่อนไข: ปล่อยได้เท่าที่เงินพอและผู้กู้ผ่านเกณฑ์ (เงินเหลือในสลิป ≥ 30%) ไม่เกินเพดานต่อคน · ยังไม่นับหนี้เสีย ผู้กู้ปิดก่อนกำหนด และคืนทุนตามแผน (หักจากฐานในแผนเป้าหมายทุนแล้ว) · เป็นประมาณการเพื่อวางแผน ไม่ใช่คำรับรอง</p></div>`;
 }
+/* ============ แผนและจำลอง (แท็บ 34) — รวมทุกอย่างที่เป็นแผน/จำลองเพื่อให้ถึงเป้า แยกจากแดชบอร์ดสถานการณ์ปัจจุบัน ============
+   ส่วน: goal = แผนเป้าหมายทุน + แผนปล่อยกู้ · shc = จำลองหุ้นค้ำกู้ · lt = จำลองหุ้นระยะยาว  (S.simSec = ส่วนที่เปิดอยู่) */
+const simSec = () => ["goal", "shc", "lt"].includes(S.simSec) ? S.simSec : "goal";
+const simOn = k => tab === 34 && simSec() === k;
+function drawNWGoal(){
+  const el = $("sim_goal"); if(!el) return;
+  if(!simOn("goal")){ el.innerHTML = ""; return; }
+  if(!NW.on()){ el.innerHTML = nwStartHTML("แผนเป้าหมายทุน"); bindNwImport(); return; }
+  el.innerHTML = nwGoalHTML() + nwLendHTML();
+  const gset = patch => { S.nw.goal = Object.assign({}, nwGoalCfg(), patch); save(); drawNWGoal(); };
+  el.querySelectorAll("[data-gl]").forEach(i => i.addEventListener("change", () => { const f = i.dataset.gl; gset({[f]:["floor", "target"].includes(f) ? Math.max(0, +i.value || 0) : i.value}); }));
+  if($("gl_radd")) $("gl_radd").onclick = () => { const a = +$("gl_ra").value; if(!(a > 0)){ toast("ใส่ยอดคืนทุนก่อน"); return; } gset({ref:nwGoalCfg().ref.concat([{id:"GR" + Math.random().toString(36).slice(2, 7), p:$("gl_rm").value, amt:r2(a)}])}); };
+  el.querySelectorAll("[data-glr]").forEach(b => b.onclick = () => gset({ref:nwGoalCfg().ref.filter(r => r.id !== b.dataset.glr)}));
+  el.querySelectorAll("[data-ld]").forEach(i => i.addEventListener("change", () => { const f = i.dataset.ld; S.nw.lend = Object.assign({}, nwLendCfg(), {[f]:f === "goal" ? i.value : f === "L" ? (i.value === "" ? null : Math.max(0, +i.value || 0)) : Math.max(0, +i.value || 0)}); save(); drawNWGoal(); }));
+  el.querySelectorAll("#ds_lend details[data-shd]").forEach(d => d.addEventListener("toggle", () => { S.shcOpen = S.shcOpen || {}; S.shcOpen[d.dataset.shd] = d.open; }));
+}
+function drawNWSim(){
+  const el = $("tab34"); if(!el) return;
+  if(tab !== 34){ el.innerHTML = ""; return; }
+  if(!$("sim_chips")){
+    el.innerHTML = `<div class="nwscreen"><div class="ds-head"><div><div class="eyebrow" style="margin:0">🎯 แผนและจำลอง — วางแผนให้ถึงเป้าหมาย</div>
+      <div class="hint">รวมเฉพาะส่วนที่เป็น <b>แผน/การจำลอง</b> ไว้ที่เดียว · ส่วนสถานการณ์ปัจจุบันดูที่แดชบอร์ด · ตัวเลขในหน้านี้เป็นประมาณการเพื่อวางแผน ไม่ใช่ยอดจริง</div></div></div>
+      <div class="ds-chips" id="sim_chips">${[["goal", "🎯", "เป้าทุน + แผนปล่อยกู้"], ["shc", "🧮", "หุ้นค้ำกู้ (ผู้กู้รายใหม่)"], ["lt", "🌱", "หุ้นระยะยาว (เงินฝากระยะยาว)"]].map(([k, i, t]) => `<button class="ds-chip" data-ss="${k}">${i} ${t}</button>`).join("")}</div>
+      <div id="sim_goal"></div><div id="sim_shc"></div><div id="sim_lt"></div></div>`;
+    el.querySelectorAll("[data-ss]").forEach(b => b.onclick = () => { S.simSec = b.dataset.ss; drawNWSim(); });
+  }
+  el.querySelectorAll("[data-ss]").forEach(b => b.classList.toggle("on", b.dataset.ss === simSec()));
+  drawNWGoal(); drawNWShc(); drawNWLt();
+}
 function drawNWDash(){
   const el = $("tab23"); if(!el) return;
-  const dsSec = S.dsSec || "ov";
+  const dsSec = (S.dsSec && S.dsSec !== "goal") ? S.dsSec : "ov";
   if(tab !== 23){ el.innerHTML = ""; return; }
   ["tab20", "tab21", "tab22", "tab24", "tab25", "tab26"].forEach(id => { const e = $(id); if(e) e.innerHTML = ""; });
   if(!NW.on()){ el.innerHTML = nwStartHTML("แดชบอร์ด"); bindNwImport(); return; }
@@ -4021,7 +4051,7 @@ function drawNWDash(){
       <div class="s">หนี้คงเหลือ ${B0(D.toT.dbt)} บาท · ${chg(D.toT.sh, D.shNow)} หุ้น / ${chg(D.toT.dbt, D.dbNow)} หนี้ จากปัจจุบัน</div></div>` : ""}
   </div>
 
-  <div class="ds-chips" id="ds_chips">${[["ov", "📈", "ภาพรวมทุนและหนี้"], ["goal", "🎯", "เป้าหมายทุน"], ["int", "💰", "ดอกเบี้ยและปันผล"], ["fc", "🔮", "คาดการณ์ล่วงหน้า"], ["top", "🏆", "อันดับสมาชิก"], ["all", "☰", "ดูทั้งหมด"]].map(([k, i, t]) => `<button class="ds-chip${dsSec === k ? " on" : ""}" data-sec="${k}">${i} ${t}</button>`).join("")}</div>
+  <div class="ds-chips" id="ds_chips">${[["ov", "📈", "ภาพรวมทุนและหนี้"], ["sim", "🎯", "แผนและจำลอง ›"], ["int", "💰", "ดอกเบี้ยและปันผล"], ["fc", "🔮", "คาดการณ์ล่วงหน้า"], ["top", "🏆", "อันดับสมาชิก"], ["all", "☰", "ดูทั้งหมด"]].map(([k, i, t]) => `<button class="ds-chip${dsSec === k ? " on" : ""}" data-sec="${k}">${i} ${t}</button>`).join("")}</div>
 
   <div class="ds-sec" data-sec="ov"${dsSec === "ov" || dsSec === "all" ? "" : " hidden"}>
   <div class="card"><div class="ds-ttl">ภาพรวมรายเดือน <span class="hint">หุ้นสะสม เทียบ หนี้คงเหลือ (รวมทุกคน)${D.fcEnd !== D.end ? " · ช่วงสีฟ้าเส้นประ = คาดการณ์ถึง " + thPer(D.fcEnd) : ""}</span>
@@ -4031,10 +4061,6 @@ function drawNWDash(){
     <div class="card"><div class="ds-ttl">① หุ้นสะสมแยกตามประเภท</div>${dashDonut([{l:NW_ACCS.sam, v:D.shBy.sam, c:DSH.sam}, {l:NW_ACCS.dk, v:D.shBy.dk, c:DSH.dk}, {l:NW_ACCS.free, v:D.shBy.free, c:DSH.free}], "หุ้นรวม")}</div>
     <div class="card"><div class="ds-ttl">② เงินกู้คงเหลือแยกตามประเภท</div>${dashDonut([{l:NW_ACCS.sam, v:D.dbBy.sam, c:DSH.sam}, {l:NW_ACCS.dk, v:D.dbBy.dk, c:DSH.dk}], "เงินกู้รวม")}</div>
   </div>
-  </div>
-
-  <div class="ds-sec" data-sec="goal"${dsSec === "goal" || dsSec === "all" ? "" : " hidden"}>
-  ${nwGoalHTML()}${nwLendHTML()}
   </div>
 
   <div class="ds-sec" data-sec="int"${dsSec === "int" || dsSec === "all" ? "" : " hidden"}>
@@ -4064,7 +4090,7 @@ function drawNWDash(){
   </div>
   </div></div>`;
 
-  el.querySelectorAll(".ds-chip").forEach(b => b.onclick = () => { S.dsSec = b.dataset.sec;
+  el.querySelectorAll(".ds-chip").forEach(b => b.onclick = () => { if(b.dataset.sec === "sim"){ goTab(34); return; } S.dsSec = b.dataset.sec;
     el.querySelectorAll(".ds-chip").forEach(x => x.classList.toggle("on", x === b)); el.querySelectorAll(".ds-sec").forEach(x => x.hidden = !(S.dsSec === "all" || x.dataset.sec === S.dsSec)); });
   const set = patch => { S.nw.dash = Object.assign({}, S.nw.dash || {}, patch); save(); drawNWDash(); };
   $("ds_from").onchange = e => set({from:e.target.value, to:pNum(e.target.value) > pNum(D.to) ? e.target.value : D.to});
@@ -4072,13 +4098,7 @@ function drawNWDash(){
   $("ds_rs").onchange = e => set({rs:Math.max(0, +e.target.value || 0)});
   $("ds_ri").onchange = e => set({ri:Math.max(0, +e.target.value || 0)});
   $("ds_adj").onchange = e => set({adj:e.target.checked});
-  const gset = patch => { S.nw.goal = Object.assign({}, nwGoalCfg(), patch); save(); drawNWDash(); };
-  el.querySelectorAll("[data-gl]").forEach(i => i.addEventListener("change", () => { const f = i.dataset.gl; gset({[f]:["floor", "target"].includes(f) ? Math.max(0, +i.value || 0) : i.value}); }));
-  if($("gl_radd")) $("gl_radd").onclick = () => { const a = +$("gl_ra").value; if(!(a > 0)){ toast("ใส่ยอดคืนทุนก่อน"); return; } gset({ref:nwGoalCfg().ref.concat([{id:"GR" + Math.random().toString(36).slice(2, 7), p:$("gl_rm").value, amt:r2(a)}])}); };
-  el.querySelectorAll("[data-glr]").forEach(b => b.onclick = () => gset({ref:nwGoalCfg().ref.filter(r => r.id !== b.dataset.glr)}));
   if($("ds_fh")) $("ds_fh").onchange = e => set({fh:+e.target.value});
-  el.querySelectorAll("[data-ld]").forEach(i => i.addEventListener("change", () => { const f = i.dataset.ld; S.nw.lend = Object.assign({}, nwLendCfg(), {[f]:f === "goal" ? i.value : f === "L" ? (i.value === "" ? null : Math.max(0, +i.value || 0)) : Math.max(0, +i.value || 0)}); save(); drawNWDash(); }));
-  el.querySelectorAll("#ds_lend details[data-shd]").forEach(d => d.addEventListener("toggle", () => { S.shcOpen = S.shcOpen || {}; S.shcOpen[d.dataset.shd] = d.open; }));
 }
 
 /* ============ เว็บใหม่: ใบสรุปชำระรายเดือน + สรุปปันผล ============
@@ -5786,8 +5806,8 @@ function nwLtChart(out){
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="กำแพงครบกำหนดและเงินต้นสะสม" style="display:block">${grid}${bars}<path d="${line}" fill="none" stroke="#1F3A68" stroke-width="2.6"/>${dots}</svg>`;
 }
 function drawNWLt(){
-  const el = $("tab33"); if(!el) return;
-  if(tab !== 33){ el.innerHTML = ""; return; }
+  const el = $("sim_lt"); if(!el) return;
+  if(!simOn("lt")){ el.innerHTML = ""; return; }
   const Q = S.ltp || (S.ltp = NW_LT_DEF()), sim = nwLtSim(Q), out = sim.out, T = sim.tot, mon = sim.rows.reduce((u, c) => u + c.D * c.k, 0), nP = sim.rows.reduce((u, c) => u + c.k, 0);
   let shNow = 0, goal = null; try { if(NW.on()){ shNow = nwDashData().shNow; const g = nwGoalData(); if(!g.bad) goal = g; } }catch(e){}
   const maxEnd = out.length ? Math.max(...out.map(o => o.end)) : 0, wall = out.length ? Math.max(...out.map(o => o.pay)) : 0, ratio = shNow > 0 ? maxEnd / shNow : 0;
@@ -5895,8 +5915,8 @@ function shxBars(gr, o){
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" style="display:block">${grid}${bars}${ln}</svg>`;
 }
 function drawNWShc(){
-  const el = $("tab32"); if(!el) return;
-  if(tab !== 32){ el.innerHTML = ""; return; }
+  const el = $("sim_shc"); if(!el) return;
+  if(!simOn("shc")){ el.innerHTML = ""; return; }
   const Q = S.shc || (S.shc = {P:100000, N:72, B:500, pct:70, tgt:1.1, D0:0, M:5000}), P = Math.max(1000, +Q.P || 100000), N = Math.min(72, Math.max(3, Math.round(+Q.N) || 72)), B0v = Math.max(0, +Q.B || 0), pct = Math.min(95, Math.max(30, +Q.pct || 70)), tgt = +Q.tgt || 1.1, D0 = Math.max(0, +Q.D0 || 0), Mcap = Math.max(500, +Q.M || 5000);
   const o = {pct, D0:0}, cur = nwShCalc(P, B0v, N, {pct, D0}), Bs = nwShSolve(P, N, tgt, o), solved = Bs === null ? null : nwShCalc(P, Bs, N, {pct, D0}), pass = cur.cover >= tgt - 1e-9;
   const rec = solved || cur, up = Math.max(0, Math.ceil((tgt * cur.rk.bal - (cur.rk.cum - D0)) / 500) * 500);
@@ -11000,7 +11020,7 @@ async function boot(){
 function draw(){
   rebuildPeriods();                     // ★ ช่วงงวดเดินตามข้อมูลจริง — ย้อนดูได้ทุกปี
   // แท็บไหนพัง ให้พังแค่แท็บนั้น อย่าลากทั้งหน้าจอลงไปด้วย
-  [["tab23",drawNWDash],["tab20",drawNWLoan],["tab21",drawNWSave],["tab22",drawNWDiv],["tab24",drawNWRc],["tab25",drawNWLoanDash],["tab26",drawNWOverview],["tab27",drawNWMdb],["tab28",drawNWGuar],["tab29",drawNWLit],["tab30",drawNWCon],["tab31",drawNWExp],["tab32",drawNWShc],["tab33",drawNWLt],["tab10",drawEntry],["tab11",drawOverview],["tab12",drawPeriods],["tab1",drawT1],["tab3",drawT3],
+  [["tab23",drawNWDash],["tab20",drawNWLoan],["tab21",drawNWSave],["tab22",drawNWDiv],["tab24",drawNWRc],["tab25",drawNWLoanDash],["tab26",drawNWOverview],["tab27",drawNWMdb],["tab28",drawNWGuar],["tab29",drawNWLit],["tab30",drawNWCon],["tab31",drawNWExp],["tab34",drawNWSim],["tab10",drawEntry],["tab11",drawOverview],["tab12",drawPeriods],["tab1",drawT1],["tab3",drawT3],
    ["tab4",drawT4],["tab5",drawT5],["tab6",drawT6],["tab7",drawT7],["tab8",drawT8],["tab9",drawT9]].forEach(([id,fn])=>{
     try{ fn(); }
     catch(err){ const el=$(id); if(el) el.innerHTML =
@@ -11037,7 +11057,7 @@ if($("saveNow")) $("saveNow").onclick = () => saveClick($("saveNow"), null);
 
 /* ============ เดินระบบ ============ */
 function all(){ draw(); save(); banner(); }
-const TABFN = {23:"drawNWDash",20:"drawNWLoan",21:"drawNWSave",22:"drawNWDiv",24:"drawNWRc",25:"drawNWLoanDash",26:"drawNWOverview",27:"drawNWMdb",28:"drawNWGuar",29:"drawNWLit",30:"drawNWCon",31:"drawNWExp",32:"drawNWShc",33:"drawNWLt",1:"drawT1",3:"drawT3",4:"drawT4",5:"drawT5",6:"drawT6",7:"drawT7",8:"drawT8",9:"drawT9",
+const TABFN = {23:"drawNWDash",20:"drawNWLoan",21:"drawNWSave",22:"drawNWDiv",24:"drawNWRc",25:"drawNWLoanDash",26:"drawNWOverview",27:"drawNWMdb",28:"drawNWGuar",29:"drawNWLit",30:"drawNWCon",31:"drawNWExp",34:"drawNWSim",1:"drawT1",3:"drawT3",4:"drawT4",5:"drawT5",6:"drawT6",7:"drawT7",8:"drawT8",9:"drawT9",
                10:"drawEntry",11:"drawOverview",12:"drawPeriods"};
 const OLD_TABS = [10,11,9,12,7,1,8,3,5,6,4];
 $("oldbtn").onclick = () => {
