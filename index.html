@@ -710,7 +710,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-161</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-162</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -736,7 +736,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
 <div class="wrap navsub" id="navsub">
   <div class="ngs" data-g="ov"><b data-t="23" class="on"><span class="grp-ic">📊</span>แดชบอร์ด</b><b data-t="26"><span class="grp-ic">📄</span>สรุปภาพรวม ๑ หน้า</b></div>
   <div class="ngs" data-g="mo" hidden><b data-t="20"><span class="grp-ic">📗</span>ทะเบียนผู้กู้</b><b data-t="21"><span class="grp-ic">📘</span>ทะเบียนผู้ฝาก</b><b data-t="24"><span class="grp-ic">🖨</span>ใบเสร็จรายเดือน</b></div>
-  <div class="ngs" data-g="ln" hidden><b data-t="25"><span class="grp-ic">🏦</span>กู้ยืม + ติดตามหนี้</b><b data-t="30"><span class="grp-ic">📑</span>ทะเบียนสัญญากู้</b><b data-t="28"><span class="grp-ic">🛡️</span>ทะเบียนคุมผู้ค้ำ</b><b data-t="29"><span class="grp-ic">⚖️</span>ชุดฟ้องร้อง</b></div>
+  <div class="ngs" data-g="ln" hidden><b data-t="25"><span class="grp-ic">🏦</span>กู้ยืม + ติดตามหนี้</b><b data-t="30"><span class="grp-ic">📑</span>ทะเบียนสัญญากู้</b><b data-t="28"><span class="grp-ic">🛡️</span>ทะเบียนคุมผู้ค้ำ</b><b data-t="29"><span class="grp-ic">⚖️</span>ชุดฟ้องร้อง</b><b data-t="32"><span class="grp-ic">🧮</span>จำลองหุ้นค้ำกู้</b></div>
   <div class="ngs" data-g="ac" hidden><b data-t="22"><span class="grp-ic">🧾</span>ใบสรุป + ปันผล</b><b data-t="31"><span class="grp-ic">💸</span>ค่าใช้จ่ายดำเนินงาน</b></div>
   <div class="ngs" data-g="mb" hidden><b data-t="27"><span class="grp-ic">👥</span>ฐานข้อมูลสมาชิก</b></div>
 </div>
@@ -772,6 +772,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
 <section id="tab29"></section>
 <section id="tab30"></section>
 <section id="tab31"></section>
+<section id="tab32"></section>
 <section id="tab10"></section>
 <section id="tab11"></section>
 <section id="tab12"></section>
@@ -5670,6 +5671,73 @@ function drawNWLoanDash(){
       .sort((u, v) => String(u.no).localeCompare(String(v.no), "th", {numeric:true}) || u.prod.localeCompare(v.prod)); if(!sel.length) return;
     if(!confirm(`บันทึกชุดสัญญา ${sel.length} ฉบับเป็นไฟล์ Word ไฟล์เดียว?\n(หลายหน้ามาก — ถ้าสะดวกให้ติ๊กเลือกเฉพาะบางคน)`)) return;
     const D = dopt(); nwxRun("ชุดสัญญา → Word", () => nwxDocx(sel.map(c => nwConDocs(c, D, D.mode)).join(""), `ชุดสัญญา-${sel.length}ฉบับ`)); };
+}
+
+/* ============ จำลองหุ้นค้ำกู้ (แท็บ 32) ============
+   หุ้นต่องวด = หุ้นประจำ (คงที่ตลอดสัญญา) + หุ้นเพิ่ม (ยอดงวด × อัตราขั้นบันได 8/10/12/14/16/18% ตามเดิม)
+   กฎ: ที่งวดที่ ceil(70% × จำนวนงวด) หุ้นสะสมในสัญญา (+ หุ้นแรกเข้าถ้ามี) ≥ เป้า × เงินต้นคงเหลือ · ผู้กู้หนีหลังจุดนี้ กลุ่มไม่ขาดทุนเงินต้น */
+function nwShCalc(P, B, N, o){
+  o = o || {}; const D0 = +o.D0 || 0, pc = (+o.pct || 70) / 100, M = reqPayment(P, B, N, RATE, false);
+  const sc = schedule({prod:"สามัญ", mode:"calc", amt:P, terms:N, inst:M, shareM:B});
+  let cum = D0; const rows = sc.rows.map(r => { cum = r2(cum + r.sh); return {t:r.t, bal:r.bal, int:r.int, pri:r.pri, base:r.base, extra:r.extra, sh:r.sh, cum, cover:r.bal > 0.005 ? cum / r.bal : 9, gap:Math.max(0, r2(r.bal - cum))}; });
+  const k = Math.min(rows.length, Math.max(1, Math.ceil(pc * N))), rk = rows[k - 1], be = rows.find(r => r.bal > 0.005 && r.cum >= r.bal), b110 = rows.find(r => r.bal > 0.005 && r.cum >= 1.1 * r.bal);
+  return {P, B, N, M, rows, k, cover:rk.cover, gap:r2(rk.bal * 1 - rk.cum), rk, be:be ? be.t : null, b110:b110 ? b110.t : null, end:cum, totInt:sc.totInt, first:rows[0], D0};
+}
+function nwShSolve(P, N, tgt, o){                                       // หุ้นประจำน้อยที่สุด (ปัดขึ้นทีละ 50) ที่ครอบคลุม ≥ เป้า ณ 70%
+  let lo = 0, hi = 30000; if(nwShCalc(P, hi, N, o).cover < tgt) return null;
+  for(let q = 0; q < 50; q++){ const mid = (lo + hi) / 2; if(nwShCalc(P, mid, N, o).cover < tgt) lo = mid; else hi = mid; }
+  let B = Math.ceil(hi / 50) * 50; while(nwShCalc(P, B, N, o).cover < tgt) B += 50; return B;
+}
+function nwShChart(c){
+  const W = 760, H = 250, L = 62, R = 16, T = 16, Bm = 34, n = c.rows.length, mx = Math.max(c.P, c.end) * 1.04, X = i => L + i * (W - L - R) / Math.max(1, n - 1), Y = v => T + (1 - v / mx) * (H - T - Bm);
+  const line = k => c.rows.map((r, i) => `${i ? "L" : "M"}${X(i).toFixed(1)},${Y(r[k]).toFixed(1)}`).join(" "), k70 = c.k - 1;
+  const grid = [0, 1, 2, 3, 4].map(g => { const v = mx * g / 4, y = Y(v); return `<line x1="${L}" x2="${W - R}" y1="${y}" y2="${y}" stroke="#E4EAF4"/><text x="${L - 8}" y="${y + 4}" text-anchor="end" font-size="11" fill="#6B7A99">${dshK(v)}</text>`; }).join("");
+  const step = Math.ceil(n / 9), xl = c.rows.map((r, i) => (i % step === 0 || i === n - 1) ? `<text x="${X(i)}" y="${H - 12}" text-anchor="middle" font-size="11" fill="#6B7A99">งวด ${r.t}</text>` : "").join("");
+  const hov = c.rows.map((r, i) => `<rect x="${X(i) - (W - L - R) / Math.max(1, n - 1) / 2}" y="${T}" width="${(W - L - R) / Math.max(1, n - 1)}" height="${H - T - Bm}" fill="transparent"><title>งวด ${r.t}\nหนี้เหลือ ${B0(r.bal)}\nหุ้นสะสม ${B0(r.cum)} (ครอบคลุม ${r.bal > 0.005 ? Math.round(r.cover * 100) + "%" : "—"})</title></rect>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="หนี้คงเหลือเทียบหุ้นสะสมรายงวด" style="display:block">${grid}
+    <rect x="${X(k70) - 1}" y="${T}" width="2" height="${H - T - Bm}" fill="#C4570F" opacity=".5"/><text x="${X(k70)}" y="${T + 10}" text-anchor="middle" font-size="11" font-weight="700" fill="#C4570F">70% (งวด ${c.k})</text>
+    <path d="${line("bal")}" fill="none" stroke="#C0202E" stroke-width="2.6"/><path d="${line("cum")}" fill="none" stroke="#1BAF7A" stroke-width="2.6"/>${xl}${hov}</svg>`;
+}
+function drawNWShc(){
+  const el = $("tab32"); if(!el) return;
+  if(tab !== 32){ el.innerHTML = ""; return; }
+  const Q = S.shc || (S.shc = {P:100000, N:72, B:500, pct:70, tgt:1.1, D0:0}), P = Math.max(1000, +Q.P || 100000), N = Math.min(72, Math.max(6, Math.round(+Q.N) || 72)), B0v = Math.max(0, +Q.B || 0), pct = Math.min(95, Math.max(30, +Q.pct || 70)), tgt = +Q.tgt || 1.1, D0 = Math.max(0, +Q.D0 || 0);
+  const o = {pct, D0:0}, cur = nwShCalc(P, B0v, N, {pct, D0}), Bs = nwShSolve(P, N, tgt, o), solved = Bs === null ? null : nwShCalc(P, Bs, N, {pct, D0}), pass = cur.cover >= tgt - 1e-9;
+  const rec = solved || cur, up = Math.max(0, Math.ceil((tgt * cur.rk.bal - (cur.rk.cum - D0)) / 500) * 500);
+  const Bopts = [400, 500, 600, 700, 800, 900, 1000, 1200], Nopts = [36, 48, 60, 72], cl = v => v >= tgt ? "background:#E3F6EC;color:#0F6B4A" : v >= 1 ? "background:#FFF4DC;color:#8A5A00" : "background:#FDE7E7;color:#B4452B";
+  const mat = Bopts.map(b => `<tr><td class="l"><b>${B0(b)}</b>${b === B0v ? ' <span class="pill">ปัจจุบัน</span>' : ""}</td>${Nopts.map(n => { const c = nwShCalc(P, b, n, {pct, D0}); return `<td class="amt" style="${cl(c.cover)}"><b>${Math.round(c.cover * 100)}%</b><div class="hint" style="color:inherit">ผ่อน ${B0(c.M)}</div></td>`; }).join("")}</tr>`).join("");
+  const sel = (k, v, list) => `<select data-shc="${k}">${list.map(q => `<option value="${q[0]}" ${String(q[0]) === String(v) ? "selected" : ""}>${q[1]}</option>`).join("")}</select>`;
+  const keyRows = [1, 6, 12, 24, 36, 48, 60, 72].filter(m => m <= N).concat([rec.k, rec.be].filter(Boolean)).filter((m, i, a) => a.indexOf(m) === i).sort((a, b) => a - b);
+  el.innerHTML = `<div class="nwscreen"><div class="ds-head"><div><div class="eyebrow" style="margin:0">จำลองหุ้นค้ำกู้ — กฎ «ส่งถึง ${pct}% แล้วไม่ขาดทุน»</div>
+      <div class="hint">ใส่วงเงินที่จะกู้ โปรแกรมคำนวณ <b>หุ้นประจำคงที่</b> ที่ต้องส่งให้หุ้นในสัญญาครอบคลุมหนี้เมื่อถึง ${pct}% ของงวด · หุ้นเพิ่มยังเป็นขั้นบันไดตามเดิม (8% → 18% ของยอดงวด) · ไม่นับเงินสะสมเดิมของผู้กู้</div></div></div>
+    <div class="card"><div class="pf">
+      <div><label>วงเงินที่จะกู้ (บาท)</label><input type="number" step="1000" min="1000" data-shc="P" value="${P}"></div>
+      <div><label>จำนวนงวด</label>${sel("N", N, [36, 48, 60, 72].map(n => [n, n + " งวด"]).concat([6, 12, 18, 24, 30, 42, 54, 66].filter(n => n === N).map(n => [n, n + " งวด"])))}</div>
+      <div><label>หุ้นประจำเดิม (บาท/เดือน)</label><input type="number" step="50" min="0" data-shc="B" value="${B0v}"></div>
+      <div><label>ตรวจที่ (% ของจำนวนงวด)</label><input type="number" min="30" max="95" data-shc="pct" value="${pct}"></div>
+      <div><label>ต้องครอบคลุมหนี้ไม่น้อยกว่า</label>${sel("tgt", tgt, [[1, "100% (พอดี)"], [1.1, "110% (เผื่อ — แนะนำ)"], [1.2, "120%"]])}</div>
+      <div><label>หุ้นแรกเข้าที่หักตอนทำสัญญา (บาท)</label><input type="number" step="500" min="0" data-shc="D0" value="${D0}"></div></div></div>
+    <div class="stats" style="margin:0 0 10px">
+      <div class="stat" style="border-top-color:${pass ? "var(--green)" : "var(--red)"}"><div class="k">ถ้าส่งหุ้นประจำเดิม ${B0(B0v)}/เดือน</div><div class="v" style="color:${pass ? "#0F6B4A" : "#B4452B"}">${Math.round(cur.cover * 100)}% <small>${pass ? "ผ่าน" : "ไม่ผ่าน"}</small></div>
+        <div class="hint">ณ งวด ${cur.k}: หุ้น ${B0(cur.rk.cum)} / หนี้เหลือ ${B0(cur.rk.bal)} · ${cur.gap > 0 ? "ขาด " + B0(cur.gap) : "เกิน " + B0(-cur.gap)} · ผ่อน ${B0(cur.M)}/เดือน</div></div>
+      ${solved ? `<div class="stat" style="border-top-color:var(--brand)"><div class="k">${pass ? "ขั้นต่ำที่ยังผ่าน" : "ต้องปรับหุ้นประจำเป็น"}</div><div class="v" style="color:var(--brand)">${B0(Bs)} <small>บาท/เดือน คงที่</small></div>
+        <div class="hint">${Bs > B0v ? `เพิ่มจากเดิม +${B0(Bs - B0v)}` : Bs < B0v ? `ลดได้จากเดิม ${B0(B0v - Bs)}` : "เท่าเดิม"} · ผ่อนใหม่ ${B0(solved.M)}/เดือน (${Bs > B0v ? "+" : ""}${B0(solved.M - cur.M)})</div></div>
+      <div class="stat"><div class="k">ผลเมื่อใช้ ${B0(Bs)}</div><div class="v">${Math.round(solved.cover * 100)}% <small>ณ งวด ${solved.k}</small></div><div class="hint">คุ้มทุนตั้งแต่งวด ${solved.be} (${Math.round(solved.be / N * 100)}% ของสัญญา) · หุ้นสิ้นสัญญา ${B0(solved.end)}</div></div>` : '<div class="stat" style="border-top-color:var(--red)"><div class="k">หุ้นประจำที่ต้องใช้</div><div class="v" style="color:#B4452B">สูงเกินไป</div><div class="hint">ลดวงเงินหรือเพิ่มหุ้นแรกเข้า</div></div>'}
+      ${!pass ? `<div class="stat"><div class="k">ทางเลือก: คงหุ้นประจำ ${B0(B0v)} หักหุ้นแรกเข้า</div><div class="v">${B0(up)} <small>บาท</small></div><div class="hint">≈ ${(up / P * 100).toFixed(1)}% ของวงเงิน · ผ่อนเท่าเดิม ${B0(cur.M)} · รับเงินสุทธิ ${B0(P - up)}</div></div>` : ""}</div>
+    <div class="card"><div class="ds-ttl">เปรียบเทียบหุ้นประจำ × จำนวนงวด <span class="hint">ครอบคลุมหนี้ ณ ${pct}% ของงวด · วงเงิน ${B0(P)}${D0 ? ` · หุ้นแรกเข้า ${B0(D0)}` : ""} · เขียว ≥ ${Math.round(tgt * 100)}% · เหลือง 100–${Math.round(tgt * 100)}% · แดง &lt; 100%</span></div>
+      <div class="tbl"><table><thead><tr><th class="l">หุ้นประจำ/เดือน</th>${Nopts.map(n => `<th>${n} งวด</th>`).join("")}</tr></thead><tbody>${mat}</tbody></table></div></div>
+    <div class="card"><div class="ds-ttl">หนี้คงเหลือ เทียบ หุ้นสะสม <span class="hint">หุ้นประจำ ${B0(rec.B)} · ${N} งวด · ผ่อน ${B0(rec.M)}/เดือน · งวดที่ 1: ดอกเบี้ย ${B0(rec.first.int)} + เงินต้น ${B0(rec.first.pri)} + หุ้นประจำ ${B0(rec.first.base)} + หุ้นเพิ่ม ${B0(rec.first.extra)}</span>
+        <span class="ds-lg"><i style="background:#C0202E"></i>หนี้คงเหลือ <i style="background:#1BAF7A"></i>หุ้นสะสมในสัญญา</span></div>
+      ${nwShChart(rec)}
+      <div class="tbl" style="margin-top:6px"><table><thead><tr><th>งวด</th><th>% ของสัญญา</th><th>หนี้คงเหลือ</th><th>หุ้นสะสม</th><th>ครอบคลุม</th><th>ช่องว่างที่กลุ่มเสี่ยง</th></tr></thead><tbody>
+        ${keyRows.map(m => { const r = rec.rows[m - 1]; if(!r) return ""; return `<tr${m === rec.k ? ' style="background:var(--faint);font-weight:700"' : ""}><td class="amt">${m}${m === rec.k ? " (ตรวจ)" : m === rec.be ? " (คุ้มทุน)" : ""}</td><td class="amt">${Math.round(m / N * 100)}%</td><td class="amt">${B0(r.bal)}</td><td class="amt">${B0(r.cum)}</td><td class="amt" style="color:${r.cover >= 1 ? "#0F6B4A" : "#B4452B"}">${r.bal > 0.005 ? Math.round(r.cover * 100) + "%" : "ปิดแล้ว"}</td><td class="amt">${r.gap ? B0(r.gap) : "—"}</td></tr>`; }).join("")}</tbody></table></div>
+      <div class="bar" style="margin-top:8px;flex-wrap:wrap"><button class="ghost sm" id="shc_csv">ส่งออกตารางผ่อน CSV</button><button class="ghost sm" id="shc_use" title="ตั้งหุ้นประจำเดิมเป็นค่าที่แนะนำ แล้วคำนวณซ้ำ" ${solved && Bs !== B0v ? "" : "disabled"}>ใช้หุ้นประจำ ${solved ? B0(Bs) : "—"} เป็นค่าตั้งต้น</button></div>
+      <p class="hint" style="margin:8px 0 0"><b>ช่วงก่อนถึง ${pct}% ยังไม่ปลอดภัยจากหุ้นอย่างเดียว</b> ต้องพึ่งผู้ค้ำ (สามัญ 2 คน) · ผู้กู้หนีหลังจุดที่หุ้นเกินหนี้ กลุ่มไม่ขาดทุนเงินต้น (ยังไม่นับดอกเบี้ยค้าง) · การหักหุ้นชำระหนี้ต้องมีข้อยินยอมเป็นหนังสือจากผู้กู้ และเป็นเรื่องที่ทนายควรตรวจ · ยอดผ่อนใหม่ต้องผ่านเกณฑ์เงินเหลือในสลิป ≥ 30%</p></div></div><div class="nwdoc" id="nwdoc"></div>`;
+  const set = (k, v) => { S.shc[k] = v; drawNWShc(); };
+  el.querySelectorAll("[data-shc]").forEach(i => i.addEventListener("change", () => { const k = i.dataset.shc; set(k, ["tgt"].includes(k) ? +i.value : k === "N" ? +i.value : +i.value || 0); }));
+  if($("shc_use")) $("shc_use").onclick = () => set("B", Bs);
+  if($("shc_csv")) $("shc_csv").onclick = () => csvOut("kbk-จำลองหุ้นค้ำกู้.csv", [[`วงเงิน ${f2(P)} · ${N} งวด · หุ้นประจำ ${f2(rec.B)} · ผ่อน ${f2(rec.M)}`, ["งวด", "ยอดส่ง", "เงินต้น", "ดอกเบี้ย", "หุ้นประจำ", "หุ้นเพิ่ม", "หนี้คงเหลือ", "หุ้นสะสม", "ครอบคลุม %"],
+    rec.rows.map(r => [r.t, f2(r.int + r.pri + r.sh), f2(r.pri), f2(r.int), f2(r.base), f2(r.extra), f2(r.bal), f2(r.cum), r.bal > 0.005 ? Math.round(r.cover * 100) : ""])]]);
 }
 
 /* ============ เว็บใหม่: ทะเบียนสัญญากู้ (แดชบอร์ด) — เลขที่สัญญาเรียงตามวันที่ทำสัญญา = วันที่ส่งงวดที่ 1 ============ */
@@ -10695,7 +10763,7 @@ async function boot(){
 function draw(){
   rebuildPeriods();                     // ★ ช่วงงวดเดินตามข้อมูลจริง — ย้อนดูได้ทุกปี
   // แท็บไหนพัง ให้พังแค่แท็บนั้น อย่าลากทั้งหน้าจอลงไปด้วย
-  [["tab23",drawNWDash],["tab20",drawNWLoan],["tab21",drawNWSave],["tab22",drawNWDiv],["tab24",drawNWRc],["tab25",drawNWLoanDash],["tab26",drawNWOverview],["tab27",drawNWMdb],["tab28",drawNWGuar],["tab29",drawNWLit],["tab30",drawNWCon],["tab31",drawNWExp],["tab10",drawEntry],["tab11",drawOverview],["tab12",drawPeriods],["tab1",drawT1],["tab3",drawT3],
+  [["tab23",drawNWDash],["tab20",drawNWLoan],["tab21",drawNWSave],["tab22",drawNWDiv],["tab24",drawNWRc],["tab25",drawNWLoanDash],["tab26",drawNWOverview],["tab27",drawNWMdb],["tab28",drawNWGuar],["tab29",drawNWLit],["tab30",drawNWCon],["tab31",drawNWExp],["tab32",drawNWShc],["tab10",drawEntry],["tab11",drawOverview],["tab12",drawPeriods],["tab1",drawT1],["tab3",drawT3],
    ["tab4",drawT4],["tab5",drawT5],["tab6",drawT6],["tab7",drawT7],["tab8",drawT8],["tab9",drawT9]].forEach(([id,fn])=>{
     try{ fn(); }
     catch(err){ const el=$(id); if(el) el.innerHTML =
@@ -10732,7 +10800,7 @@ if($("saveNow")) $("saveNow").onclick = () => saveClick($("saveNow"), null);
 
 /* ============ เดินระบบ ============ */
 function all(){ draw(); save(); banner(); }
-const TABFN = {23:"drawNWDash",20:"drawNWLoan",21:"drawNWSave",22:"drawNWDiv",24:"drawNWRc",25:"drawNWLoanDash",26:"drawNWOverview",27:"drawNWMdb",28:"drawNWGuar",29:"drawNWLit",30:"drawNWCon",31:"drawNWExp",1:"drawT1",3:"drawT3",4:"drawT4",5:"drawT5",6:"drawT6",7:"drawT7",8:"drawT8",9:"drawT9",
+const TABFN = {23:"drawNWDash",20:"drawNWLoan",21:"drawNWSave",22:"drawNWDiv",24:"drawNWRc",25:"drawNWLoanDash",26:"drawNWOverview",27:"drawNWMdb",28:"drawNWGuar",29:"drawNWLit",30:"drawNWCon",31:"drawNWExp",32:"drawNWShc",1:"drawT1",3:"drawT3",4:"drawT4",5:"drawT5",6:"drawT6",7:"drawT7",8:"drawT8",9:"drawT9",
                10:"drawEntry",11:"drawOverview",12:"drawPeriods"};
 const OLD_TABS = [10,11,9,12,7,1,8,3,5,6,4];
 $("oldbtn").onclick = () => {
