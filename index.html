@@ -548,6 +548,9 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
 .ovp .ov-leg i{display:block;width:10px;height:10px}.ovp .ov-leg b{text-align:right;font-weight:600}.ovp .ov-leg em{font-style:normal;text-align:right}
 .ovp .ov-mini{font-size:13pt;line-height:1.15}.ovp .ov-mini>div{display:flex;justify-content:space-between;align-items:baseline;gap:8px;border-top:1px dotted #888}.ovp .ov-mini b{font-size:14pt}
 .ovp .ov-h small{font-size:11.5pt;font-weight:400}
+.cygrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:0 0 6px}.cychart{border:1px solid var(--line,#d6dbe6);border-radius:10px;padding:8px 10px 4px;min-width:0}.cyt{font-weight:700;font-size:14px;margin-bottom:2px}
+.cyleg{font-size:13px;margin:0 0 10px;display:flex;align-items:center;flex-wrap:wrap}.cyleg i{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:5px}
+@media(max-width:760px){.cygrid{grid-template-columns:1fr}}
 .ovp .dv-kp{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:6px}
 .ovp .dv-kp .ov-kpi{padding:2px 8px 3px}.ovp .dv-kp .ov-kl{font-size:11.5pt;line-height:1.1}.ovp .dv-kp .ov-kv{font-size:15pt}.ovp .dv-kp .ov-kv small{font-size:12pt;font-weight:600}
 .ovp .dvt{width:100%;border-collapse:collapse;font-size:10.5pt;line-height:1.05;margin-bottom:6px}
@@ -696,7 +699,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-152</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-153</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -4431,11 +4434,37 @@ function nwConYearRows(U){                                // แถวตาร�
   U.ys.forEach(y => { const t = U.Y[y]; rows.push([y, "สามัญ", t.sam, "k"], [y, "ดูแลกัน", t.dk, "k"], [y, "รวมปี " + y, nwConYAdd(t.sam, t.dk), "s"]); });
   rows.push(["", "รวมทุกปี", nwConYAdd(U.tot.sam, U.tot.dk), "t"]); return rows;
 }
+/* แผนภูมิแท่งรายปี: แต่ละปี ๒ แท่ง (สามัญ · ดูแลกัน) ซ้อน «สัญญาใหม่» (ล่าง) + «กู้ทบ» (บน) · kind = "n" จำนวนสัญญา | "a" ยอดเงิน */
+function nwConYearChart(U, kind){
+  const NC = "#1F3A68", RC = "#E07B2E", fa = kind === "a", ys = U.ys, W = 520, H = 250, L = 12, R = 12, T = 28, Bt = 56, gw = (W - L - R) / Math.max(ys.length, 1), bw = Math.min(54, gw * 0.34);
+  const val = (t, f) => fa ? t["a" + f] : t["n" + f], tv = t => val(t, "New") + val(t, "Ref");
+  const mx = Math.max(1, ...ys.flatMap(y => ["sam", "dk"].map(k => tv(U.Y[y][k])))), h = v => (H - T - Bt) * v / mx;
+  const fm = v => fa ? (v >= 1e6 ? (v / 1e6).toFixed(2) + " ล้าน" : B0(v)) : String(v);
+  if(!ys.length || mx <= 1 && !ys.some(y => ["sam", "dk"].some(k => tv(U.Y[y][k]) > 0))) return "";
+  let g = "";
+  ys.forEach((y, i) => ["sam", "dk"].forEach((k, j) => { const t = U.Y[y][k], a = val(t, "New"), b = val(t, "Ref"), x = L + gw * i + gw / 2 + (j ? 6 : -bw - 6), base = H - Bt, ha = h(a), hb = h(b);
+    if(a + b > 0){
+      if(a > 0) g += `<rect x="${x.toFixed(1)}" y="${(base - ha).toFixed(1)}" width="${bw.toFixed(1)}" height="${ha.toFixed(1)}" fill="${NC}"><title>${NLP[k]} ${y} · สัญญาใหม่ ${fa ? B(a) + " บาท" : a + " สัญญา"}</title></rect>`;
+      if(b > 0) g += `<rect x="${x.toFixed(1)}" y="${(base - ha - hb).toFixed(1)}" width="${bw.toFixed(1)}" height="${hb.toFixed(1)}" fill="${RC}"><title>${NLP[k]} ${y} · กู้ทบ ${fa ? B(b) + " บาท (เงินส่วนต่าง)" : b + " สัญญา"}</title></rect>`;
+      if(ha > 16) g += `<text x="${(x + bw / 2).toFixed(1)}" y="${(base - ha / 2 + 5).toFixed(1)}" text-anchor="middle" font-size="13" fill="#fff">${fm(a)}</text>`;
+      if(hb > 16) g += `<text x="${(x + bw / 2).toFixed(1)}" y="${(base - ha - hb / 2 + 5).toFixed(1)}" text-anchor="middle" font-size="13" fill="#fff">${fm(b)}</text>`;
+      g += `<text x="${(x + bw / 2).toFixed(1)}" y="${(base - ha - hb - 6).toFixed(1)}" text-anchor="middle" font-size="14" font-weight="700" fill="currentColor">${fm(a + b)}</text>`; }
+    else g += `<text x="${(x + bw / 2).toFixed(1)}" y="${base - 6}" text-anchor="middle" font-size="13" fill="currentColor" opacity=".5">—</text>`;
+    g += `<text x="${(x + bw / 2).toFixed(1)}" y="${base + 17}" text-anchor="middle" font-size="13" fill="currentColor">${NLP[k]}</text>`;
+    if(j === 1) g += `<text x="${(L + gw * i + gw / 2).toFixed(1)}" y="${base + 38}" text-anchor="middle" font-size="16" font-weight="700" fill="currentColor">ปี ${y}</text>`; }));
+  return `<div class="cychart"><div class="cyt">${fa ? "ยอดเงินปล่อยสินเชื่อ (บาท)" : "จำนวนสัญญาที่ทำ (สัญญา)"}</div>
+    <svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${fa ? "ยอดเงินปล่อยสินเชื่อรายปี" : "จำนวนสัญญารายปี"} เปรียบเทียบสามัญและดูแลกัน"><line x1="${L}" x2="${W - R}" y1="${H - Bt}" y2="${H - Bt}" stroke="currentColor" stroke-opacity=".4"/>${g}</svg></div>`;
+}
+function nwConYearCharts(U){
+  const a = nwConYearChart(U, "n"), b = nwConYearChart(U, "a"); if(!a && !b) return "";
+  return `<div class="cygrid">${a}${b}</div><div class="cyleg"><i style="background:#1F3A68"></i> สัญญาใหม่ (นับยอดเต็ม) <i style="background:#E07B2E;margin-left:14px"></i> กู้ทบ (นับเฉพาะเงินส่วนต่างที่ได้รับ)</div>`;
+}
 function nwConYearHTML(U){
   U = U || nwConYearSum(); if(!U.ys.length && !(U.old.sam + U.old.dk)) return "";
   const n = (v, f) => v ? v : "—", m = v => v ? B(v) : "—", all = t => ({n:t.nNew + t.nRef, a:r2(t.aNew + t.aRef)});
   return `<div class="card"><div class="eyebrow">สรุปรายปี — สัญญาที่ทำและยอดเงินปล่อยสินเชื่อ</div>
     <p class="hint" style="margin:0 0 8px"><b>อ่านอย่างไร:</b> แต่ละปีแยกตามประเภทสินเชื่อ · <b>สัญญาใหม่</b> = กู้ครั้งแรก นับยอดเต็ม · <b>กู้ทบ</b> = กู้เพิ่มทับหนี้เดิม นับเฉพาะ<b>เงินส่วนต่างที่ได้รับจริง</b> (ยอดกู้ใหม่ − หนี้เก่าที่หักออก) · ปี = ปีของวันที่ส่งงวดที่ 1 · กู้ทบ ๑ ครั้ง = ๑ สัญญา · ระบบตรวจกู้ทบจากหนี้ที่เพิ่มขึ้น</p>
+    ${nwConYearCharts(U)}
     <div class="tbl"><table><thead><tr><th class="l">ปี</th><th class="l">ประเภท</th><th>สัญญาใหม่ (สัญญา)</th><th>สัญญาใหม่ ยอดเต็ม (บาท)</th><th>กู้ทบ (สัญญา)</th><th>กู้ทบ เงินส่วนต่างที่ได้รับ (บาท)</th><th>รวมสัญญา</th><th>รวมยอดปล่อย (บาท)</th></tr></thead><tbody>
       ${nwConYearRows(U).map(([y, lbl, t, kind]) => { const q = all(t), st = kind === "s" ? ' style="background:var(--faint);font-weight:700"' : kind === "t" ? ' style="font-weight:700;border-top:2px solid var(--navy,#0a2a66)"' : "";
         return `<tr${st}><td class="l">${kind === "k" && lbl === "สามัญ" ? `<b>${y}</b>` : ""}</td><td class="l">${esc(lbl)}${kind === "k" && t.fut ? ` <span class="pill amb" title="รวมที่ลงล่วงหน้า ${t.fut} สัญญา — ยังไม่ถึงงวดที่ 1">ล่วงหน้า ${t.fut}</span>` : ""}</td>
