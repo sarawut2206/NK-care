@@ -710,7 +710,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-162</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-163</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -5698,34 +5698,52 @@ function nwShChart(c){
     <rect x="${X(k70) - 1}" y="${T}" width="2" height="${H - T - Bm}" fill="#C4570F" opacity=".5"/><text x="${X(k70)}" y="${T + 10}" text-anchor="middle" font-size="11" font-weight="700" fill="#C4570F">70% (งวด ${c.k})</text>
     <path d="${line("bal")}" fill="none" stroke="#C0202E" stroke-width="2.6"/><path d="${line("cum")}" fill="none" stroke="#1BAF7A" stroke-width="2.6"/>${xl}${hov}</svg>`;
 }
+function nwShCap(M, N, tgt, o){                              // ผู้กู้ส่งไหว M บาท/เดือน → วงเงินสูงสุดที่ผ่านกฎ (หุ้นประจำน้อยที่สุดที่ผ่าน ปัดขึ้นทีละ 50)
+  const cv = B => { const P = maxPrincipal(M, B, N, RATE, false); return P > 1000 ? {P, c:nwShCalc(Math.floor(P / 100) * 100, B, N, o)} : {P:0, c:{cover:0}}; };
+  let lo = 0, hi = M * 0.85; if(cv(hi).c.cover < tgt) return null;
+  for(let q = 0; q < 50; q++){ const mid = (lo + hi) / 2; if(cv(mid).c.cover < tgt) lo = mid; else hi = mid; }
+  let B = Math.ceil(hi / 50) * 50, r = cv(B); while(r.c.cover < tgt && B < M){ B += 50; r = cv(B); } return {B, P:Math.floor(r.P / 100) * 100, c:r.c};
+}
 function drawNWShc(){
   const el = $("tab32"); if(!el) return;
   if(tab !== 32){ el.innerHTML = ""; return; }
-  const Q = S.shc || (S.shc = {P:100000, N:72, B:500, pct:70, tgt:1.1, D0:0}), P = Math.max(1000, +Q.P || 100000), N = Math.min(72, Math.max(6, Math.round(+Q.N) || 72)), B0v = Math.max(0, +Q.B || 0), pct = Math.min(95, Math.max(30, +Q.pct || 70)), tgt = +Q.tgt || 1.1, D0 = Math.max(0, +Q.D0 || 0);
+  const Q = S.shc || (S.shc = {P:100000, N:72, B:500, pct:70, tgt:1.1, D0:0, M:5000}), P = Math.max(1000, +Q.P || 100000), N = Math.min(72, Math.max(3, Math.round(+Q.N) || 72)), B0v = Math.max(0, +Q.B || 0), pct = Math.min(95, Math.max(30, +Q.pct || 70)), tgt = +Q.tgt || 1.1, D0 = Math.max(0, +Q.D0 || 0), Mcap = Math.max(500, +Q.M || 5000);
   const o = {pct, D0:0}, cur = nwShCalc(P, B0v, N, {pct, D0}), Bs = nwShSolve(P, N, tgt, o), solved = Bs === null ? null : nwShCalc(P, Bs, N, {pct, D0}), pass = cur.cover >= tgt - 1e-9;
   const rec = solved || cur, up = Math.max(0, Math.ceil((tgt * cur.rk.bal - (cur.rk.cum - D0)) / 500) * 500);
-  const Bopts = [400, 500, 600, 700, 800, 900, 1000, 1200], Nopts = [36, 48, 60, 72], cl = v => v >= tgt ? "background:#E3F6EC;color:#0F6B4A" : v >= 1 ? "background:#FFF4DC;color:#8A5A00" : "background:#FDE7E7;color:#B4452B";
-  const mat = Bopts.map(b => `<tr><td class="l"><b>${B0(b)}</b>${b === B0v ? ' <span class="pill">ปัจจุบัน</span>' : ""}</td>${Nopts.map(n => { const c = nwShCalc(P, b, n, {pct, D0}); return `<td class="amt" style="${cl(c.cover)}"><b>${Math.round(c.cover * 100)}%</b><div class="hint" style="color:inherit">ผ่อน ${B0(c.M)}</div></td>`; }).join("")}</tr>`).join("");
+  const Bopts = [400, 500, 600, 700, 800, 900, 1000, 1200, 1500, 2000], Nopts = [...new Set([12, 24, 36, 48, 60, 72, N])].sort((u, v) => u - v);
+  const cl = v => v >= tgt ? "background:#E3F6EC;color:#0F6B4A" : v >= 1 ? "background:#FFF4DC;color:#8A5A00" : "background:#FDE7E7;color:#B4452B";
+  const mat = Bopts.map(b => `<tr><td class="l"><b>${B0(b)}</b>${b === B0v ? ' <span class="pill">ปัจจุบัน</span>' : ""}</td>${Nopts.map(n => { const c = nwShCalc(P, b, n, {pct, D0}); return `<td class="amt" style="${cl(c.cover)}${n === N ? ";outline:2px solid var(--brand)" : ""}"><b>${Math.round(c.cover * 100)}%</b><div class="hint" style="color:inherit">ผ่อน ${B0(c.M)}</div></td>`; }).join("")}</tr>`).join("");
+  const reqRow = Nopts.map(n => { const bb = nwShSolve(P, n, tgt, o), c = bb === null ? null : nwShCalc(P, bb, n, {pct, D0}); return {n, bb, c}; });
+  const reqHtml = `<tr class="tot"><td class="l"><b>หุ้นประจำที่ต้องใช้ (≥ ${Math.round(tgt * 100)}%)</b></td>${reqRow.map(r => `<td class="amt"${r.n === N ? ' style="outline:2px solid var(--brand)"' : ""}><b>${r.bb === null ? "—" : B0(r.bb)}</b>${r.c ? `<div class="hint">ผ่อน ${B0(r.c.M)}</div>` : ""}</td>`).join("")}</tr>
+    <tr><td class="l">หุ้นรวมต่อยอดส่ง (เฉลี่ย)</td>${reqRow.map(r => `<td class="amt">${r.c ? Math.round(r.c.rows.reduce((u, x) => u + x.sh, 0) / r.c.rows.length / r.c.M * 100) + "%" : "—"}</td>`).join("")}</tr>
+    <tr><td class="l">หรือคงหุ้นประจำ ${B0(B0v)} + หุ้นแรกเข้า</td>${Nopts.map(n => { const c = nwShCalc(P, B0v, n, {pct, D0:0}), d = Math.max(0, Math.ceil((tgt * c.rk.bal - c.rk.cum) / 500) * 500); return `<td class="amt">${d ? B0(d) : "ไม่ต้อง"}</td>`; }).join("")}</tr>`;
+  const capRows = [12, 24, 36, 48, 60, 72].map(n => { const r = nwShCap(Mcap, n, tgt, o); return r ? `<tr><td class="l"><b>${n} งวด</b></td><td class="amt"><b>${B0(r.P)}</b></td><td class="amt">${B0(r.B)}</td><td class="amt">${B0(r.c.M)}</td><td class="amt">${Math.round(r.c.cover * 100)}%</td><td class="amt">${r.c.be || "—"}</td></tr>` : `<tr><td class="l"><b>${n} งวด</b></td><td class="hint" colspan="5">ยอดส่งนี้ไม่พอ</td></tr>`; }).join("");
   const sel = (k, v, list) => `<select data-shc="${k}">${list.map(q => `<option value="${q[0]}" ${String(q[0]) === String(v) ? "selected" : ""}>${q[1]}</option>`).join("")}</select>`;
-  const keyRows = [1, 6, 12, 24, 36, 48, 60, 72].filter(m => m <= N).concat([rec.k, rec.be].filter(Boolean)).filter((m, i, a) => a.indexOf(m) === i).sort((a, b) => a - b);
+  const keyRows = [1, 3, 6, 12, 18, 24, 36, 48, 60, 72].filter(m => m <= N).concat([rec.k, rec.be].filter(Boolean)).filter((m, i, a) => a.indexOf(m) === i).sort((a, b) => a - b);
+  const rule = (P / N), rl = Math.round(0.27 * rule / 50) * 50, rh = Math.round(0.31 * rule / 50) * 50;
   el.innerHTML = `<div class="nwscreen"><div class="ds-head"><div><div class="eyebrow" style="margin:0">จำลองหุ้นค้ำกู้ — กฎ «ส่งถึง ${pct}% แล้วไม่ขาดทุน»</div>
-      <div class="hint">ใส่วงเงินที่จะกู้ โปรแกรมคำนวณ <b>หุ้นประจำคงที่</b> ที่ต้องส่งให้หุ้นในสัญญาครอบคลุมหนี้เมื่อถึง ${pct}% ของงวด · หุ้นเพิ่มยังเป็นขั้นบันไดตามเดิม (8% → 18% ของยอดงวด) · ไม่นับเงินสะสมเดิมของผู้กู้</div></div></div>
+      <div class="hint">ใส่วงเงินและ <b>จำนวนงวดที่ผู้กู้ต้องการ (3–72 งวด)</b> โปรแกรมคำนวณ <b>หุ้นประจำคงที่</b> ที่ทำให้หุ้นในสัญญาครอบคลุมหนี้เมื่อถึง ${pct}% ของงวด · หุ้นเพิ่มยังเป็นขั้นบันไดตามเดิม (8% → 18% ของยอดงวด) · ไม่นับเงินสะสมเดิมของผู้กู้</div></div></div>
     <div class="card"><div class="pf">
       <div><label>วงเงินที่จะกู้ (บาท)</label><input type="number" step="1000" min="1000" data-shc="P" value="${P}"></div>
-      <div><label>จำนวนงวด</label>${sel("N", N, [36, 48, 60, 72].map(n => [n, n + " งวด"]).concat([6, 12, 18, 24, 30, 42, 54, 66].filter(n => n === N).map(n => [n, n + " งวด"])))}</div>
+      <div><label>จำนวนงวด (3–72)</label><input type="number" min="3" max="72" data-shc="N" value="${N}"></div>
       <div><label>หุ้นประจำเดิม (บาท/เดือน)</label><input type="number" step="50" min="0" data-shc="B" value="${B0v}"></div>
       <div><label>ตรวจที่ (% ของจำนวนงวด)</label><input type="number" min="30" max="95" data-shc="pct" value="${pct}"></div>
       <div><label>ต้องครอบคลุมหนี้ไม่น้อยกว่า</label>${sel("tgt", tgt, [[1, "100% (พอดี)"], [1.1, "110% (เผื่อ — แนะนำ)"], [1.2, "120%"]])}</div>
-      <div><label>หุ้นแรกเข้าที่หักตอนทำสัญญา (บาท)</label><input type="number" step="500" min="0" data-shc="D0" value="${D0}"></div></div></div>
+      <div><label>หุ้นแรกเข้าที่หักตอนทำสัญญา (บาท)</label><input type="number" step="500" min="0" data-shc="D0" value="${D0}"></div></div>
+      <div class="bar" style="margin-top:6px;flex-wrap:wrap"><span class="hint">เลือกงวดเร็ว:</span>${[12, 18, 24, 36, 48, 60, 72].map(n => `<button class="${n === N ? "" : "ghost "}sm" data-shcn="${n}">${n}</button>`).join("")}</div></div>
     <div class="stats" style="margin:0 0 10px">
-      <div class="stat" style="border-top-color:${pass ? "var(--green)" : "var(--red)"}"><div class="k">ถ้าส่งหุ้นประจำเดิม ${B0(B0v)}/เดือน</div><div class="v" style="color:${pass ? "#0F6B4A" : "#B4452B"}">${Math.round(cur.cover * 100)}% <small>${pass ? "ผ่าน" : "ไม่ผ่าน"}</small></div>
+      <div class="stat" style="border-top-color:${pass ? "var(--green)" : "var(--red)"}"><div class="k">ถ้าส่งหุ้นประจำเดิม ${B0(B0v)}/เดือน · ${N} งวด</div><div class="v" style="color:${pass ? "#0F6B4A" : "#B4452B"}">${Math.round(cur.cover * 100)}% <small>${pass ? "ผ่าน" : "ไม่ผ่าน"}</small></div>
         <div class="hint">ณ งวด ${cur.k}: หุ้น ${B0(cur.rk.cum)} / หนี้เหลือ ${B0(cur.rk.bal)} · ${cur.gap > 0 ? "ขาด " + B0(cur.gap) : "เกิน " + B0(-cur.gap)} · ผ่อน ${B0(cur.M)}/เดือน</div></div>
       ${solved ? `<div class="stat" style="border-top-color:var(--brand)"><div class="k">${pass ? "ขั้นต่ำที่ยังผ่าน" : "ต้องปรับหุ้นประจำเป็น"}</div><div class="v" style="color:var(--brand)">${B0(Bs)} <small>บาท/เดือน คงที่</small></div>
         <div class="hint">${Bs > B0v ? `เพิ่มจากเดิม +${B0(Bs - B0v)}` : Bs < B0v ? `ลดได้จากเดิม ${B0(B0v - Bs)}` : "เท่าเดิม"} · ผ่อนใหม่ ${B0(solved.M)}/เดือน (${Bs > B0v ? "+" : ""}${B0(solved.M - cur.M)})</div></div>
-      <div class="stat"><div class="k">ผลเมื่อใช้ ${B0(Bs)}</div><div class="v">${Math.round(solved.cover * 100)}% <small>ณ งวด ${solved.k}</small></div><div class="hint">คุ้มทุนตั้งแต่งวด ${solved.be} (${Math.round(solved.be / N * 100)}% ของสัญญา) · หุ้นสิ้นสัญญา ${B0(solved.end)}</div></div>` : '<div class="stat" style="border-top-color:var(--red)"><div class="k">หุ้นประจำที่ต้องใช้</div><div class="v" style="color:#B4452B">สูงเกินไป</div><div class="hint">ลดวงเงินหรือเพิ่มหุ้นแรกเข้า</div></div>'}
+      <div class="stat"><div class="k">ผลเมื่อใช้ ${B0(Bs)}</div><div class="v">${Math.round(solved.cover * 100)}% <small>ณ งวด ${solved.k}</small></div><div class="hint">คุ้มทุนตั้งแต่งวด ${solved.be} (${Math.round(solved.be / N * 100)}% ของสัญญา) · หุ้นสิ้นสัญญา ${B0(solved.end)}</div></div>` : '<div class="stat" style="border-top-color:var(--red)"><div class="k">หุ้นประจำที่ต้องใช้</div><div class="v" style="color:#B4452B">สูงเกินไป</div><div class="hint">ลดวงเงิน ยืดงวด หรือเพิ่มหุ้นแรกเข้า</div></div>'}
       ${!pass ? `<div class="stat"><div class="k">ทางเลือก: คงหุ้นประจำ ${B0(B0v)} หักหุ้นแรกเข้า</div><div class="v">${B0(up)} <small>บาท</small></div><div class="hint">≈ ${(up / P * 100).toFixed(1)}% ของวงเงิน · ผ่อนเท่าเดิม ${B0(cur.M)} · รับเงินสุทธิ ${B0(P - up)}</div></div>` : ""}</div>
-    <div class="card"><div class="ds-ttl">เปรียบเทียบหุ้นประจำ × จำนวนงวด <span class="hint">ครอบคลุมหนี้ ณ ${pct}% ของงวด · วงเงิน ${B0(P)}${D0 ? ` · หุ้นแรกเข้า ${B0(D0)}` : ""} · เขียว ≥ ${Math.round(tgt * 100)}% · เหลือง 100–${Math.round(tgt * 100)}% · แดง &lt; 100%</span></div>
-      <div class="tbl"><table><thead><tr><th class="l">หุ้นประจำ/เดือน</th>${Nopts.map(n => `<th>${n} งวด</th>`).join("")}</tr></thead><tbody>${mat}</tbody></table></div></div>
+    <div class="keybox" style="margin:0 0 10px;font-size:13px"><b>สูตรกะประมาณ (ใช้ได้กับทุกจำนวนงวด):</b> หุ้นประจำต่อเดือน ≈ <b>27–31% ของเงินต้นเฉลี่ยต่อเดือน</b> (วงเงิน ÷ จำนวนงวด = ${B0(rule)}) → ประมาณ <b>${B0(rl)}–${B0(rh)}</b> บาท · รวมหุ้นประจำ+หุ้นเพิ่ม ≈ 27–30% ของยอดส่งทุกเดือน · งวดสั้น (≤ 24) ต้องหุ้นประจำสูงมาก จึงควรใช้หุ้นแรกเข้า ลดวงเงิน หรือเพิ่มผู้ค้ำแทน (ตัวเลขจริงดูตารางด้านล่าง)</div>
+    <div class="card"><div class="ds-ttl">ทุกจำนวนงวด: หุ้นประจำที่ต้องใช้ <span class="hint">วงเงิน ${B0(P)} · ครอบคลุม ณ ${pct}% ของงวด${D0 ? ` · หุ้นแรกเข้า ${B0(D0)}` : ""} · เขียว ≥ ${Math.round(tgt * 100)}% · เหลือง 100–${Math.round(tgt * 100)}% · แดง &lt; 100% · กรอบน้ำเงิน = งวดที่เลือก</span></div>
+      <div class="tbl"><table><thead><tr><th class="l">หุ้นประจำ/เดือน</th>${Nopts.map(n => `<th>${n} งวด</th>`).join("")}</tr></thead><tbody>${mat}${reqHtml}</tbody></table></div></div>
+    <div class="card"><div class="ds-ttl">ผู้กู้ส่งไหวเดือนละเท่าไร → กู้ได้สูงสุดเท่าไร (ตามกฎ) <span class="hint">คำนวณหุ้นประจำน้อยที่สุดที่ผ่านเป้า ${Math.round(tgt * 100)}% แล้วหาวงเงินสูงสุดที่ยอดส่งนี้รองรับ</span></div>
+      <div class="bar" style="flex-wrap:wrap;margin:0 0 6px"><label><b>ยอดส่งรวมต่อเดือนที่ผู้กู้ไหว (บาท)</b> <input type="number" step="500" min="500" data-shc="M" value="${Mcap}" style="width:130px"></label><span class="hint">รวมดอกเบี้ย + เงินต้น + หุ้น (ยอดที่หักจากเงินเดือนเพื่อกลุ่ม)</span></div>
+      <div class="tbl"><table><thead><tr><th class="l">จำนวนงวด</th><th>วงเงินสูงสุด (บาท)</th><th>หุ้นประจำที่ต้องใช้</th><th>ผ่อนจริง/เดือน</th><th>ครอบคลุม ณ ${pct}%</th><th>คุ้มทุนงวดที่</th></tr></thead><tbody>${capRows}</tbody></table></div></div>
     <div class="card"><div class="ds-ttl">หนี้คงเหลือ เทียบ หุ้นสะสม <span class="hint">หุ้นประจำ ${B0(rec.B)} · ${N} งวด · ผ่อน ${B0(rec.M)}/เดือน · งวดที่ 1: ดอกเบี้ย ${B0(rec.first.int)} + เงินต้น ${B0(rec.first.pri)} + หุ้นประจำ ${B0(rec.first.base)} + หุ้นเพิ่ม ${B0(rec.first.extra)}</span>
         <span class="ds-lg"><i style="background:#C0202E"></i>หนี้คงเหลือ <i style="background:#1BAF7A"></i>หุ้นสะสมในสัญญา</span></div>
       ${nwShChart(rec)}
@@ -5734,7 +5752,8 @@ function drawNWShc(){
       <div class="bar" style="margin-top:8px;flex-wrap:wrap"><button class="ghost sm" id="shc_csv">ส่งออกตารางผ่อน CSV</button><button class="ghost sm" id="shc_use" title="ตั้งหุ้นประจำเดิมเป็นค่าที่แนะนำ แล้วคำนวณซ้ำ" ${solved && Bs !== B0v ? "" : "disabled"}>ใช้หุ้นประจำ ${solved ? B0(Bs) : "—"} เป็นค่าตั้งต้น</button></div>
       <p class="hint" style="margin:8px 0 0"><b>ช่วงก่อนถึง ${pct}% ยังไม่ปลอดภัยจากหุ้นอย่างเดียว</b> ต้องพึ่งผู้ค้ำ (สามัญ 2 คน) · ผู้กู้หนีหลังจุดที่หุ้นเกินหนี้ กลุ่มไม่ขาดทุนเงินต้น (ยังไม่นับดอกเบี้ยค้าง) · การหักหุ้นชำระหนี้ต้องมีข้อยินยอมเป็นหนังสือจากผู้กู้ และเป็นเรื่องที่ทนายควรตรวจ · ยอดผ่อนใหม่ต้องผ่านเกณฑ์เงินเหลือในสลิป ≥ 30%</p></div></div><div class="nwdoc" id="nwdoc"></div>`;
   const set = (k, v) => { S.shc[k] = v; drawNWShc(); };
-  el.querySelectorAll("[data-shc]").forEach(i => i.addEventListener("change", () => { const k = i.dataset.shc; set(k, ["tgt"].includes(k) ? +i.value : k === "N" ? +i.value : +i.value || 0); }));
+  el.querySelectorAll("[data-shc]").forEach(i => i.addEventListener("change", () => { const k = i.dataset.shc; set(k, k === "N" ? Math.min(72, Math.max(3, Math.round(+i.value) || 72)) : +i.value || 0); }));
+  el.querySelectorAll("[data-shcn]").forEach(b => b.onclick = () => set("N", +b.dataset.shcn));
   if($("shc_use")) $("shc_use").onclick = () => set("B", Bs);
   if($("shc_csv")) $("shc_csv").onclick = () => csvOut("kbk-จำลองหุ้นค้ำกู้.csv", [[`วงเงิน ${f2(P)} · ${N} งวด · หุ้นประจำ ${f2(rec.B)} · ผ่อน ${f2(rec.M)}`, ["งวด", "ยอดส่ง", "เงินต้น", "ดอกเบี้ย", "หุ้นประจำ", "หุ้นเพิ่ม", "หนี้คงเหลือ", "หุ้นสะสม", "ครอบคลุม %"],
     rec.rows.map(r => [r.t, f2(r.int + r.pri + r.sh), f2(r.pri), f2(r.int), f2(r.base), f2(r.extra), f2(r.bal), f2(r.cum), r.bal > 0.005 ? Math.round(r.cover * 100) : ""])]]);
