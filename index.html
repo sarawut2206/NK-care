@@ -696,7 +696,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-151</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-152</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -4411,31 +4411,36 @@ function nwConStat(r){
   if(r.fut && !(st.debt > 0.005)) return '<span class="pill amb" title="ลงล่วงหน้าไว้ — ยังไม่ถึงงวดที่ 1">รอถึงงวด</span>';
   return st.missed ? `<span class="pill red">ค้าง ${st.missed} งวด</span>` : '<span class="pill grn">ปกติ</span>';
 }
-/* สรุปรายปี: จำนวนสัญญาที่ทำ และยอดเงินปล่อยสินเชื่อแต่ละประเภท
-   • กู้ใหม่ = ยอดเต็ม · กู้ทบ = เฉพาะเงินส่วนต่างที่ได้รับหลังหักหนี้เก่า (นับ ๑ สัญญา) · ปี = ปีของวันที่ส่งงวดที่ 1 ของสัญญานั้น
-   • สัญญาเดียวตั้งแต่ต้น (ไม่พบกู้ทบ) ใช้วันที่/วงเงินจากทะเบียนสัญญา · สัญญาก่อนกู้ทบครั้งแรกที่ไม่ทราบปี (ก่อน พ.ค.68) นับแยก ไม่รวมยอด */
+/* สรุปรายปี: สัญญาที่ทำในแต่ละปี แยก «สัญญาใหม่» (ยอดเต็ม) กับ «กู้ทบ» (เฉพาะเงินส่วนต่างที่ได้รับหลังหักหนี้เก่า) ตามประเภทสินเชื่อ
+   ปี = ปีของวันที่ส่งงวดที่ 1 · สัญญาที่ไม่ทราบวันที่จริง (ทำก่อนข้อมูลเริ่ม พ.ค.68 และไม่มีสัญญา/วันที่ที่กรอกไว้) แยกเป็นแถว «ก่อน พ.ค.68» นับจำนวนอย่างเดียว ไม่ใส่ยอด */
 function nwConYearSum(R){
-  R = R || nwConRows(); const Y = {}, T = () => ({n:0, amt:0, refi:0, refiAmt:0, fut:0}), at = (y, k) => ((Y[y] = Y[y] || {sam:T(), dk:T()})[k]);
-  let unk = 0, est = 0;
-  const rowOf = (x, k) => R.find(r => r.x.no === x.no && r.k === k);
-  NW.people().forEach(x => ["sam", "dk"].forEach(k => { const a = nwAcctF(x, k), evs = nwLoanEvents(x, a), r = rowOf(x, k);
-    evs.forEach(e => { const t = at(nwConYear(nwDate5(e.p)), k), refi = e.D > 0.005; t.n++; t.amt = r2(t.amt + e.amt); if(refi){ t.refi++; t.refiAmt = r2(t.refiAmt + e.amt); } if(e.fut) t.fut++; });
-    if(evs.length){ if(evs[0].D > 0.005) unk++; }
-    else if(r){ const c = r.c, t = at(nwConYear((c && c.d) || r.d), k); t.n++; t.amt = r2(t.amt + (c && +c.amt ? +c.amt : r.g.amt || 0)); if(!c || c.conf !== "ok") est++; if(r.fut) t.fut++; } }));
-  const ys = Object.keys(Y).map(Number).sort(), z = () => ({n:0, amt:0, refi:0, refiAmt:0, fut:0}), tot = {sam:z(), dk:z()};
-  ys.forEach(y => ["sam", "dk"].forEach(k => { const t = Y[y][k], u = tot[k]; u.n += t.n; u.amt = r2(u.amt + t.amt); u.refi += t.refi; u.refiAmt = r2(u.refiAmt + t.refiAmt); u.fut += t.fut; }));
-  return {Y, ys, tot, unk, est};
+  R = R || nwConRows(); const Y = {}, T = () => ({nNew:0, aNew:0, nRef:0, aRef:0, fut:0}), at = (y, k) => ((Y[y] = Y[y] || {sam:T(), dk:T()})[k]), old = {sam:0, dk:0};
+  NW.people().forEach(x => ["sam", "dk"].forEach(k => { const a = nwAcctF(x, k), evs = nwLoanEvents(x, a), r = R.find(q => q.x.no === x.no && q.k === k);
+    evs.forEach(e => { const t = at(nwConYear(nwDate5(e.p)), k); if(e.D > 0.005){ t.nRef++; t.aRef = r2(t.aRef + e.amt); } else { t.nNew++; t.aNew = r2(t.aNew + e.amt); } if(e.fut) t.fut++; });
+    if(evs.length){ if(evs[0].D > 0.005) old[k]++; }                                           // สัญญาเดิมก่อนกู้ทบครั้งแรก — ทำก่อน พ.ค.68
+    else if(r){ const c = r.c;
+      if(c && !nwConAutoD(c) && c.d){ const t = at(nwConYear(c.d), k); t.nNew++; t.aNew = r2(t.aNew + (+c.amt || 0)); if(r.fut) t.fut++; }      // มีสัญญาจริง/วันที่ที่กรอกเอง
+      else old[k]++; } }));                                                                      // สัญญาเดียวตั้งแต่ต้น ไม่ทราบวันที่ — ก่อน พ.ค.68
+  const ys = Object.keys(Y).map(Number).sort(), z = () => T(), tot = {sam:z(), dk:z()};
+  ys.forEach(y => ["sam", "dk"].forEach(k => { const t = Y[y][k], u = tot[k]; ["nNew", "aNew", "nRef", "aRef", "fut"].forEach(f => u[f] = r2(u[f] + t[f])); }));
+  return {Y, ys, tot, old};
 }
-function nwConYearHTML(S0){
-  const U = S0 || nwConYearSum(); if(!U.ys.length) return "";
-  const cell = t => `<td class="amt">${t.n || "—"}${t.refi ? `<div class="hint">กู้ทบ ${t.refi}</div>` : ""}</td><td class="amt">${t.n ? B(t.amt) : "—"}${t.refi ? `<div class="hint">ส่วนต่าง ${B0(t.refiAmt)}</div>` : ""}</td>`;
-  const both = t => ({n:t.sam.n + t.dk.n, amt:r2(t.sam.amt + t.dk.amt), refi:t.sam.refi + t.dk.refi, refiAmt:r2(t.sam.refiAmt + t.dk.refiAmt), fut:t.sam.fut + t.dk.fut});
-  return `<div class="card"><div class="eyebrow">สรุปรายปี — สัญญาที่ทำและยอดปล่อยสินเชื่อ</div>
-    <p class="hint" style="margin:0 0 6px">นับทุกสัญญาที่ทำในปีนั้น (ปี = ปีของวันที่ส่งงวดที่ 1) · <b>ยอดปล่อย</b>: กู้ใหม่ = ยอดเต็ม · <b>กู้ทบ = เฉพาะเงินส่วนต่างที่ได้รับหลังหักหนี้เก่า</b> · ตรวจกู้ทบจากหนี้ที่เพิ่มขึ้น${U.est ? ` · สัญญาเดียวตั้งแต่ต้นที่ยังไม่มีสัญญาจริง ${U.est} ฉบับใช้วันที่/วงเงินประมาณ` : ""}${U.unk ? ` · ไม่รวมสัญญาก่อนกู้ทบครั้งแรกที่ไม่ทราบปี (ก่อน พ.ค.68) ${U.unk} ฉบับ` : ""}</p>
-    <div class="tbl"><table><thead><tr><th rowspan="2" class="l">ปี</th><th colspan="2">สินเชื่อสามัญ</th><th colspan="2">สินเชื่อดูแลกัน</th><th colspan="2">รวม</th></tr>
-      <tr><th>สัญญา</th><th>ยอดปล่อย (บาท)</th><th>สัญญา</th><th>ยอดปล่อย (บาท)</th><th>สัญญา</th><th>ยอดปล่อย (บาท)</th></tr></thead><tbody>
-      ${U.ys.map(y => `<tr><td class="l"><b>${y}</b>${U.Y[y].sam.fut + U.Y[y].dk.fut ? ` <span class="pill amb" title="รวมที่ลงล่วงหน้า ${U.Y[y].sam.fut + U.Y[y].dk.fut} สัญญา">ล่วงหน้า ${U.Y[y].sam.fut + U.Y[y].dk.fut}</span>` : ""}</td>${cell(U.Y[y].sam)}${cell(U.Y[y].dk)}${cell(both(U.Y[y]))}</tr>`).join("")}
-      <tr class="tot"><td class="l"><b>รวมทุกปี</b></td>${cell(U.tot.sam)}${cell(U.tot.dk)}${cell(both(U.tot))}</tr></tbody></table></div></div>`;
+const nwConYAdd = (u, v) => ({nNew:u.nNew + v.nNew, aNew:r2(u.aNew + v.aNew), nRef:u.nRef + v.nRef, aRef:r2(u.aRef + v.aRef), fut:u.fut + v.fut});
+function nwConYearRows(U){                                // แถวตาราง: [ปี, ประเภท, ข้อมูล, ชนิดแถว] ปีละ ๓ แถว (สามัญ · ดูแลกัน · รวมปี) + รวมทุกปี
+  const rows = [];
+  U.ys.forEach(y => { const t = U.Y[y]; rows.push([y, "สามัญ", t.sam, "k"], [y, "ดูแลกัน", t.dk, "k"], [y, "รวมปี " + y, nwConYAdd(t.sam, t.dk), "s"]); });
+  rows.push(["", "รวมทุกปี", nwConYAdd(U.tot.sam, U.tot.dk), "t"]); return rows;
+}
+function nwConYearHTML(U){
+  U = U || nwConYearSum(); if(!U.ys.length && !(U.old.sam + U.old.dk)) return "";
+  const n = (v, f) => v ? v : "—", m = v => v ? B(v) : "—", all = t => ({n:t.nNew + t.nRef, a:r2(t.aNew + t.aRef)});
+  return `<div class="card"><div class="eyebrow">สรุปรายปี — สัญญาที่ทำและยอดเงินปล่อยสินเชื่อ</div>
+    <p class="hint" style="margin:0 0 8px"><b>อ่านอย่างไร:</b> แต่ละปีแยกตามประเภทสินเชื่อ · <b>สัญญาใหม่</b> = กู้ครั้งแรก นับยอดเต็ม · <b>กู้ทบ</b> = กู้เพิ่มทับหนี้เดิม นับเฉพาะ<b>เงินส่วนต่างที่ได้รับจริง</b> (ยอดกู้ใหม่ − หนี้เก่าที่หักออก) · ปี = ปีของวันที่ส่งงวดที่ 1 · กู้ทบ ๑ ครั้ง = ๑ สัญญา · ระบบตรวจกู้ทบจากหนี้ที่เพิ่มขึ้น</p>
+    <div class="tbl"><table><thead><tr><th class="l">ปี</th><th class="l">ประเภท</th><th>สัญญาใหม่ (สัญญา)</th><th>สัญญาใหม่ ยอดเต็ม (บาท)</th><th>กู้ทบ (สัญญา)</th><th>กู้ทบ เงินส่วนต่างที่ได้รับ (บาท)</th><th>รวมสัญญา</th><th>รวมยอดปล่อย (บาท)</th></tr></thead><tbody>
+      ${nwConYearRows(U).map(([y, lbl, t, kind]) => { const q = all(t), st = kind === "s" ? ' style="background:var(--faint);font-weight:700"' : kind === "t" ? ' style="font-weight:700;border-top:2px solid var(--navy,#0a2a66)"' : "";
+        return `<tr${st}><td class="l">${kind === "k" && lbl === "สามัญ" ? `<b>${y}</b>` : ""}</td><td class="l">${esc(lbl)}${kind === "k" && t.fut ? ` <span class="pill amb" title="รวมที่ลงล่วงหน้า ${t.fut} สัญญา — ยังไม่ถึงงวดที่ 1">ล่วงหน้า ${t.fut}</span>` : ""}</td>
+          <td class="amt">${n(t.nNew)}</td><td class="amt">${m(t.aNew)}</td><td class="amt">${n(t.nRef)}</td><td class="amt">${m(t.aRef)}</td><td class="amt"><b>${n(q.n)}</b></td><td class="amt"><b>${m(q.a)}</b></td></tr>`; }).join("")}
+      ${U.old.sam + U.old.dk ? `<tr><td class="l"><b>ก่อน พ.ค.68</b></td><td class="l">สามัญ ${U.old.sam} · ดูแลกัน ${U.old.dk}</td><td class="hint" colspan="6" style="text-align:left">สัญญา ${U.old.sam + U.old.dk} ฉบับที่ทำก่อนข้อมูลเริ่ม (พ.ค.68) และยังไม่มีวันที่จริง — นับจำนวนอย่างเดียว ไม่ใส่ยอด · ใส่วันที่ทำสัญญาในตารางด้านล่าง สัญญานั้นจะย้ายเข้าปีที่ถูกต้อง</td></tr>` : ""}</tbody></table></div></div>`;
 }
 function nwConDashHTML(){
   const f = S.ncf || "all", fy = S.ncy || "all", q = (S.ncq || "").trim().toLowerCase(), all = nwConRows();
@@ -4480,12 +4485,12 @@ function nwConDashHTML(){
 /* เอกสารทะเบียนสัญญา (พิมพ์) — ๒๒ แถวต่อหน้า */
 function nwConYearPrint(){
   const U = nwConYearSum(); if(!U.ys.length) return "";
-  const c = t => `<td class="n">${t.n || "—"}${t.refi ? ` (กู้ทบ ${t.refi})` : ""}</td><td class="n">${t.n ? B(t.amt) : "—"}</td>`, both = t => ({n:t.sam.n + t.dk.n, amt:r2(t.sam.amt + t.dk.amt), refi:t.sam.refi + t.dk.refi});
-  return `<div class="kt1" style="margin-top:12px;font-size:1.05em">สรุปรายปี — สัญญาที่ทำและยอดปล่อยสินเชื่อ</div>
-    <table class="kt"><thead><tr><th rowspan="2" class="l">ปี</th><th colspan="2">สินเชื่อสามัญ</th><th colspan="2">สินเชื่อดูแลกัน</th><th colspan="2">รวม</th></tr><tr><th>สัญญา</th><th>ยอดปล่อย</th><th>สัญญา</th><th>ยอดปล่อย</th><th>สัญญา</th><th>ยอดปล่อย</th></tr></thead><tbody>
-    ${U.ys.map(y => `<tr><td class="l">${y}</td>${c(U.Y[y].sam)}${c(U.Y[y].dk)}${c(both(U.Y[y]))}</tr>`).join("")}
-    <tr class="hl"><td class="l"><b>รวม</b></td>${c(U.tot.sam)}${c(U.tot.dk)}${c(both(U.tot))}</tr></tbody></table>
-    <p class="kh">ยอดปล่อย: กู้ใหม่ = ยอดเต็ม · กู้ทบ = เฉพาะเงินส่วนต่างที่ได้รับหลังหักหนี้เก่า</p>`;
+  const n = v => v || "—", m = v => v ? B(v) : "—";
+  return `<div class="kt1" style="margin-top:12px;font-size:1.05em">สรุปรายปี — สัญญาที่ทำและยอดเงินปล่อยสินเชื่อ</div>
+    <table class="kt"><thead><tr><th class="l">ปี</th><th class="l">ประเภท</th><th>สัญญาใหม่ (สัญญา)</th><th>ยอดเต็ม</th><th>กู้ทบ (สัญญา)</th><th>เงินส่วนต่างที่ได้รับ</th><th>รวมสัญญา</th><th>รวมยอดปล่อย</th></tr></thead><tbody>
+    ${nwConYearRows(U).map(([y, lbl, t, kind]) => `<tr${kind === "k" ? "" : ' class="hl"'}><td class="l">${kind === "k" && lbl === "สามัญ" ? y : ""}</td><td class="l">${esc(lbl)}</td><td class="n">${n(t.nNew)}</td><td class="n">${m(t.aNew)}</td><td class="n">${n(t.nRef)}</td><td class="n">${m(t.aRef)}</td><td class="n">${n(t.nNew + t.nRef)}</td><td class="n">${m(r2(t.aNew + t.aRef))}</td></tr>`).join("")}
+    </tbody></table>
+    <p class="kh">สัญญาใหม่ = ยอดเต็ม · กู้ทบ = เฉพาะเงินส่วนต่างที่ได้รับหลังหักหนี้เก่า${U.old.sam + U.old.dk ? ` · ยังไม่รวมสัญญาก่อน พ.ค.68 ที่ไม่ทราบวันที่ ${U.old.sam + U.old.dk} ฉบับ` : ""}</p>`;
 }
 function nwConRegDoc(){ return nwLand(nwConRegDoc0()); }
 function nwConRegDoc0(){
@@ -5440,8 +5445,8 @@ function drawNWCon(){
   if($("nc_csv")) $("nc_csv").onclick = () => { const R = nwConRows();
     csvOut("kbk-ทะเบียนสัญญา.csv", [["ทะเบียนสัญญา", ["ลำดับ", "เลขที่สัญญา", "เลขสมาชิก", "ผู้กู้", "ประเภท", "วันที่ส่งงวดที่ 1", "วันที่ทำสัญญา", "วงเงิน", "งวด", "งวดละ", "ผู้ค้ำ 1", "ผู้ค้ำ 2", "หนี้คงเหลือ", "ค้าง (งวด)"],
       R.map((r, i) => { const c = r.c || {}; return [i + 1, c.code || "", r.x.no, r.x.name, NLP[r.k], r.fd, c.d || r.d || "", c.amt ? f2(c.amt) : "", c.terms || "", f2(r.a.inst || c.inst || 0), c.g1 ? c.g1 + " " + nwNmOf(c.g1) : "", c.g2 ? c.g2 + " " + nwNmOf(c.g2) : "", f2(r.st.debt), r.st.missed || 0]; })],
-      ["สรุปรายปี (ยอดปล่อย: กู้ทบ = เฉพาะเงินส่วนต่างที่ได้รับ)", ["ปี", "สามัญ สัญญา", "สามัญ ยอดปล่อย", "ดูแลกัน สัญญา", "ดูแลกัน ยอดปล่อย", "รวม สัญญา", "รวม ยอดปล่อย", "กู้ทบ (สัญญา)", "กู้ทบ (เงินส่วนต่าง)"],
-        (() => { const U = nwConYearSum(R); return U.ys.map(y => { const t = U.Y[y]; return [y, t.sam.n, f2(t.sam.amt), t.dk.n, f2(t.dk.amt), t.sam.n + t.dk.n, f2(t.sam.amt + t.dk.amt), t.sam.refi + t.dk.refi, f2(t.sam.refiAmt + t.dk.refiAmt)]; }); })()]]); };
+      ["สรุปรายปี (สัญญาใหม่ = ยอดเต็ม · กู้ทบ = เฉพาะเงินส่วนต่างที่ได้รับ)", ["ปี", "ประเภท", "สัญญาใหม่ (สัญญา)", "สัญญาใหม่ ยอดเต็ม", "กู้ทบ (สัญญา)", "กู้ทบ เงินส่วนต่างที่ได้รับ", "รวมสัญญา", "รวมยอดปล่อย"],
+        (() => { const U = nwConYearSum(R); return nwConYearRows(U).map(([y, lbl, t]) => [y, lbl, t.nNew, f2(t.aNew), t.nRef, f2(t.aRef), t.nNew + t.nRef, f2(t.aNew + t.aRef)]).concat(U.old.sam + U.old.dk ? [["ก่อน พ.ค.68", `สามัญ ${U.old.sam} ดูแลกัน ${U.old.dk}`, "", "", "", "", U.old.sam + U.old.dk, ""]] : []); })()]]); };
 }
 
 /* ============ เว็บใหม่: สรุปภาพรวม กบข.นข. สำหรับสมาชิก — ๑ หน้า A4 ============
