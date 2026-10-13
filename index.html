@@ -699,7 +699,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-153</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-154</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -4417,16 +4417,19 @@ function nwConStat(r){
 /* สรุปรายปี: สัญญาที่ทำในแต่ละปี แยก «สัญญาใหม่» (ยอดเต็ม) กับ «กู้ทบ» (เฉพาะเงินส่วนต่างที่ได้รับหลังหักหนี้เก่า) ตามประเภทสินเชื่อ
    ปี = ปีของวันที่ส่งงวดที่ 1 · สัญญาที่ไม่ทราบวันที่จริง (ทำก่อนข้อมูลเริ่ม พ.ค.68 และไม่มีสัญญา/วันที่ที่กรอกไว้) แยกเป็นแถว «ก่อน พ.ค.68» นับจำนวนอย่างเดียว ไม่ใส่ยอด */
 function nwConYearSum(R){
-  R = R || nwConRows(); const Y = {}, T = () => ({nNew:0, aNew:0, nRef:0, aRef:0, fut:0}), at = (y, k) => ((Y[y] = Y[y] || {sam:T(), dk:T()})[k]), old = {sam:0, dk:0};
+  R = R || nwConRows(); const Y = {}, T = () => ({nNew:0, aNew:0, nRef:0, aRef:0, fut:0}), at = (y, k) => ((Y[y] = Y[y] || {sam:T(), dk:T()})[k]), old = {sam:0, dk:0}, items = [];
   NW.people().forEach(x => ["sam", "dk"].forEach(k => { const a = nwAcctF(x, k), evs = nwLoanEvents(x, a), r = R.find(q => q.x.no === x.no && q.k === k);
-    evs.forEach(e => { const t = at(nwConYear(nwDate5(e.p)), k); if(e.D > 0.005){ t.nRef++; t.aRef = r2(t.aRef + e.amt); } else { t.nNew++; t.aNew = r2(t.aNew + e.amt); } if(e.fut) t.fut++; });
-    if(evs.length){ if(evs[0].D > 0.005) old[k]++; }                                           // สัญญาเดิมก่อนกู้ทบครั้งแรก — ทำก่อน พ.ค.68
+    evs.forEach(e => { const y = nwConYear(nwDate5(e.p)), t = at(y, k), refi = e.D > 0.005; if(refi){ t.nRef++; t.aRef = r2(t.aRef + e.amt); } else { t.nNew++; t.aNew = r2(t.aNew + e.amt); } if(e.fut) t.fut++;
+      items.push({y, d:nwDate5(e.p), x, k, kind:refi ? "refi" : "new", N:e.N, D:e.D, amt:e.amt, fut:!!e.fut}); });
+    if(evs.length){ if(evs[0].D > 0.005){ old[k]++; items.push({y:0, d:"", x, k, kind:"before", N:0, D:0, amt:0, fut:false}); } }                  // สัญญาเดิมก่อนกู้ทบครั้งแรก — ทำก่อน พ.ค.68
     else if(r){ const c = r.c;
-      if(c && !nwConAutoD(c) && c.d){ const t = at(nwConYear(c.d), k); t.nNew++; t.aNew = r2(t.aNew + (+c.amt || 0)); if(r.fut) t.fut++; }      // มีสัญญาจริง/วันที่ที่กรอกเอง
-      else old[k]++; } }));                                                                      // สัญญาเดียวตั้งแต่ต้น ไม่ทราบวันที่ — ก่อน พ.ค.68
+      if(c && !nwConAutoD(c) && c.d){ const y = nwConYear(c.d), t = at(y, k); t.nNew++; t.aNew = r2(t.aNew + (+c.amt || 0)); if(r.fut) t.fut++;      // มีสัญญาจริง/วันที่ที่กรอกเอง
+        items.push({y, d:c.d, x, k, kind:"new", N:+c.amt || 0, D:0, amt:+c.amt || 0, fut:!!r.fut}); }
+      else { old[k]++; items.push({y:0, d:"", x, k, kind:"single", N:0, D:0, amt:0, fut:false}); } } }));                  // สัญญาเดียวตั้งแต่ต้น ไม่ทราบวันที่ — ก่อน พ.ค.68
   const ys = Object.keys(Y).map(Number).sort(), z = () => T(), tot = {sam:z(), dk:z()};
   ys.forEach(y => ["sam", "dk"].forEach(k => { const t = Y[y][k], u = tot[k]; ["nNew", "aNew", "nRef", "aRef", "fut"].forEach(f => u[f] = r2(u[f] + t[f])); }));
-  return {Y, ys, tot, old};
+  items.sort((u, v) => (u.y || 9999) - (v.y || 9999) || String(u.d).localeCompare(String(v.d)) || String(u.x.no).localeCompare(String(v.x.no), "th", {numeric:true}));
+  return {Y, ys, tot, old, items};
 }
 const nwConYAdd = (u, v) => ({nNew:u.nNew + v.nNew, aNew:r2(u.aNew + v.aNew), nRef:u.nRef + v.nRef, aRef:r2(u.aRef + v.aRef), fut:u.fut + v.fut});
 function nwConYearRows(U){                                // แถวตาราง: [ปี, ประเภท, ข้อมูล, ชนิดแถว] ปีละ ๓ แถว (สามัญ · ดูแลกัน · รวมปี) + รวมทุกปี
@@ -4459,6 +4462,19 @@ function nwConYearCharts(U){
   const a = nwConYearChart(U, "n"), b = nwConYearChart(U, "a"); if(!a && !b) return "";
   return `<div class="cygrid">${a}${b}</div><div class="cyleg"><i style="background:#1F3A68"></i> สัญญาใหม่ (นับยอดเต็ม) <i style="background:#E07B2E;margin-left:14px"></i> กู้ทบ (นับเฉพาะเงินส่วนต่างที่ได้รับ)</div>`;
 }
+const NW_KIND = {new:"สัญญาใหม่", refi:"กู้ทบ", before:"สัญญาเดิม (ก่อนกู้ทบครั้งแรก)", single:"สัญญาเดียวตั้งแต่ต้น"};
+function nwConYearDetail(U){
+  const L = U.items; if(!L.length) return "";
+  const grp = [...new Set(L.map(i => i.y))], m = v => v ? B(v) : "—";
+  const row = i => `<tr><td class="l" style="white-space:nowrap">${i.d ? thDayS(i.d) : "—"}</td><td class="l"><span class="no">${esc(i.x.no)}</span><b>${esc(i.x.name)}</b></td><td class="l">${NLP[i.k]}</td>
+      <td class="l"><span class="pill ${i.kind === "refi" ? "amb" : i.kind === "new" ? "grn" : ""}">${NW_KIND[i.kind]}</span>${i.fut ? ' <span class="pill amb">ล่วงหน้า</span>' : ""}</td>
+      <td class="amt">${i.kind === "before" || i.kind === "single" ? "—" : m(i.N)}</td><td class="amt">${i.kind === "refi" ? m(i.D) : "—"}</td><td class="amt"><b>${i.kind === "before" || i.kind === "single" ? "—" : m(i.amt)}</b></td></tr>`;
+  return `<details class="opn" open style="margin-top:12px"><summary><b>รายละเอียดแต่ละสัญญา</b> (${L.filter(i => i.y).length} สัญญา${L.some(i => !i.y) ? ` · ก่อน พ.ค.68 ${L.filter(i => !i.y).length} ราย` : ""})</summary>
+    <p class="hint" style="margin:6px 0">เรียงตามวันที่ส่งงวดที่ 1 · <b>กู้ทบ</b>: ยอดสัญญาใหม่ − หนี้เก่าที่หักออก = เงินที่ได้รับจริง · <b>สัญญาใหม่</b>: ได้รับยอดเต็ม</p>
+    <div class="tbl" style="max-height:420px"><table><thead><tr><th class="l">วันที่ส่งงวดที่ 1</th><th class="l">ผู้กู้</th><th class="l">ประเภทสินเชื่อ</th><th class="l">ชนิด</th><th>ยอดสัญญา (บาท)</th><th>หักหนี้เก่า (บาท)</th><th>เงินที่ได้รับ (บาท)</th></tr></thead><tbody>
+      ${grp.map(y => `<tr><td colspan="7" class="l" style="background:var(--faint);font-weight:700">${y ? "ปี " + y : "ก่อน พ.ค.68 — ไม่ทราบวันที่ทำสัญญา (นับจำนวน ไม่มียอด)"}</td></tr>${L.filter(i => i.y === y).map(row).join("")}`).join("")}
+      </tbody></table></div></details>`;
+}
 function nwConYearHTML(U){
   U = U || nwConYearSum(); if(!U.ys.length && !(U.old.sam + U.old.dk)) return "";
   const n = (v, f) => v ? v : "—", m = v => v ? B(v) : "—", all = t => ({n:t.nNew + t.nRef, a:r2(t.aNew + t.aRef)});
@@ -4469,7 +4485,7 @@ function nwConYearHTML(U){
       ${nwConYearRows(U).map(([y, lbl, t, kind]) => { const q = all(t), st = kind === "s" ? ' style="background:var(--faint);font-weight:700"' : kind === "t" ? ' style="font-weight:700;border-top:2px solid var(--navy,#0a2a66)"' : "";
         return `<tr${st}><td class="l">${kind === "k" && lbl === "สามัญ" ? `<b>${y}</b>` : ""}</td><td class="l">${esc(lbl)}${kind === "k" && t.fut ? ` <span class="pill amb" title="รวมที่ลงล่วงหน้า ${t.fut} สัญญา — ยังไม่ถึงงวดที่ 1">ล่วงหน้า ${t.fut}</span>` : ""}</td>
           <td class="amt">${n(t.nNew)}</td><td class="amt">${m(t.aNew)}</td><td class="amt">${n(t.nRef)}</td><td class="amt">${m(t.aRef)}</td><td class="amt"><b>${n(q.n)}</b></td><td class="amt"><b>${m(q.a)}</b></td></tr>`; }).join("")}
-      ${U.old.sam + U.old.dk ? `<tr><td class="l"><b>ก่อน พ.ค.68</b></td><td class="l">สามัญ ${U.old.sam} · ดูแลกัน ${U.old.dk}</td><td class="hint" colspan="6" style="text-align:left">สัญญา ${U.old.sam + U.old.dk} ฉบับที่ทำก่อนข้อมูลเริ่ม (พ.ค.68) และยังไม่มีวันที่จริง — นับจำนวนอย่างเดียว ไม่ใส่ยอด · ใส่วันที่ทำสัญญาในตารางด้านล่าง สัญญานั้นจะย้ายเข้าปีที่ถูกต้อง</td></tr>` : ""}</tbody></table></div></div>`;
+      ${U.old.sam + U.old.dk ? `<tr><td class="l"><b>ก่อน พ.ค.68</b></td><td class="l">สามัญ ${U.old.sam} · ดูแลกัน ${U.old.dk}</td><td class="hint" colspan="6" style="text-align:left">สัญญา ${U.old.sam + U.old.dk} ฉบับที่ทำก่อนข้อมูลเริ่ม (พ.ค.68) และยังไม่มีวันที่จริง — นับจำนวนอย่างเดียว ไม่ใส่ยอด · ใส่วันที่ทำสัญญาในตารางด้านล่าง สัญญานั้นจะย้ายเข้าปีที่ถูกต้อง</td></tr>` : ""}</tbody></table></div>${nwConYearDetail(U)}</div>`;
 }
 function nwConDashHTML(){
   const f = S.ncf || "all", fy = S.ncy || "all", q = (S.ncq || "").trim().toLowerCase(), all = nwConRows();
@@ -5474,6 +5490,8 @@ function drawNWCon(){
   if($("nc_csv")) $("nc_csv").onclick = () => { const R = nwConRows();
     csvOut("kbk-ทะเบียนสัญญา.csv", [["ทะเบียนสัญญา", ["ลำดับ", "เลขที่สัญญา", "เลขสมาชิก", "ผู้กู้", "ประเภท", "วันที่ส่งงวดที่ 1", "วันที่ทำสัญญา", "วงเงิน", "งวด", "งวดละ", "ผู้ค้ำ 1", "ผู้ค้ำ 2", "หนี้คงเหลือ", "ค้าง (งวด)"],
       R.map((r, i) => { const c = r.c || {}; return [i + 1, c.code || "", r.x.no, r.x.name, NLP[r.k], r.fd, c.d || r.d || "", c.amt ? f2(c.amt) : "", c.terms || "", f2(r.a.inst || c.inst || 0), c.g1 ? c.g1 + " " + nwNmOf(c.g1) : "", c.g2 ? c.g2 + " " + nwNmOf(c.g2) : "", f2(r.st.debt), r.st.missed || 0]; })],
+      ["รายละเอียดแต่ละสัญญา", ["ปี", "วันที่ส่งงวดที่ 1", "เลขสมาชิก", "ผู้กู้", "ประเภทสินเชื่อ", "ชนิด", "ยอดสัญญา", "หักหนี้เก่า", "เงินที่ได้รับ", "หมายเหตุ"],
+        (() => { const U = nwConYearSum(R); return U.items.map(i => [i.y || "ก่อน พ.ค.68", i.d || "", i.x.no, i.x.name, NLP[i.k], NW_KIND[i.kind], i.N ? f2(i.N) : "", i.D ? f2(i.D) : "", i.amt ? f2(i.amt) : "", i.fut ? "ล่วงหน้า" : ""]); })()],
       ["สรุปรายปี (สัญญาใหม่ = ยอดเต็ม · กู้ทบ = เฉพาะเงินส่วนต่างที่ได้รับ)", ["ปี", "ประเภท", "สัญญาใหม่ (สัญญา)", "สัญญาใหม่ ยอดเต็ม", "กู้ทบ (สัญญา)", "กู้ทบ เงินส่วนต่างที่ได้รับ", "รวมสัญญา", "รวมยอดปล่อย"],
         (() => { const U = nwConYearSum(R); return nwConYearRows(U).map(([y, lbl, t]) => [y, lbl, t.nNew, f2(t.aNew), t.nRef, f2(t.aRef), t.nNew + t.nRef, f2(t.aNew + t.aRef)]).concat(U.old.sam + U.old.dk ? [["ก่อน พ.ค.68", `สามัญ ${U.old.sam} ดูแลกัน ${U.old.dk}`, "", "", "", "", U.old.sam + U.old.dk, ""]] : []); })()]]); };
 }
