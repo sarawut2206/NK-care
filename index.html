@@ -710,7 +710,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-167</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-168</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -914,7 +914,7 @@ function applyBackup(j){
   if(j.tx)        S.tx        = j.tx;
   ["profile","assign","per","rule","cut","pdfg","ledger","open","nw"].forEach(k=>{ if(j[k]!==undefined) S[k]=j[k]; });
   if(j.board && j.board.list && j.board.list.length){
-    BOARD.list = j.board.list;
+    BOARD.list = j.board.list.filter(b => !(b && /เลขานุการ/.test(b.r || "")));
     if(j.board.year) BOARD.year = j.board.year;
     if(j.board.meet) BOARD.meet = j.board.meet;
   }
@@ -9460,7 +9460,6 @@ const BOARD = {
     {r:"กรรมการฝ่ายการเงิน",             n:"นางสาวพรรณิตา บุญกล้า",   no:""},
     {r:"กรรมการฝ่ายติดตามหนี้",           n:"นายวุฒินันท์ สีดีจริง",      no:"009"},
     {r:"กรรมการฝ่ายติดตามหนี้",           n:"นายวีระ วรรณคำ",          no:""},
-    {r:"ประชาสัมพันธ์และเลขานุการ",        n:"นางแพรรุ้ง ทองอยู่",       no:""},
   ]
 };
 const bd = role => { const x = BOARD.list.find(z=>z.r.indexOf(role)>=0); return x ? x.n : ""; };
@@ -10845,7 +10844,7 @@ async function boot(){
       DB = Object.assign({}, EMPTY, r.db||{});
       S  = Object.assign(freshS(), r.state||{});
       if(r.board && r.board.list && r.board.list.length){
-        BOARD.list = r.board.list;
+        BOARD.list = r.board.list.filter(b => !(b && /เลขานุการ/.test(b.r || "")));
         if(r.board.year) BOARD.year = r.board.year;
         if(r.board.meet) BOARD.meet = r.board.meet;
       }
