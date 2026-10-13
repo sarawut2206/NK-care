@@ -710,7 +710,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-166</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-167</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -5678,23 +5678,26 @@ function drawNWLoanDash(){
    ผู้ฝากสะสมรายเดือนตามสัญญา T ปี · ดอกเบี้ยแบบธรรมดา (เงินต้นที่ฝากแล้ว × อัตรา ÷ 12 ต่อเดือน ไม่ทบต้น) จ่ายพร้อมโบนัสเมื่อครบสัญญา
    รายได้ = เงินต้นที่ฝากแล้ว × สัดส่วนที่ปล่อยกู้ × ดอกเบี้ยกู้ ÷ 12 (เดือนที่ไม่ปล่อยกู้ = ช่วงสำรองเงินก่อนครบ) · หักหนี้เสีย
    แบบ «รับประกัน» กลุ่มจ่ายตามสัญญาเสมอ · แบบ «หุ้นระยะยาว» จ่ายผู้ถือไม่เกินสัดส่วนของรายได้สุทธิจากพูล (ส่วนเกินเป้าไม่จ่าย) */
-const NW_LT_DEF = () => ({yld:12, bad:0, dep:100, hold:0, share:85, g3:2500000, rows:[
+const NW_LT_DEF = () => ({yld:12, bad:0, dep:100, hold:12, share:85, g3:2500000, rows:[
   {id:"L1", T:3, r:6, D:1500, k:6, bp:0, bc:0}, {id:"L2", T:5, r:7, D:1500, k:6, bp:0, bc:0}, {id:"L3", T:7, r:8, D:1000, k:4, bp:0, bc:0}]});
 function nwLtSim(Q){
-  const rows = (Q.rows || []).filter(c => c.T > 0 && c.D > 0 && c.k > 0), Y = rows.length ? Math.max(...rows.map(c => Math.ceil(c.T))) : 0, yld = (+Q.yld || 0) / 100, bad = (+Q.bad || 0) / 100, dep = Math.min(1, Math.max(0, (+Q.dep || 0) / 100)), hold = Math.max(0, +Q.hold || 0), sh = Math.min(1, Math.max(0, (+Q.share || 0) / 100));
-  const out = [];
+  const rows = (Q.rows || []).filter(c => c.T > 0 && c.D > 0 && c.k > 0), Y = rows.length ? Math.max(...rows.map(c => Math.ceil(c.T))) : 0, yld = (+Q.yld || 0) / 100, bad = (+Q.bad || 0) / 100, dep = Math.min(1, Math.max(0, (+Q.dep || 0) / 100)), hold = Math.max(0, Math.round(+Q.hold || 0)), sh = Math.min(1, Math.max(0, (+Q.share || 0) / 100));
+  const out = [], ev = [];
+  rows.forEach(c => { const n = Math.round(c.T * 12), r = (+c.r || 0) / 100, bt = c.bp > 0 ? Math.min(c.bp / 100 * c.D * n, +c.bc || 1e12) * c.k : 0, intT = c.D * c.k * r / 12 * ((n - 1) * n / 2);
+    c.n = n; c.bt = bt; c.payTot = c.D * c.k * n + intT + bt; ev.push({T:c.T, n, k:c.k, pay:c.payTot, c}); });
   for(let yr = 1; yr <= Y; yr++){
-    const o = {yr, new:0, avg:0, end:0, inc:0, bd:0, ic:0, bn:0, pay:0};
-    rows.forEach(c => { const n = Math.round(c.T * 12), r = (+c.r || 0) / 100, bt = c.bp > 0 ? Math.min(c.bp / 100 * c.D * n, +c.bc || 1e12) * c.k : 0;
+    const o = {yr, new:0, avg:0, end:0, inc:0, bd:0, ic:0, bn:0, pay:0, res:0};
+    rows.forEach(c => { const n = c.n, r = (+c.r || 0) / 100;
       for(let m = 1; m <= 12; m++){ const t = (yr - 1) * 12 + m; if(t > n) break;
-        const pool = c.D * t * c.k, frac = t > n - hold ? 0 : dep;
-        o.ic += c.D * (t - 1) * c.k * r / 12; o.bn += bt / n; o.inc += pool * frac * yld / 12; o.bd += pool * frac * bad / 12; o.avg += pool / 12; o.new += c.D * c.k;
-        if(t === n){ o.pay += pool + c.D * c.k * r / 12 * ((n - 1) * n / 2) + bt; } }
+        const pool = c.D * t * c.k, reserve = hold > 0 && t > n - hold ? Math.min(c.payTot, c.payTot * (t - (n - hold)) / hold) : 0, deployed = Math.max(0, pool * dep - reserve);
+        o.ic += c.D * (t - 1) * c.k * r / 12; o.bn += c.bt / n; o.inc += deployed * yld / 12; o.bd += deployed * bad / 12; o.avg += pool / 12; o.new += c.D * c.k;
+        if(m === 12 || t === n) o.res = Math.max(o.res, 0) + (t === n && t % 12 !== 0 ? 0 : reserve);
+        if(t === n) o.pay += c.payTot; }
       if(yr * 12 <= n) o.end += c.D * yr * 12 * c.k; });
     o.cost = o.ic + o.bn; o.incNet = o.inc - o.bd; o.netG = o.incNet - o.cost;
     o.payS = Math.min(sh * Math.max(0, o.incNet), o.cost); o.netS = o.incNet - o.payS; out.push(o); }
   let cg = 0, cs = 0; out.forEach(o => { cg += o.netG; cs += o.netS; o.cumG = cg; o.cumS = cs; });
-  return {rows, out, Y, tot:{inc:out.reduce((u, o) => u + o.inc, 0), cost:out.reduce((u, o) => u + o.cost, 0), netG:cg, netS:cs, paySr:out.reduce((u, o) => u + o.payS, 0)}};
+  return {rows, out, Y, ev, hold, tot:{inc:out.reduce((u, o) => u + o.inc, 0), cost:out.reduce((u, o) => u + o.cost, 0), netG:cg, netS:cs, paySr:out.reduce((u, o) => u + o.payS, 0)}};
 }
 function nwLtCap(out){                                             // ทุนฐาน (สัญญาเดิม − คืนทุนตามแผน) ณ สิ้นแต่ละปีของแผน + เงินต้นจากพูล
   try{ if(!NW.on() || !out.length) return null;
@@ -5729,7 +5732,7 @@ function drawNWLt(){
         <tr class="tot"><td colspan="3" class="l"><b>รวม ${nP} คน</b></td><td class="amt"><b>${nP}</b></td><td colspan="2"></td><td class="amt"><b>${B0(mon)}</b></td><td></td></tr></tbody></table></div>
       <div class="bar" style="margin-top:6px;flex-wrap:wrap"><button class="ghost sm" id="lt_add">+ เพิ่มกลุ่ม</button><span class="hint">แผนสำเร็จรูป:</span><button class="ghost sm" id="lt_p1">แผนปรับปรุง 16 คน (ไม่มีโบนัส)</button><button class="ghost sm" id="lt_p2">แผนเดิม 9 คน (มีโบนัส)</button><button class="ghost sm" id="lt_p3">แผนเดิม 9 คน (ไม่มีโบนัส)</button></div>
       <div class="pf" style="margin-top:8px"><div><label>ดอกเบี้ยกู้ที่กลุ่มได้ (%/ปี) — 1%/เดือน = 12</label>${nin("yld", +Q.yld, 0.1)}</div><div><label>หนี้เสีย (% ของเงินที่ปล่อยกู้ต่อปี)</label>${nin("bad", +Q.bad, 0.1)}</div>
-        <div><label>สัดส่วนที่ปล่อยกู้ได้ (%)</label>${nin("dep", +Q.dep, 5)}</div><div><label>สำรองเงินสดก่อนครบ (เดือน)</label>${nin("hold", +Q.hold, 1)}</div>
+        <div><label>สัดส่วนที่ปล่อยกู้ได้ (%)</label>${nin("dep", +Q.dep, 5)}</div><div title="กันเงินสดจ่ายคืนครบสัญญาล่วงหน้า เท่ากันทุกเดือน เริ่มก่อนครบกำหนดกี่เดือน (เงินส่วนที่กันไว้ไม่ถูกปล่อยกู้)"><label>กันเงินครบกำหนดล่วงหน้า (เดือน) — ทยอยเท่ากันทุกเดือน</label>${nin("hold", +Q.hold, 1)}</div>
         <div title="ใช้เฉพาะ «แบบหุ้นระยะยาว» · ถ้ารายได้ดอกเบี้ยจากพูลไม่พอจ่ายตามเป้า (6%/7%) จะจ่ายผู้ถือสูงสุดเท่าสัดส่วนนี้ของรายได้ ที่เหลือเป็นของกลุ่ม · ถ้ารายได้พออยู่แล้ว ช่องนี้ไม่มีผล"><label>แบบหุ้นระยะยาว: จ่ายผู้ถือสูงสุด % ของรายได้ (เมื่อรายได้ไม่พอตามเป้า)</label>${nin("share", +Q.share, 5)}</div>
         <div><label>เป้าทุนที่ 3 (บาท) — เทียบในตารางทุนรวม</label>${nin("g3", +Q.g3 || 2500000, 50000)}</div></div>
       <p class="hint" style="margin:6px 0 0"><b>ช่อง «จ่ายผู้ถือสูงสุด %» คืออะไร:</b> ใช้กับแบบหุ้นระยะยาวเท่านั้น — เช่นตั้ง 85% ปีไหนรายได้จากพูล 10,000 แต่เป้าต้องจ่ายผู้ถือ 12,000 กลุ่มจ่ายผู้ถือ 8,500 (85%) กลุ่มเก็บ 1,500 · ถ้ารายได้พอจ่ายตามเป้าแล้ว จ่ายตามเป้า ช่องนี้ไม่มีผล · 100% = ยกรายได้ให้ผู้ถือหมด (กลุ่มไม่เหลือเลย) · 70% = กลุ่มเก็บมากขึ้น ผู้ถือได้ลดลงเมื่อรายได้ไม่พอ · แบบ «รับประกัน» ไม่ใช้ช่องนี้ (กลุ่มจ่ายตามสัญญาเสมอ)</p></div>
@@ -5745,11 +5748,18 @@ function drawNWLt(){
       <div class="tbl"><table><thead><tr><th class="l">ปีที่</th><th class="l">สิ้นเดือน</th><th>ทุนฐาน (ไม่รวมพูล)</th><th>+ เงินต้นจากพูล</th><th>= ทุนรวม</th><th>เป้าขั้นต่ำ ${(g1 / 1e6).toFixed(2)} ล.</th><th>เป้าบริหาร ${(g2 / 1e6).toFixed(2)} ล.</th><th>เป้าที่ 3 ${(g3 / 1e6).toFixed(2)} ล.</th></tr></thead><tbody>
         ${C.rows.map(r => `<tr><td class="l"><b>${r.yr}</b></td><td class="l">${thPer(r.p)}${r.fc ? ' <span class="pill amb">คาดการณ์</span>' : ""}</td><td class="amt">${B0(r.base)}</td><td class="amt">${B0(r.pool)}</td><td class="amt"><b>${B0(r.tot)}</b></td>${cell(r.tot, g1)}${cell(r.tot, g2)}${cell(r.tot, g3)}</tr>`).join("")}</tbody></table></div>
       <p class="hint" style="margin:6px 0 0">ทุนฐานคือหุ้นตามสัญญาที่มีอยู่ (ไม่รวมสมาชิกใหม่/หุ้นสมัครใจอื่น) หักคืนทุนที่ใส่ในแผนเป้าหมายทุน · เงินต้นจากพูลหายไปเมื่อครบสัญญา (ถ้าไม่ต่อสัญญา) ทุนรวมจึงอาจลดลงในปีที่มีกำแพงครบกำหนด · ตั้งเป้า/แผนคืนทุนที่แท็บ แดชบอร์ด → 🎯 เป้าหมายทุน</p></div>`; })()}
-    <div class="card"><div class="ds-ttl">ผลตอบแทนที่ได้ vs ที่จ่าย รายปี <span class="hint">ดอกเบี้ยกู้ ${(+Q.yld).toFixed(1)}% · ปล่อยกู้ ${Q.dep}%${+Q.bad ? ` · หนี้เสีย ${Q.bad}%` : ""}${+Q.hold ? ` · สำรองก่อนครบ ${Q.hold} เดือน` : ""}</span></div>
+    <div class="card"><div class="ds-ttl">ผลตอบแทนที่ได้ vs ที่จ่าย รายปี <span class="hint">ดอกเบี้ยกู้ ${(+Q.yld).toFixed(1)}% · ปล่อยกู้ ${Q.dep}%${+Q.bad ? ` · หนี้เสีย ${Q.bad}%` : ""}${+Q.hold ? ` · กันเงินครบกำหนดล่วงหน้า ${Q.hold} เดือน` : ""}</span></div>
       <div class="tbl"><table><thead><tr><th class="l">ปี</th><th>เงินต้นสะสมสิ้นปี</th><th>พูลเฉลี่ย</th><th>① ได้ (ดอกเบี้ยกู้)</th><th>หนี้เสีย</th><th>② จ่ายผู้ฝาก (ดอกเบี้ย + โบนัส)</th><th>③ เหลือ — รับประกัน</th><th>③ เหลือ — หุ้นระยะยาว</th><th>เงินสดครบสัญญา</th></tr></thead><tbody>
         ${out.map(o => `<tr><td class="l"><b>${o.yr}</b></td><td class="amt">${B0(o.end)}</td><td class="amt">${B0(o.avg)}</td><td class="amt">${B0(o.inc)}</td><td class="amt">${o.bd ? "−" + B0(o.bd) : "—"}</td><td class="amt">${B0(o.cost)}<div class="hint">${B0(o.ic)} + ${B0(o.bn)}</div></td>
           <td class="amt" style="color:${o.netG >= 0 ? "#0F6B4A" : "#B4452B"}"><b>${o.netG >= 0 ? "" : "−"}${B0(Math.abs(o.netG))}</b><div class="hint">สะสม ${B0(o.cumG)}</div></td><td class="amt" style="color:${o.netS >= 0 ? "#0F6B4A" : "#B4452B"}"><b>${B0(o.netS)}</b><div class="hint">ผู้ถือ ${o.cost ? Math.round(o.payS / o.cost * 100) : 0}% ของเป้า · สะสม ${B0(o.cumS)}</div></td><td class="amt">${o.pay ? `<b>${B0(o.pay)}</b>` : "—"}</td></tr>`).join("")}
         <tr class="tot"><td class="l"><b>รวม</b></td><td></td><td></td><td class="amt"><b>${B0(T.inc)}</b></td><td class="amt">${B0(out.reduce((u, o) => u + o.bd, 0))}</td><td class="amt"><b>${B0(T.cost)}</b></td><td class="amt"><b>${B0(T.netG)}</b></td><td class="amt"><b>${B0(T.netS)}</b></td><td class="amt"><b>${B0(out.reduce((u, o) => u + o.pay, 0))}</b></td></tr></tbody></table></div></div>
+    ${(() => { if(!sim.ev.length) return ""; let pri = 0; try { if(NW.on()){ const F = nwFcstData(12); pri = F.tot.reduce((u, q) => u + q.pri, 0) / 12; } }catch(e){}
+      const H = Math.max(1, sim.hold || 12), evs = sim.ev.slice().sort((a, b) => a.n - b.n);
+      return `<div class="card"><div class="ds-ttl">แผนสำรองเงินครบกำหนด — จ่ายคืนให้ครบทุกคน <span class="hint">กันเงินล่วงหน้า ${H} เดือน เท่ากันทุกเดือน · เงินที่กันไว้ไม่ปล่อยกู้</span></div>
+      <div class="tbl"><table><thead><tr><th class="l">ครบสัญญา</th><th>จำนวนคน</th><th>เงินสดที่ต้องจ่าย</th><th>เริ่มกัน (เดือนที่ของแผน)</th><th>กันต่อเดือน</th>${pri ? "<th>เทียบเงินต้นรับคืนของกลุ่ม/เดือน</th>" : ""}</tr></thead><tbody>
+        ${evs.map(e => { const per = e.pay / H, ratio = pri > 0 ? per / pri : 0; return `<tr><td class="l"><b>${e.T} ปี</b> (เดือนที่ ${e.n})</td><td class="amt">${e.k}</td><td class="amt"><b>${B0(e.pay)}</b></td><td class="amt">เดือนที่ ${Math.max(1, e.n - H + 1)}</td><td class="amt"><b>${B0(per)}</b></td>
+          ${pri ? `<td class="amt" style="${ratio > 1 ? "background:#FDE7E7;color:#B4452B" : ratio > 0.5 ? "background:#FFF4DC;color:#8A5A00" : "background:#E3F6EC;color:#0F6B4A"}"><b>${Math.round(ratio * 100)}%</b> <div class="hint" style="color:inherit">ของเงินต้นรับคืน ${B0(pri)}/เดือน${ratio > 1 ? " — เกิน! ต้องงดปล่อยกู้ใหม่/ใช้เงินใหม่/ขยายเวลากัน" : ""}</div></td>` : ""}</tr>`; }).join("")}</tbody></table></div>
+      <p class="hint" style="margin:6px 0 0">วิธีกัน: ทุกเดือนนำเงินต้นที่ผู้กู้คืน/เงินใหม่ของพูล ส่วนหนึ่งเข้า «บัญชีเงินรอครบกำหนด» (แยกต่างหาก ห้ามปล่อยกู้) ตามยอดกันต่อเดือน · ถ้ากันต่อเดือนเกิน ≈ 50% ของเงินต้นที่รับคืน แปลว่าเกือบต้องงดปล่อยกู้ใหม่ — ควรขยายเวลากันเป็น 18–24 เดือน กระจายรอบรับสมัคร หรือกำหนดให้รอบเปิดใหม่เงินเข้า ≥ รอบที่ครบ</p></div>`; })()}
     <div class="card"><div class="ds-ttl">กำแพงครบกำหนด และเงินต้นสะสม <span class="hint">แท่งส้ม = เงินสดที่ต้องมีจ่ายผู้ฝากเมื่อครบสัญญา (เงินต้น + ดอกเบี้ย + โบนัส) · เส้นน้ำเงิน = เงินต้นสะสมสิ้นปี (นับเป็นทุนช่วงที่ยังอยู่ในพูล)</span></div>${nwLtChart(out)}
       <div class="bar" style="margin-top:6px"><button class="ghost sm" id="lt_csv">ส่งออก CSV</button><span class="hint">แบบรับประกัน = กลุ่มจ่ายตามสัญญาทุกกรณี · แบบหุ้นระยะยาว = จ่ายผู้ถือไม่เกิน ${Q.share}% ของรายได้สุทธิจากพูล · ยังไม่รวมค่าใช้จ่ายดำเนินงาน · ให้ทนายตรวจสถานะ (หุ้นหรือเงินฝาก) และผ่านมติประชุมใหญ่ก่อนใช้จริง</span></div></div></div><div class="nwdoc" id="nwdoc"></div>`;
   const set = (k, v) => { S.ltp[k] = v; drawNWLt(); };
