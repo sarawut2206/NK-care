@@ -736,7 +736,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-173</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-174</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -4221,6 +4221,52 @@ function nwSumDoc(x, D){
   </div>`;
 }
 
+/* ============ อันดับปันผลสมาชิก (ในหน้าใบสรุป + ปันผล) ============
+   ปัจจุบัน = ปันผลที่สะสมถึงเดือนล่าสุดที่บันทึก (หุ้น ณ เดือนนั้น × อัตรา × เดือนที่ผ่านไป ÷ 12 + เฉลี่ยคืนจากดอกเบี้ยที่ชำระแล้ว)
+   คาดการณ์ = ถึงสิ้นเดือนที่เลือก: หุ้น ณ สิ้นเดือนนั้น (ตามงวดผ่อน + หุ้นประจำต่อเนื่อง) และดอกเบี้ยจริง + คาดการณ์ · สูตรเดียวกับใบสรุป · S.dvr = {sort, n, end} */
+function nwSumF(x, D, to){
+  const cur = nwCurP();
+  if(pNum(to) <= pNum(cur)) return nwSum(x, Object.assign({}, D, {to}));
+  const A = nwSum(x, Object.assign({}, D, {to:cur}));
+  let sh = 0, int = A.int;
+  nwAccts(x).forEach(a => { const T = nwTimeline(a, true); let sv = a.share0;
+    T.rows.forEach(o => { if(pNum(o.p) <= pNum(to)){ sv = o.shares; if(pNum(o.p) > pNum(cur) && !o.warn && !o.gap){ const v = o.r || o.proj || {}; int += num(v.int); } } });
+    sh += sv; });
+  const months = Math.max(0, pNum(to) - pNum(D.from) + 1), divS = r2(sh * D.rs / 100 * months / 12), divI = r2(int * D.ri / 100 * months / 12);
+  return {shares:r2(sh), int:r2(int), months, divS, divI, tot:r2(divS + divI), loan:A.loan};
+}
+function nwDivRank(D){
+  const cur = nwCurP(), R = S.dvr || {}, yr = D.to.split("-")[0], defEnd = pNum(D.to) > pNum(cur) ? D.to : (pNum(`${yr}-12`) > pNum(cur) ? `${yr}-12` : D.to);
+  const to = R.end && pNum(R.end) >= pNum(D.from) ? R.end : defEnd, nowTo = pNum(D.to) < pNum(cur) ? D.to : cur;
+  const rows = NW.people().map(x => { const n = nwSum(x, Object.assign({}, D, {to:nowTo})), f = nwSumF(x, D, to); return {x, n, f}; });
+  const key = R.sort === "now" ? "n" : "f";
+  rows.sort((a, b) => b[key].tot - a[key].tot || String(a.x.no).localeCompare(String(b.x.no)));
+  const totN = r2(rows.reduce((u, r) => u + r.n.tot, 0)), totF = r2(rows.reduce((u, r) => u + r.f.tot, 0));
+  return {rows, to, nowTo, cur, totN, totF, key, N:R.n === 0 ? 0 : [10, 20].includes(+R.n) ? +R.n : 10};
+}
+function nwDivRankHTML(D){
+  const K = nwDivRank(D), shown = K.N ? K.rows.slice(0, K.N) : K.rows, top = K.rows.slice(0, 10), mx = Math.max(1, ...shown.map(r => Math.max(r.n.tot, r.f.tot)));
+  const medal = i => i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : String(i + 1), tot = K.totF || 1;
+  const topSum = r2(top.reduce((u, r) => u + r.f.tot, 0)), best = K.rows[0];
+  const opts = []; for(let n = pNum(K.cur) + 1; n <= pNum(K.cur) + 15; n++){ const q = pFrom(n); opts.push(`<option value="${q}" ${q === K.to ? "selected" : ""}>${thPer(q)}</option>`); }
+  if(pNum(K.to) <= pNum(K.cur)) opts.unshift(`<option value="${K.to}" selected>${thPer(K.to)}</option>`);
+  const bars = shown.slice(0, 10).map((r, i) => `<div class="shx-row"><span class="lb" style="width:150px">${medal(i)} ${esc(r.x.name)}</span><span class="tr" style="height:30px"><i style="width:${r.f.tot / mx * 100}%;background:#1F3A68;height:15px;border-radius:7px 7px 0 0"></i><i style="width:${r.n.tot / mx * 100}%;background:#8FA8D6;height:15px;border-radius:0 0 7px 7px"></i></span><span class="nm" style="width:150px"><b>${B0(r.f.tot)}</b> <span class="hint">ตอนนี้ ${B0(r.n.tot)}</span></span></div>`).join("");
+  return `<div class="card" id="dv_rank"><div class="bar" style="margin:0 0 6px;flex-wrap:wrap"><div class="ds-ttl" style="margin:0">🏆 อันดับปันผลสมาชิก <span class="hint">ปัจจุบัน = สะสมถึง ${thPer(K.nowTo)} · คาดการณ์ = ถึงสิ้น ${thPer(K.to)} (ช่วง ${thPer(D.from)} เป็นต้นไป · หุ้น ${pct(D.rs)} · เฉลี่ยคืน ${pct(D.ri)})</span></div>
+      <span style="margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label class="hint">คาดการณ์ถึง <select id="dr_end" style="width:auto">${opts.join("")}</select></label>
+      <span class="hint">เรียงตาม</span><button class="${K.key === "f" ? "" : "ghost "}sm" data-drs="fc">คาดการณ์</button><button class="${K.key === "n" ? "" : "ghost "}sm" data-drs="now">ปัจจุบัน</button>
+      <select id="dr_n" style="width:auto"><option value="10" ${K.N === 10 ? "selected" : ""}>10 อันดับ</option><option value="20" ${K.N === 20 ? "selected" : ""}>20 อันดับ</option><option value="0" ${K.N === 0 ? "selected" : ""}>ทั้งหมด</option></select><button class="ghost sm" id="dr_csv">📥 CSV</button></span></div>
+    <div class="shx-cards" style="margin:6px 0 10px">
+      <div class="shx-card" style="border-top-color:#8FA8D6"><div class="k">💵 ปันผลรวมที่สะสมตอนนี้</div><div class="v">${B0(K.totN)} <small>บาท</small></div><div class="h">ถึง ${thPer(K.nowTo)} · ${K.rows.length} คน</div></div>
+      <div class="shx-card" style="border-top-color:#1F3A68"><div class="k">🔮 คาดว่าจ่ายรวมสิ้น ${thPer(K.to)}</div><div class="v">${B0(K.totF)} <small>บาท</small></div><div class="h">เพิ่มจากตอนนี้ ${B0(K.totF - K.totN)}</div></div>
+      <div class="shx-card" style="border-top-color:#C4570F"><div class="k">🥇 ได้สูงสุด</div><div class="v" style="font-size:20px">${best ? esc(best.x.name) : "—"}</div><div class="h">${best ? `คาดการณ์ ${B0(best.f.tot)} (${(best.f.tot / tot * 100).toFixed(1)}% ของยอดรวม) · ตอนนี้ ${B0(best.n.tot)}` : ""}</div></div>
+      <div class="shx-card" style="border-top-color:#1BAF7A"><div class="k">📊 10 อันดับแรกรับ</div><div class="v">${(topSum / tot * 100).toFixed(1)}<small>% ของยอดรวม</small></div><div class="h">${B0(topSum)} จาก ${B0(K.totF)}</div></div></div>
+    <div class="hint" style="margin:0 0 4px"><i style="display:inline-block;width:12px;height:8px;background:#1F3A68;border-radius:2px"></i> คาดการณ์สิ้นช่วง &nbsp; <i style="display:inline-block;width:12px;height:8px;background:#8FA8D6;border-radius:2px"></i> ปัจจุบัน</div>${bars}
+    <div class="tbl" style="margin-top:8px;max-height:${K.N ? "none" : "460px"}"><table><thead><tr><th>อันดับ</th><th class="l">เลขที่</th><th class="l">ชื่อ</th><th class="l">สถานะ</th><th>หุ้น (สิ้นช่วง)</th><th>ปันผลหุ้น</th><th>เฉลี่ยคืนดอกเบี้ย</th><th>รับตอนนี้</th><th>คาดการณ์รวมรับ</th><th>เพิ่มอีก</th><th>สัดส่วน</th></tr></thead><tbody>
+      ${shown.map((r, i) => `<tr data-dv="${esc(r.x.no)}" style="cursor:pointer"><td class="amt"><b>${medal(i)}</b></td><td class="l">${esc(r.x.no)}</td><td class="l"><b>${esc(r.x.name)}</b></td><td class="l"><span class="pill ${r.f.loan ? "" : "grn"}">${r.f.loan ? "ผู้กู้" : "ผู้ฝาก"}</span></td>
+        <td class="amt">${B0(r.f.shares)}</td><td class="amt">${B(r.f.divS)}</td><td class="amt">${B(r.f.divI)}</td><td class="amt">${B(r.n.tot)}</td><td class="amt"><b>${B(r.f.tot)}</b></td><td class="amt" style="color:#0F6B4A">+${B(r.f.tot - r.n.tot)}</td>
+        <td class="amt">${(r.f.tot / tot * 100).toFixed(1)}%<div style="height:4px;background:#E6EBF5;border-radius:2px;margin-top:2px"><i style="display:block;height:4px;width:${Math.min(100, r.f.tot / mx * 100).toFixed(0)}%;background:#1F3A68;border-radius:2px"></i></div></td></tr>`).join("")}</tbody></table></div>
+    <p class="hint" style="margin:6px 0 0">คาดการณ์ใช้สูตรเดียวกับใบสรุป (หุ้น ณ สิ้นช่วง × % × เดือน ÷ 12 + ดอกเบี้ยที่ชำระ × % × เดือน ÷ 12) · ดอกเบี้ยและหุ้นของเดือนที่ยังไม่บันทึกคำนวณตามงวดผ่อน/หุ้นประจำที่ลงไว้ · ไม่รวมผู้กู้ใหม่ในอนาคต · ยังไม่หักค่าใช้จ่าย จึงควรดูควบคู่ «ต้องเตรียมเงินจ่ายปันผล» ด้านบน · กดแถวเพื่อดูใบสรุปรายคน</p></div>`;
+}
 function drawNWDiv(){
   const el = $("tab22"); if(!el) return;
   if(tab !== 22){ el.innerHTML = ""; return; }
@@ -4260,7 +4306,7 @@ function drawNWDiv(){
     <div class="stat"><div class="k">เฉลี่ยคืนดอกเบี้ยรวม</div><div class="v">${B(T("divI"))}</div></div>
     <div class="stat" style="border-top-color:var(--green)"><div class="k">รวมจ่ายปันผล</div><div class="v" style="color:var(--green)">${B(T("tot"))}</div></div>
   </div>
-  ${netHTML}${fcHTML}
+  ${netHTML}${fcHTML}${nwDivRankHTML(D)}
   <div class="card">
     <div class="bar" style="margin:0 0 8px">
       <select id="dv_f" style="width:auto"><option value="all">ทุกคน</option><option value="loan" ${f==="loan"?"selected":""}>ผู้กู้</option>
@@ -4288,6 +4334,12 @@ function drawNWDiv(){
   <div class="nwdoc" id="nwdoc"></div>`;
 
   const setD = patch => { S.nw.div = Object.assign(nwDivCfg(), patch); save(); drawNWDiv(); };
+  const dset = patch => { S.dvr = Object.assign({}, S.dvr || {}, patch); drawNWDiv(); };
+  el.querySelectorAll("[data-drs]").forEach(b => b.onclick = () => dset({sort:b.dataset.drs}));
+  if($("dr_end")) $("dr_end").onchange = e => dset({end:e.target.value});
+  if($("dr_n")) $("dr_n").onchange = e => dset({n:+e.target.value});
+  if($("dr_csv")) $("dr_csv").onclick = () => { const K = nwDivRank(D); csvOut("kbk-อันดับปันผล.csv", [[`อันดับปันผลสมาชิก ปัจจุบัน ถึง ${thPer(K.nowTo)} · คาดการณ์ ถึง ${thPer(K.to)}`, ["อันดับ", "เลขที่", "ชื่อ", "สถานะ", "หุ้น สิ้นช่วง", "ปันผลหุ้น", "เฉลี่ยคืนดอกเบี้ย", "รับตอนนี้", "คาดการณ์รวมรับ"],
+    K.rows.map((r, i) => [i + 1, r.x.no, r.x.name, r.f.loan ? "ผู้กู้" : "ผู้ฝาก", f2(r.f.shares), f2(r.f.divS), f2(r.f.divI), f2(r.n.tot), f2(r.f.tot)])]]); };
   $("dv_from").onchange = e => { const v = e.target.value; setD(pNum(v) > pNum(D.to) ? {from:v, to:v} : {from:v}); };
   $("dv_to").onchange   = e => { const v = e.target.value; setD(pNum(v) < pNum(D.from) ? {from:v, to:v} : {to:v}); };
   $("dv_rs").onchange   = e => setD({rs: Math.max(0, +e.target.value||0)});
