@@ -699,7 +699,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-156</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-160</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -3843,6 +3843,71 @@ function nwFcstHTML(){
         ${F.planned.map(q => `<tr><td class="l"><span class="no">${esc(q.x.no)}</span><b>${esc(q.x.name)}</b></td><td class="l">${NW_ACCS[q.a.prod]}</td><td class="amt">${q.n}</td><td class="l">${thPer(q.from)} – ${thPer(q.to)}</td><td class="amt">${q.loan ? B(q.loan) : "—"}</td><td class="l">${q.lp ? thPer(q.lp) : "—"}</td></tr>`).join("")}</tbody></table></div>` : `<p class="hint" style="margin:8px 0 0">ยังไม่มีรายการลงล่วงหน้า — ลงได้ที่ทะเบียนผู้กู้: พิมพ์ในแถวเดือนที่ยังไม่ถึง หรือ «นำเข้าตารางผ่อน» ที่งวดที่ 1 เป็นเดือนหน้า</p>`}</div>`;
 }
 
+/* ============ แผนเป้าหมายทุนเรือนหุ้น (ในแดชบอร์ด) ============
+   S.nw.goal = {floor, target, p0 (เดือนเริ่มแผน = ฐาน ณ สิ้นเดือนนี้), pE (เดือนสิ้นสุด), ref:[{id, p, amt}] (แผนคืนทุน)}
+   เส้นเป้า: ทุนฐาน + หุ้นเข้าเท่ากันทุกเดือน (คำนวณให้ถึงเป้าพอดี) − คืนทุนตามแผน → เทียบกับยอดจริง (≤ เดือนล่าสุดที่กรอก) และคาดการณ์ตามงวดผ่อน (− คืนทุนตามแผนที่ยังไม่เกิด) */
+const nwGoalCfg = () => { const g = (S.nw && S.nw.goal) || {}; return {floor:has(g.floor) ? +g.floor : 2000000, target:has(g.target) ? +g.target : 2250000, p0:g.p0 || "2569-12", pE:g.pE || "2570-12", ref:Array.isArray(g.ref) ? g.ref : []}; };
+function nwGoalData(){
+  const G = nwGoalCfg(); if(pNum(G.pE) <= pNum(G.p0)) return {G, bad:"เดือนสิ้นสุดต้องอยู่หลังเดือนเริ่มแผน"};
+  const DD = nwDashData({fc:true, from:"2568-05", to:G.pE, fcEnd:true, fcTo:G.pE}), end = DD.end, byP = {}; DD.tot.forEach(t => byP[t.p] = t);
+  const months = []; for(let n = pNum(G.p0); n <= pNum(G.pE); n++) months.push(pFrom(n));
+  if(!months.every(q => byP[q])) return {G, bad:"ยังไม่มีข้อมูลคาดการณ์ครบช่วงนี้"};
+  const refAfterEnd = q => r2(G.ref.filter(r => pNum(r.p) > pNum(end) && pNum(r.p) <= pNum(q)).reduce((u, r) => u + num(r.amt), 0));      // คืนทุนที่ยังไม่เกิด (ใช้ปรับคาดการณ์)
+  const refPlan = q => r2(G.ref.filter(r => pNum(r.p) > pNum(G.p0) && pNum(r.p) <= pNum(q)).reduce((u, r) => u + num(r.amt), 0));          // คืนทุนตามแผนในช่วงแผน (ใช้สร้างเส้นเป้า)
+  const cap = q => r2(byP[q].sh - refAfterEnd(q)), base0 = cap(G.p0), N = pNum(G.pE) - pNum(G.p0), R = refPlan(G.pE);
+  const line = Gv => { const x = (Gv - base0 + R) / N; return {x:r2(x), at:q => r2(base0 + x * (pNum(q) - pNum(G.p0)) - refPlan(q))}; };
+  const LF = line(G.floor), LT = line(G.target);
+  const rows = months.map(q => ({p:q, k:pNum(q) - pNum(G.p0), cap:cap(q), fc:!!byP[q].fc, rf:LF.at(q), rt:LT.at(q)}));
+  const nowP = pNum(end) >= pNum(G.p0) ? (pNum(end) <= pNum(G.pE) ? end : G.pE) : null, from = nowP && pNum(nowP) > pNum(G.p0) ? nowP : G.p0, mRem = Math.max(1, pNum(G.pE) - pNum(from));
+  const baseIn = r2((byP[G.pE].sh - byP[from].sh) / mRem), endCap = cap(G.pE), now = nowP ? rows.find(r => r.p === nowP) : null;
+  const one = (Gv, key) => { const gapEnd = r2(endCap - Gv), need = gapEnd < 0 ? r2(-gapEnd / mRem) : 0, gapNow = now ? r2(now.cap - now[key]) : null;
+    const act = rows.filter(r => !r.fc && r.k >= 1).sort((a, b) => pNum(b.p) - pNum(a.p)); let behind = 0; for(const r of act){ if(r.cap < r[key] - 0.005) behind++; else break; }
+    return {goal:Gv, gapEnd, need, gapNow, behind, reqIn:r2(baseIn + need)}; };
+  return {G, rows, end, base0, N, R, endCap, baseIn, mRem, nowP, now, from, x:{floor:LF.x, target:LT.x}, floor:one(G.floor, "rf"), target:one(G.target, "rt")};
+}
+function nwGoalChart(GD){
+  const rows = GD.rows, n = rows.length, W = 760, H = 280, L = 62, Rr = 16, T = 18, Bm = 36;
+  const vals = rows.flatMap(r => [r.cap, r.rf, r.rt]), lo = Math.min(...vals) * 0.97, hi = Math.max(...vals) * 1.02, X = i => L + i * (W - L - Rr) / Math.max(1, n - 1), Y = v => T + (1 - (v - lo) / (hi - lo)) * (H - T - Bm);
+  const path = (k, a, b) => rows.slice(a, b + 1).map((r, i) => `${i ? "L" : "M"}${X(a + i).toFixed(1)},${Y(r[k]).toFixed(1)}`).join(" ");
+  const k0 = rows.findIndex(r => r.fc), grid = [0, 1, 2, 3, 4].map(g => { const v = lo + (hi - lo) * g / 4, y = Y(v); return `<line x1="${L}" x2="${W - Rr}" y1="${y}" y2="${y}" stroke="#E4EAF4"/><text x="${L - 8}" y="${y + 4}" text-anchor="end" font-size="11" fill="#6B7A99">${(v / 1e6).toFixed(2)}ล.</text>`; }).join("");
+  const step = Math.ceil(n / 8), xl = rows.map((r, i) => (i % step === 0 || i === n - 1) ? `<text x="${X(i)}" y="${H - 12}" text-anchor="middle" font-size="11" fill="#6B7A99">${thPer(r.p)}</text>` : "").join("");
+  const hov = rows.map((r, i) => `<rect x="${X(i) - (W - L - Rr) / Math.max(1, n - 1) / 2}" y="${T}" width="${(W - L - Rr) / Math.max(1, n - 1)}" height="${H - T - Bm}" fill="transparent"><title>${thPer(r.p)}${r.fc ? " (คาดการณ์)" : ""}\nทุน ${B0(r.cap)}\nเส้นเป้าหมาย ${B0(r.rt)} (${r.cap - r.rt >= 0 ? "เกิน" : "ขาด"} ${B0(Math.abs(r.cap - r.rt))})\nเส้นขั้นต่ำ ${B0(r.rf)} (${r.cap - r.rf >= 0 ? "เกิน" : "ขาด"} ${B0(Math.abs(r.cap - r.rf))})</title></rect>`).join("");
+  const fcBand = k0 > 0 ? `<rect x="${X(k0 - 1)}" y="${T}" width="${X(n - 1) - X(k0 - 1)}" height="${H - T - Bm}" fill="#E8F1FF" opacity=".6"/>` : k0 === 0 ? `<rect x="${L}" y="${T}" width="${W - L - Rr}" height="${H - T - Bm}" fill="#E8F1FF" opacity=".6"/>` : "";
+  const real = k0 < 0 ? path("cap", 0, n - 1) : k0 > 0 ? path("cap", 0, k0 - 1) : "", proj = k0 >= 0 ? path("cap", Math.max(0, k0 - 1), n - 1) : "";
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="ทุนเรือนหุ้นเทียบเส้นเป้าหมาย" style="display:block">${fcBand}${grid}
+    <path d="${path("rf", 0, n - 1)}" fill="none" stroke="#C0202E" stroke-width="2" stroke-dasharray="6 4"/><path d="${path("rt", 0, n - 1)}" fill="none" stroke="#1BAF7A" stroke-width="2.2" stroke-dasharray="6 4"/>
+    ${real ? `<path d="${real}" fill="none" stroke="#1F3A68" stroke-width="3" stroke-linejoin="round"/>` : ""}${proj ? `<path d="${proj}" fill="none" stroke="#1F3A68" stroke-width="3" stroke-dasharray="2 4" stroke-linecap="round"/>` : ""}
+    <text x="${X(n - 1) - 4}" y="${Y(rows[n - 1].rt) - 6}" text-anchor="end" font-size="11" font-weight="700" fill="#0F6B4A">เป้า ${(rows[n - 1].rt / 1e6).toFixed(2)}ล.</text><text x="${X(n - 1) - 4}" y="${Y(rows[n - 1].rf) + 14}" text-anchor="end" font-size="11" font-weight="700" fill="#C0202E">ขั้นต่ำ ${(rows[n - 1].rf / 1e6).toFixed(2)}ล.</text>${xl}${hov}</svg>`;
+}
+function nwGoalHTML(){
+  const GD = nwGoalData(), G = GD.G, mopts = (sel, a, b) => { const o = []; for(let n = pNum(a); n <= pNum(b); n++){ const q = pFrom(n); o.push(`<option value="${q}" ${q === sel ? "selected" : ""}>${thPer(q)}</option>`); } return o.join(""); };
+  const form = `<div class="pf"><div><label>เป้าขั้นต่ำ — ห้ามต่ำกว่า (บาท)</label><input type="number" step="1000" min="0" data-gl="floor" value="${G.floor}"></div><div><label>เป้าบริหาร (บาท)</label><input type="number" step="1000" min="0" data-gl="target" value="${G.target}"></div>
+      <div><label>เริ่มแผน (ฐาน ณ สิ้นเดือน)</label><select data-gl="p0">${mopts(G.p0, "2568-12", "2571-12")}</select></div><div><label>ครบกำหนดเป้า (สิ้นเดือน)</label><select data-gl="pE">${mopts(G.pE, "2569-06", "2572-12")}</select></div></div>
+    <div class="bar" style="flex-wrap:wrap;margin:6px 0"><b style="font-size:13px">แผนคืนทุนสมาชิก (ลบออกจากทุนตามเดือนที่ระบุ)</b>
+      ${G.ref.slice().sort((a, b) => pNum(a.p) - pNum(b.p)).map(r => `<span class="pill">${thPer(r.p)} · ${B0(r.amt)} <button class="del" data-glr="${r.id}" title="ลบ">×</button></span>`).join("") || '<span class="hint">ยังไม่ใส่ — ใส่เดือนและยอดที่คาดว่าจะคืนทุน (เช่น รอบเม.ย./ต.ค.)</span>'}
+      <select id="gl_rm" style="width:auto">${mopts(G.p0, "2569-01", "2572-12")}</select><input type="number" step="1000" min="0" id="gl_ra" placeholder="ยอดคืนทุน (บาท)" style="width:150px"><button class="ghost sm" id="gl_radd">+ เพิ่มรายการคืนทุน</button></div>`;
+  if(GD.bad) return `<div class="card" id="ds_goal"><div class="ds-ttl">แผนเป้าหมายทุนเรือนหุ้น</div>${form}<p class="hint" style="color:var(--danger)">${GD.bad}</p></div>`;
+  const nm = k => k === "floor" ? "ขั้นต่ำ" : "เป้าบริหาร", col = k => k === "floor" ? "#C0202E" : "#1BAF7A";
+  const card = k => { const o = GD[k], ok = o.gapEnd >= 0, nowTxt = GD.now && GD.nowP && pNum(GD.nowP) > pNum(G.p0) ? (o.gapNow >= 0 ? `เกินเส้นเป้า ${B0(o.gapNow)}` : `ขาดจากเส้นเป้า ${B0(-o.gapNow)}`) : "แผนยังไม่เริ่ม";
+    return `<div class="ds-kpi" style="border-top-color:${col(k)}"><div class="k">${nm(k)} ${(o.goal / 1e6).toFixed(2)} ล้านบาท · สิ้น ${thPer(G.pE)}</div>
+      <div class="v" style="color:${ok ? "#0F6B4A" : "#B4452B"}">${ok ? "ถึงเป้าตามคาด" : "ต้องเพิ่มหุ้น " + B0(o.need) + "/เดือน"}</div>
+      <div class="s">${GD.nowP && pNum(GD.nowP) > pNum(G.p0) ? `ณ ${thPer(GD.nowP)}: ทุนจริง ${B0(GD.now.cap)} · <b>${nowTxt}</b><br>` : ""}คาดการณ์สิ้นสุด ${B0(GD.endCap)} (${ok ? "เกิน" : "ขาด"} ${B0(Math.abs(o.gapEnd))})${ok ? "" : `<br>หุ้นเข้ารวมที่ต้องได้ ≈ <b>${B0(o.reqIn)}</b>/เดือน (ฐานตามสัญญาเดิม ${B0(GD.baseIn)} + เพิ่ม ${B0(o.need)})`}</div></div>`; };
+  const alerts = [];
+  ["floor", "target"].forEach(k => { const o = GD[k];
+    if(o.behind >= 2) alerts.push({c:"red", t:`ตามไม่ทัน${k === "floor" ? "เป้าขั้นต่ำ" : "เป้าบริหาร"} ${o.behind} เดือนติดต่อกัน — ตามเกณฑ์: หยุดขยายสินเชื่อวงเงินสูง และเปิดมาตรการเพิ่มหุ้นทันที`});
+    else if(o.behind === 1) alerts.push({c:"amb", t:`เดือนล่าสุด (${thPer(GD.nowP)}) ต่ำกว่าเส้น${k === "floor" ? "เป้าขั้นต่ำ" : "เป้าบริหาร"} ${B0(-o.gapNow)} บาท — ถ้าเดือนหน้ายังต่ำกว่าอีก จะเข้าเกณฑ์ตามไม่ทัน 2 เดือนติด`});
+    if(GD.endCap < o.goal && k === "floor") alerts.push({c:"red", t:`คาดการณ์สิ้น ${thPer(G.pE)} ต่ำกว่าเป้าขั้นต่ำ ${B0(-o.gapEnd)} บาท — ต้องเพิ่มหุ้นเดือนละ ${B0(o.need)} บาทขึ้นไป`}); });
+  const tbl = GD.rows.map(r => `<tr${r.p === GD.nowP ? ' style="background:var(--faint)"' : ""}><td class="l">${thPer(r.p)}${r.fc ? ' <span class="pill amb">คาดการณ์</span>' : ""}${G.ref.some(q => q.p === r.p) ? ' <span class="pill red" title="เดือนคืนทุนตามแผน">คืนทุน</span>' : ""}</td><td class="amt"><b>${B0(r.cap)}</b></td>
+      <td class="amt">${B0(r.rf)}</td><td class="amt" style="color:${r.cap >= r.rf ? "#0F6B4A" : "#B4452B"}">${r.cap >= r.rf ? "+" : "−"}${B0(Math.abs(r.cap - r.rf))}</td><td class="amt">${B0(r.rt)}</td><td class="amt" style="color:${r.cap >= r.rt ? "#0F6B4A" : "#B4452B"}">${r.cap >= r.rt ? "+" : "−"}${B0(Math.abs(r.cap - r.rt))}</td></tr>`).join("");
+  return `<div class="card" id="ds_goal"><div class="ds-ttl">แผนเป้าหมายทุนเรือนหุ้น <span class="hint">ฐาน ${B0(GD.base0)} ณ ${thPer(G.p0)} → ครบกำหนด ${thPer(G.pE)} (${GD.N} เดือน)</span>
+      <span class="ds-lg"><i style="background:#1F3A68"></i>ทุนจริง/คาดการณ์ <i style="background:#1BAF7A"></i>เส้นเป้าบริหาร <i style="background:#C0202E"></i>เส้นขั้นต่ำ</span></div>
+    ${form}
+    ${alerts.length ? alerts.map(a => `<div class="keybox" style="margin:6px 0;border-left:4px solid ${a.c === "red" ? "var(--red)" : "var(--amber,#C4570F)"};font-size:13px">${a.c === "red" ? "⚠ " : ""}${a.t}</div>`).join("") : '<div class="keybox" style="margin:6px 0;border-left:4px solid var(--green);font-size:13px">✓ ไม่พบเดือนที่ตามไม่ทันเส้นเป้า และคาดการณ์สิ้นสุดแผนไม่ต่ำกว่าเป้าขั้นต่ำ</div>'}
+    <div class="ds-kpis" style="margin:8px 0">${card("floor")}${card("target")}</div>
+    ${nwGoalChart(GD)}
+    <p class="hint" style="margin:4px 0">เส้นเป้า = ทุนฐาน + หุ้นเข้าเท่ากันทุกเดือน (เป้าบริหารต้องเข้า ≈ <b>${B0(GD.x.target)}</b>/เดือน · ขั้นต่ำ ≈ <b>${B0(GD.x.floor)}</b>/เดือน) − คืนทุนตามแผน · ทุนจริงถึง ${thPer(GD.end)} หลังจากนั้นคาดการณ์ตามงวดผ่อนของสัญญาที่มีอยู่ (ไม่รวมสมาชิกใหม่ ผู้กู้ใหม่ หรือหุ้นสมัครใจที่ยังไม่ได้ลง) หักคืนทุนตามแผน · ตามเกณฑ์: ตามไม่ทัน 2 เดือนติด = หยุดขยายสินเชื่อวงเงินสูง + เปิดมาตรการเพิ่มหุ้น</p>
+    <details class="opn"><summary><b>ตารางรายเดือน</b> (ทุน เทียบเส้นเป้า)</summary><div class="tbl" style="max-height:360px"><table><thead><tr><th class="l">เดือน</th><th>ทุน (จริง/คาดการณ์)</th><th>เส้นขั้นต่ำ</th><th>ผลต่าง</th><th>เส้นเป้าบริหาร</th><th>ผลต่าง</th></tr></thead><tbody>${tbl}</tbody></table></div></details></div>`;
+}
 function drawNWDash(){
   const el = $("tab23"); if(!el) return;
   if(tab !== 23){ el.innerHTML = ""; return; }
@@ -3871,6 +3936,8 @@ function drawNWDash(){
 
   <div class="card"><div class="ds-ttl">ภาพรวมรายเดือน <span class="hint">หุ้นสะสม เทียบ หนี้คงเหลือ (รวมทุกคน)${D.fcEnd !== D.end ? " · ช่วงสีฟ้าเส้นประ = คาดการณ์ถึง " + thPer(D.fcEnd) : ""}</span>
       <span class="ds-lg"><i style="background:${DSH.sh}"></i>ทุนเรือนหุ้นสะสม <i style="background:${DSH.dbt}"></i>หนี้คงเหลือ</span></div>${dashLine(D.tot)}</div>
+
+  ${nwGoalHTML()}
 
   <div class="ds-g2">
     <div class="card"><div class="ds-ttl">① หุ้นสะสมแยกตามประเภท</div>${dashDonut([{l:NW_ACCS.sam, v:D.shBy.sam, c:DSH.sam}, {l:NW_ACCS.dk, v:D.shBy.dk, c:DSH.dk}, {l:NW_ACCS.free, v:D.shBy.free, c:DSH.free}], "หุ้นรวม")}</div>
@@ -3904,6 +3971,10 @@ function drawNWDash(){
   $("ds_rs").onchange = e => set({rs:Math.max(0, +e.target.value || 0)});
   $("ds_ri").onchange = e => set({ri:Math.max(0, +e.target.value || 0)});
   $("ds_adj").onchange = e => set({adj:e.target.checked});
+  const gset = patch => { S.nw.goal = Object.assign({}, nwGoalCfg(), patch); save(); drawNWDash(); };
+  el.querySelectorAll("[data-gl]").forEach(i => i.addEventListener("change", () => { const f = i.dataset.gl; gset({[f]:["floor", "target"].includes(f) ? Math.max(0, +i.value || 0) : i.value}); }));
+  if($("gl_radd")) $("gl_radd").onclick = () => { const a = +$("gl_ra").value; if(!(a > 0)){ toast("ใส่ยอดคืนทุนก่อน"); return; } gset({ref:nwGoalCfg().ref.concat([{id:"GR" + Math.random().toString(36).slice(2, 7), p:$("gl_rm").value, amt:r2(a)}])}); };
+  el.querySelectorAll("[data-glr]").forEach(b => b.onclick = () => gset({ref:nwGoalCfg().ref.filter(r => r.id !== b.dataset.glr)}));
   if($("ds_fh")) $("ds_fh").onchange = e => set({fh:+e.target.value});
 }
 
@@ -5621,20 +5692,77 @@ const nwExpSum = (a, b) => r2(nwExps().filter(e => pNum(e.p) >= pNum(a) && pNum(
 const nwExpAvg = () => { const cur = pNum(nwCurP()), by = {}; nwExps().forEach(e => { if(pNum(e.p) <= cur && pNum(e.p) > cur - 6) by[e.p] = r2((by[e.p] || 0) + num(e.amt)); });
   const v = Object.values(by); return v.length ? r2(v.reduce((u, q) => u + q, 0) / v.length) : 0; };               // เฉลี่ยต่อเดือน เฉพาะเดือนที่มีรายการ ใน ๖ เดือนล่าสุด
 const nwExpFc = () => { const o = S.nw && S.nw.expFc; return has(o) && o !== "" ? Math.max(0, +o || 0) : nwExpAvg(); };
+/* อ่านตารางถอนเงิน: แต่ละบรรทัดมี «วันที่» (เช่น 7 ม.ค. 69 / 7 มกราคม 2569 / 2026-01-07) และ «ยอดเงิน» (เช่น 10,000.00) */
+function nwExpParseWd(txt){
+  const MS = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."], MF = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+  const out = [], bad = [];
+  String(txt || "").split(/\r?\n/).forEach(ln => { const t = ln.trim(); if(!t) return;
+    let y, mo, d, rest;
+    const iso = t.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if(iso){ y = +iso[1]; mo = +iso[2] - 1; d = +iso[3]; rest = t.replace(iso[0], " "); }
+    else { const rx = new RegExp("(\\d{1,2})\\s*(" + MS.concat(MF).map(q => q.replace(/\./g, "\\.")).join("|") + ")\\s*(\\d{2,4})"), m = t.match(rx);
+      if(!m){ bad.push(t); return; } d = +m[1]; const k = MS.indexOf(m[2]); mo = k >= 0 ? k : MF.indexOf(m[2]); y = +m[3]; rest = t.replace(m[0], " "); }
+    if(y < 100) y += 2500; if(y < 2400) y += 543;                                    // ปี พ.ศ. (69 → 2569 · 2026 → 2569)
+    const am = rest.match(/(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+\.\d{2})/), amt = am ? +am[1].replace(/,/g, "") : 0;
+    if(!(amt > 0) || d < 1 || d > 31){ bad.push(t); return; }
+    out.push({iso:`${y - 543}-${String(mo + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`, p:`${y}-${String(mo + 1).padStart(2, "0")}`, wd:r2(amt), br:rest.replace(am[0], " ").replace(/^\s*\d+\s+/, "").replace(/\s+/g, " ").trim()}); });
+  return {rows:out, bad};
+}
+/* ทะเบียนการถอนเงินสด: S.nw.wd = [{id, d (ISO), amt, br (สาขา), purpose, n (ผู้เดินทาง), fee (ค่าเดินทางเบิกเงินครั้งนี้)}]
+   ค่าเดินทาง (fee > 0) สร้างเป็นรายการค่าใช้จ่ายที่ผูกกัน (wdId) ลงเดือนปฏิทินของวันที่ถอน */
+const nwWds = () => (S.nw.wd || (S.nw.wd = []));
+const nwWdCfg = () => { const c = S.nw.wdCfg || {}; return {rate:has(c.rate) ? +c.rate : 500, n:has(c.n) ? Math.max(1, +c.n) : 2, mode:c.mode === "head" ? "head" : "trip"}; };
+const nwWdFee = c => c.mode === "head" ? r2(c.rate * c.n) : r2(c.rate);
+const nwWdP = d => { const a = String(d).split("-"); return `${+a[0] + 543}-${a[1]}`; };
+function nwWdSync(w){
+  const ex = nwExps(), i = ex.findIndex(e => e.wdId === w.id);
+  if(!(num(w.fee) > 0) || !w.d){ if(i >= 0) ex.splice(i, 1); return; }
+  const e = {id:i >= 0 ? ex[i].id : "EX" + Math.random().toString(36).slice(2, 8), p:nwWdP(w.d), d:w.d, cat:NW_EXPC[0], desc:`ค่าเดินทางเบิกเงิน (ถอนเงินสด ${B(w.amt)} บาท${w.br ? " · " + w.br : ""}) ${w.n || 1} คน`, amt:r2(w.fee), wdId:w.id};
+  if(i >= 0) ex[i] = e; else ex.push(e);
+}
+function nwWdMig(){                                       // รายการที่นำเข้าจากเวอร์ชันก่อน (wd) → ย้ายเป็นแถวในทะเบียนถอนเงิน
+  nwExps().forEach(e => { if(e.wd && !e.wdId){ const w = {id:"WD" + Math.random().toString(36).slice(2, 8), d:e.d, amt:e.wd, br:"", purpose:"", n:2, fee:e.amt}; nwWds().push(w); e.wdId = w.id; delete e.wd; } });
+}
+const nwKd = h => h.split('class="kpage').join('class="kpage kd');                          // เอกสารแฟ้ม/รายงาน ตัวอักษร 14 pt เหมือนสัญญา
+const nwThL = iso => { const a = String(iso || "").split("-").map(Number); return a[0] ? `${a[2]} ${NW_MF[a[1] - 1]} พ.ศ. ${a[0] + 543}` : "…………………………"; };      // 7 มกราคม พ.ศ. 2569
+const nwThS = iso => { const a = String(iso || "").split("-").map(Number); return a[0] ? `${a[2]} ${MTH_TH[a[1] - 1]} ${a[0] + 543}` : "—"; };                        // 7 ม.ค. 2569
+function nwWdDoc(y){
+  const L = nwWds().filter(w => nwConYear(w.d) === y).sort((a, b) => String(a.d).localeCompare(String(b.d))), tAmt = r2(L.reduce((u, w) => u + num(w.amt), 0)), tFee = r2(L.reduce((u, w) => u + num(w.fee), 0)), by = {};
+  L.forEach(w => { const k = nwWdP(w.d), o = by[k] = by[k] || {n:0, amt:0, fee:0}; o.n++; o.amt = r2(o.amt + num(w.amt)); o.fee = r2(o.fee + num(w.fee)); });
+  const mk = k => { const a = k.split("-"); return `${MTH_TH[+a[1] - 1]} ${a[0]}`; };
+  return nwKd(pg(1, 1, `${logo()}<div class="kt1">รายงานการถอนเงินสดและค่าเดินทางเบิกเงิน</div>
+    <div class="kt2">${ORG}<br>โรงเรียนมัธยมวัดหนองแขม (กบข.นข.)<br>ประจำปี พ.ศ. ${y}</div>
+    <div class="kmeta2"><span>รายงาน ณ วันที่ ${nwThL(nwToday())}</span><span>ถอนเงินสด ${L.length} ครั้ง</span></div>
+    <p class="i2">ตามที่คณะกรรมการบริหารกลุ่มบุคคลได้ถอนเงินสดจากบัญชีเงินฝากของกลุ่มบุคคลเพื่อใช้ในการดำเนินงาน ในปี พ.ศ. ${y} จำนวน <b>${L.length}</b> ครั้ง รวมเป็นเงิน <b>${B(tAmt)}</b> บาท (${bahtText(tAmt)})
+      และมีค่าเดินทางเบิกเงินรวม <b>${B(tFee)}</b> บาท (${bahtText(tFee)}) ซึ่งบันทึกเป็นค่าใช้จ่ายในการดำเนินงาน รายละเอียดดังนี้</p>
+    <table class="kt"><colgroup><col style="width:9%"><col style="width:17%"><col style="width:19%"><col style="width:23%"><col style="width:12%"><col style="width:10%"><col style="width:10%"></colgroup>
+      <thead><tr><th>ครั้งที่</th><th>วันที่</th><th>จำนวนเงินที่ถอน (บาท)</th><th>สาขาที่ถอน</th><th>วัตถุประสงค์</th><th>ผู้เดินทาง (คน)</th><th>ค่าเดินทาง (บาท)</th></tr></thead><tbody>
+      ${L.map((w, i) => `<tr><td class="c">${i + 1}</td><td class="c">${nwThS(w.d)}</td><td class="n">${B(w.amt)}</td><td class="l">${esc(w.br || "—")}</td><td class="l">${esc(w.purpose || "—")}</td><td class="c">${w.n || 1}</td><td class="n">${num(w.fee) ? B(w.fee) : "—"}</td></tr>`).join("") || '<tr><td colspan="7" class="c">ไม่มีรายการถอนเงินในปีนี้</td></tr>'}
+      <tr class="hl"><td colspan="2" class="c"><b>รวม ${L.length} ครั้ง</b></td><td class="n"><b>${B(tAmt)}</b></td><td colspan="3"></td><td class="n"><b>${B(tFee)}</b></td></tr></tbody></table>
+    ${Object.keys(by).length > 1 ? `<div style="break-inside:avoid;page-break-inside:avoid"><p class="i2" style="margin-top:8px"><b>สรุปรายเดือน</b></p>
+    <table class="kt" style="break-inside:avoid;page-break-inside:avoid"><colgroup><col style="width:34%"><col style="width:14%"><col style="width:28%"><col style="width:24%"></colgroup><thead><tr><th>เดือน</th><th>จำนวนครั้ง</th><th>ยอดถอน (บาท)</th><th>ค่าเดินทาง (บาท)</th></tr></thead><tbody>
+      ${Object.keys(by).sort().map(k => `<tr><td class="c">${mk(k)}</td><td class="c">${by[k].n}</td><td class="n">${B(by[k].amt)}</td><td class="n">${by[k].fee ? B(by[k].fee) : "—"}</td></tr>`).join("")}
+      <tr class="hl"><td class="c"><b>รวม</b></td><td class="c"><b>${L.length}</b></td><td class="n"><b>${B(tAmt)}</b></td><td class="n"><b>${B(tFee)}</b></td></tr></tbody></table></div>` : ""}
+    <p class="kh" style="margin-top:8px">หมายเหตุ: ค่าเดินทางเบิกเงินบันทึกเป็นค่าใช้จ่ายในการดำเนินงาน และนำไปหักจากดอกเบี้ยรับก่อนคำนวณเงินปันผล · แนบหลักฐานการถอนเงิน (สมุดบัญชีหรือใบถอนเงิน) และใบสำคัญรับเงินค่าเดินทางทุกครั้ง</p>
+    <div class="ksigs" style="grid-template-columns:1fr 1fr 1fr;margin:16px auto 0">${sigOf("ผู้ถอนเงิน", FIN())}${sigOf("ผู้ร่วมเดินทาง", "")}${sigOf("ประธานคณะกรรมการ", CHAIR())}</div>`, ""));
+}
 function nwExpDoc(p){
   const L = nwExps().filter(e => e.p === p).sort((a, b) => String(a.d || "").localeCompare(String(b.d || ""))), tot = r2(L.reduce((u, e) => u + num(e.amt), 0)), today = nwToday();
   const D = nwDashData(), it = (D.tot.find(t => t.p === p) || {}).int || 0, byC = {}; L.forEach(e => byC[e.cat] = r2((byC[e.cat] || 0) + num(e.amt)));
-  return pg(1, 1, `${logo()}<div class="kt1">รายงานค่าใช้จ่ายในการดำเนินงาน ประจำเดือน${nwPFull(p)}</div>
-    <div class="kt2">${ORG}<br>โรงเรียนมัธยมวัดหนองแขม (กบข.นข.)</div>
-    <div class="kmeta2"><span>จำนวน ${L.length} รายการ</span><span>รวม ${B(tot)} บาท</span><span>วันที่ ${thDate(today)}</span></div>
-    <table class="kt"><thead><tr><th style="width:36px">ที่</th><th class="l" style="width:84px">วันที่</th><th class="l">หมวด</th><th class="l">รายการ</th><th>จำนวนเงิน (บาท)</th></tr></thead><tbody>
-      ${L.map((e, i) => `<tr><td class="c">${i + 1}</td><td class="l">${e.d ? thDayS(e.d) : "—"}</td><td class="l">${esc(e.cat)}</td><td class="l">${esc(e.desc)}</td><td class="n">${B(e.amt)}</td></tr>`).join("") || '<tr><td colspan="5" class="c">ไม่มีรายการค่าใช้จ่ายในเดือนนี้</td></tr>'}
-      <tr class="hl"><td colspan="4" class="l"><b>รวมค่าใช้จ่าย</b></td><td class="n"><b>${B(tot)}</b></td></tr></tbody></table>
-    ${Object.keys(byC).length > 1 ? `<p class="kh" style="margin-top:6px">แยกตามหมวด: ${Object.keys(byC).map(k => `${esc(k)} ${B(byC[k])}`).join(" · ")}</p>` : ""}
-    <table class="kt sum" style="margin-top:8px"><tbody><tr><td>ดอกเบี้ยรับเดือน${nwPFull(p).split(" ")[0]}</td><td class="n">${B(it)}</td></tr><tr><td>หัก ค่าใช้จ่ายดำเนินงานเดือนนี้</td><td class="n">${B(tot)}</td></tr>
-      <tr class="hl"><td><b>ดอกเบี้ยสุทธิหลังหักค่าใช้จ่าย</b></td><td class="n"><b>${B(r2(it - tot))}</b></td></tr></tbody></table>
-    <div class="ksigs" style="grid-template-columns:1fr 1fr;max-width:460px;margin:14px auto 0">${sigOf("กรรมการฝ่ายการเงิน (ผู้จัดทำ)", FIN())}${sigOf("ประธานคณะกรรมการ", CHAIR())}</div>
-    <p class="kh" style="margin-top:8px">แนบใบสำคัญจ่าย/ใบเสร็จรับเงินของแต่ละรายการเป็นหลักฐาน</p>`, "");
+  return nwKd(pg(1, 1, `${logo()}<div class="kt1">รายงานค่าใช้จ่ายในการดำเนินงาน</div>
+    <div class="kt2">${ORG}<br>โรงเรียนมัธยมวัดหนองแขม (กบข.นข.)<br>ประจำเดือน${nwPFull(p)}</div>
+    <div class="kmeta2"><span>รายงาน ณ วันที่ ${nwThL(today)}</span><span>จำนวน ${L.length} รายการ</span></div>
+    <p class="i2">กลุ่มบุคคลมีค่าใช้จ่ายในการดำเนินงานประจำเดือน${nwPFull(p)} จำนวน <b>${L.length}</b> รายการ รวมเป็นเงิน <b>${B(tot)}</b> บาท (${bahtText(tot)}) รายละเอียดดังนี้</p>
+    <table class="kt"><colgroup><col style="width:8%"><col style="width:17%"><col style="width:25%"><col style="width:33%"><col style="width:17%"></colgroup>
+      <thead><tr><th>ที่</th><th>วันที่</th><th>หมวด</th><th>รายการ</th><th>จำนวนเงิน (บาท)</th></tr></thead><tbody>
+      ${L.map((e, i) => `<tr><td class="c">${i + 1}</td><td class="c">${e.d ? nwThS(e.d) : "—"}</td><td class="l">${esc(e.cat)}</td><td class="l">${esc(e.desc)}</td><td class="n">${B(e.amt)}</td></tr>`).join("") || '<tr><td colspan="5" class="c">ไม่มีรายการค่าใช้จ่ายในเดือนนี้</td></tr>'}
+      <tr class="hl"><td colspan="4" class="c"><b>รวมค่าใช้จ่าย</b></td><td class="n"><b>${B(tot)}</b></td></tr></tbody></table>
+    ${Object.keys(byC).length > 1 ? `<p class="kh" style="margin-top:6px">แยกตามหมวด: ${Object.keys(byC).map(k => `${esc(k)} ${B(byC[k])} บาท`).join(" · ")}</p>` : ""}
+    <p class="i2" style="margin-top:8px"><b>ดอกเบี้ยสุทธิหลังหักค่าใช้จ่าย</b></p>
+    <table class="kt"><colgroup><col style="width:70%"><col style="width:30%"></colgroup><tbody><tr><td class="l">ดอกเบี้ยรับเดือน${nwPFull(p).split(" ")[0]}</td><td class="n">${B(it)}</td></tr><tr><td class="l">หัก ค่าใช้จ่ายดำเนินงานเดือนนี้</td><td class="n">${B(tot)}</td></tr>
+      <tr class="hl"><td class="l"><b>ดอกเบี้ยสุทธิหลังหักค่าใช้จ่าย</b></td><td class="n"><b>${B(r2(it - tot))}</b></td></tr></tbody></table>
+    <p class="kh" style="margin-top:8px">แนบใบสำคัญจ่ายหรือใบเสร็จรับเงินของแต่ละรายการเป็นหลักฐาน</p>
+    <div class="ksigs" style="grid-template-columns:1fr 1fr;max-width:460px;margin:16px auto 0">${sigOf("กรรมการฝ่ายการเงิน (ผู้จัดทำ)", FIN())}${sigOf("ประธานคณะกรรมการ", CHAIR())}</div>`, ""));
 }
 function nwExpBars(rows){
   const W = 760, H = 230, L = 58, R = 12, T = 22, Bm = 32, n = rows.length; if(!n) return "";
@@ -5658,6 +5786,9 @@ function drawNWExp(){
   const byC = {}; nwExps().filter(e => e.p.startsWith(yr)).forEach(e => byC[e.cat] = r2((byC[e.cat] || 0) + num(e.amt)));
   const cats = Object.keys(byC).sort((a, b) => byC[b] - byC[a]), mxC = Math.max(1, ...cats.map(k => byC[k]));
   const catOpt = sel => NW_EXPC.concat(sel && !NW_EXPC.includes(sel) ? [sel] : []).map(c => `<option ${c === sel ? "selected" : ""}>${esc(c)}</option>`).join("");
+  nwWdMig(); const CFG = nwWdCfg(), WD = nwWds().filter(w => nwConYear(w.d) === +yr).sort((u, v) => String(u.d).localeCompare(String(v.d))), wdAmt = r2(WD.reduce((u, w) => u + num(w.amt), 0)), wdFee = r2(WD.reduce((u, w) => u + num(w.fee), 0));
+  const wdBy = {}; WD.forEach(w => { const k = nwWdP(w.d), o = wdBy[k] = wdBy[k] || {n:0, amt:0, fee:0}; o.n++; o.amt = r2(o.amt + num(w.amt)); o.fee = r2(o.fee + num(w.fee)); });
+  const WDTXT = S.exWdTxt || "", WDP = nwExpParseWd(WDTXT), wdHave = new Set(nwWds().map(w => `${w.d}|${w.amt}`)), WDNEW = WDP.rows.filter(w => !wdHave.has(`${w.iso}|${w.wd}`));
   el.innerHTML = `<div class="nwscreen"><div class="ds-head"><div><div class="eyebrow" style="margin:0">ค่าใช้จ่ายในการดำเนินงาน</div>
       <div class="hint">พิมพ์รายการและตัวเลขเองทุกเดือน · หักออกจากดอกเบี้ยรับ แล้วจึงนำไปปันผล (ดูที่แท็บ ใบสรุป + ปันผล) · เก็บใบสำคัญจ่ายแนบไว้ทุกรายการ</div></div></div>
     <div class="stats" style="margin:0 0 10px">
@@ -5675,12 +5806,37 @@ function drawNWExp(){
         <div><label>จำนวนเงิน (บาท)</label><input type="number" step="0.01" min="0" id="ex_a"></div>
         <div style="align-self:end"><button id="ex_add" style="width:100%">+ เพิ่มรายการ</button></div></div>
       <div class="tbl" style="margin-top:8px"><table><thead><tr><th>ที่</th><th class="l">วันที่</th><th class="l">หมวด</th><th class="l">รายการ</th><th>จำนวนเงิน (บาท)</th><th></th></tr></thead><tbody>
-        ${L.map((e, i) => `<tr><td class="amt">${i + 1}</td><td class="l"><input class="ce ced" type="date" data-exf="${e.id}|d" value="${esc(e.d || "")}"></td>
+        ${L.map((e, i) => e.wdId ? `<tr><td class="amt">${i + 1}</td><td class="l">${e.d ? thDayS(e.d) : "—"}</td><td class="l">${esc(e.cat)}</td><td class="l" style="white-space:normal">${esc(e.desc)} <span class="pill" title="แก้ไขที่ทะเบียนการถอนเงินสดด้านล่าง">จากทะเบียนถอนเงิน</span></td><td class="amt">${B(e.amt)}</td><td></td></tr>` : `<tr><td class="amt">${i + 1}</td><td class="l"><input class="ce ced" type="date" data-exf="${e.id}|d" value="${esc(e.d || "")}"></td>
           <td class="l"><select data-exf="${e.id}|cat" style="width:230px">${catOpt(e.cat)}</select></td>
           <td class="l"><input class="ce" data-exf="${e.id}|desc" value="${esc(e.desc)}" style="width:100%;min-width:220px"></td>
           <td class="amt"><input class="ce" type="number" step="0.01" min="0" data-exf="${e.id}|amt" value="${esc(e.amt)}" style="width:110px"></td>
           <td><button class="del" data-exd="${e.id}" title="ลบรายการ">×</button></td></tr>`).join("") || '<tr><td colspan="6" class="hint" style="text-align:left">ยังไม่มีรายการในเดือนนี้ — พิมพ์รายการด้านบนแล้วกด «เพิ่มรายการ»</td></tr>'}
         ${L.length ? `<tr class="tot"><td colspan="4" class="l"><b>รวมเดือน ${thPer(pSel)}</b></td><td class="amt"><b>${B(mExp)}</b></td><td></td></tr>` : ""}</tbody></table></div></div>
+    <div class="card" id="ex_wd"><div class="eyebrow">ทะเบียนการถอนเงินสด ปี ${yr}<span style="margin-left:auto;display:flex;gap:6px"><button class="ghost sm" id="wd_print">🖨 พิมพ์รายงาน</button><button class="ghost sm" id="wd_word">Word</button></span></div>
+      <div class="stats" style="margin:6px 0">
+        <div class="stat"><div class="k">ถอนเงินสด</div><div class="v">${WD.length} <small>ครั้ง</small></div></div>
+        <div class="stat"><div class="k">ยอดถอนรวม</div><div class="v">${B0(wdAmt)} <small>บาท</small></div></div>
+        <div class="stat"><div class="k">ค่าเดินทางเบิกเงินรวม</div><div class="v">${B0(wdFee)} <small>บาท</small></div><div class="hint">บันทึกเป็นค่าใช้จ่ายให้อัตโนมัติ</div></div>
+        <div class="stat"><div class="k">เฉลี่ยต่อครั้ง</div><div class="v">${WD.length ? B0(r2(wdAmt / WD.length)) : "—"} <small>บาท</small></div></div></div>
+      <div class="pf"><div><label>ค่าเดินทางต่อครั้ง (บาท)</label><input type="number" step="0.01" min="0" id="wd_rate" value="${CFG.rate}"></div><div><label>ผู้เดินทาง (คน)</label><input type="number" min="1" id="wd_n" value="${CFG.n}"></div>
+        <div style="grid-column:span 2"><label>วิธีคิดค่าเดินทาง</label><select id="wd_mode"><option value="trip" ${CFG.mode === "trip" ? "selected" : ""}>ครั้งละ ${B0(CFG.rate)} บาท (รวมทุกคนในทริปนั้น)</option><option value="head" ${CFG.mode === "head" ? "selected" : ""}>คนละ ${B0(CFG.rate)} บาท × ${CFG.n} คน = ${B0(CFG.rate * CFG.n)} บาท/ครั้ง</option></select></div></div>
+      <div class="pf"><div><label>วันที่ถอน</label><input type="date" id="wd_d"></div><div><label>จำนวนเงินที่ถอน (บาท)</label><input type="number" step="0.01" min="0" id="wd_a"></div>
+        <div><label>สาขาที่ถอน</label><input id="wd_b" placeholder="เช่น สาขา…"></div><div><label>วัตถุประสงค์</label><input id="wd_p" placeholder="เช่น จ่ายเงินกู้ / รับชำระ"></div>
+        <div style="align-self:end"><button id="wd_add" style="width:100%">+ เพิ่มการถอน (ค่าเดินทาง ${B0(nwWdFee(CFG))})</button></div></div>
+      <div class="tbl" style="margin-top:8px"><table><thead><tr><th>ครั้งที่</th><th class="l">วันที่</th><th>จำนวนเงินที่ถอน (บาท)</th><th class="l">สาขาที่ถอน</th><th class="l">วัตถุประสงค์</th><th>ผู้เดินทาง (คน)</th><th>ค่าเดินทาง (บาท)</th><th></th></tr></thead><tbody>
+        ${WD.map((w, i) => `<tr><td class="amt">${i + 1}</td><td class="l"><input class="ce ced" type="date" data-wdf="${w.id}|d" value="${esc(w.d)}"></td>
+          <td class="amt"><input class="ce" type="number" step="0.01" min="0" data-wdf="${w.id}|amt" value="${esc(w.amt)}" style="width:120px"></td>
+          <td class="l"><input class="ce" data-wdf="${w.id}|br" value="${esc(w.br || "")}" style="width:100%;min-width:150px"></td><td class="l"><input class="ce" data-wdf="${w.id}|purpose" value="${esc(w.purpose || "")}" style="width:100%;min-width:130px"></td>
+          <td class="amt"><input class="ce" type="number" min="1" data-wdf="${w.id}|n" value="${esc(w.n || 1)}" style="width:56px"></td><td class="amt"><input class="ce" type="number" step="0.01" min="0" data-wdf="${w.id}|fee" value="${esc(w.fee || 0)}" style="width:92px"></td>
+          <td><button class="del" data-wdd="${w.id}" title="ลบ">×</button></td></tr>`).join("") || '<tr><td colspan="8" class="hint" style="text-align:left">ยังไม่มีรายการถอนเงินในปีนี้ — เพิ่มทีละรายการด้านบน หรือวางตารางด้านล่าง</td></tr>'}
+        ${WD.length ? `<tr class="tot"><td colspan="2" class="l"><b>รวม ${WD.length} ครั้ง</b></td><td class="amt"><b>${B(wdAmt)}</b></td><td colspan="3"></td><td class="amt"><b>${B(wdFee)}</b></td><td></td></tr>` : ""}</tbody></table></div>
+      ${Object.keys(wdBy).length > 1 ? `<div class="tbl" style="margin-top:8px"><table><thead><tr><th class="l">สรุปรายเดือน</th><th>ครั้ง</th><th>ยอดถอน (บาท)</th><th>ค่าเดินทาง (บาท)</th></tr></thead><tbody>${Object.keys(wdBy).sort().map(k => `<tr><td class="l">${thPer(k)}</td><td class="amt">${wdBy[k].n}</td><td class="amt">${B(wdBy[k].amt)}</td><td class="amt">${wdBy[k].fee ? B(wdBy[k].fee) : "—"}</td></tr>`).join("")}</tbody></table></div>` : ""}
+      <div class="bar" style="margin-top:8px;flex-wrap:wrap"><button class="ghost sm" id="wd_apply" ${WD.length ? "" : "disabled"} title="ตั้งค่าเดินทางและจำนวนคนตามช่องด้านบนให้ทุกแถวของปีนี้">ใช้ค่าเดินทาง ${B0(nwWdFee(CFG))} บาท/ครั้ง กับทุกแถวของปี ${yr}</button>
+        <span class="hint">ค่าเดินทางลงเป็นค่าใช้จ่ายเดือนปฏิทินของวันที่ถอน · แก้ค่าเดินทางรายแถวได้ · ใส่ 0 = ไม่มีค่าเดินทาง</span></div>
+      <details class="opn" style="margin-top:8px"${WDTXT ? " open" : ""}><summary><b>วางตารางถอนเงินหลายรายการ</b> (วันที่ + ยอดถอน + สาขา — แต่ละบรรทัด ๑ ครั้ง)</summary>
+        <textarea id="wd_txt" rows="5" style="width:100%;font-family:inherit;margin-top:6px" placeholder="เช่น&#10;1&#9;7 ม.ค. 69&#9;10,000.00&#9;สาขา…&#10;2&#9;13 ก.พ. 69&#9;20,000.00&#9;สาขา…">${esc(WDTXT)}</textarea>
+        <div class="bar" style="margin-top:6px"><button id="wd_paste" ${WDNEW.length ? "" : "disabled"}>${WDNEW.length ? `เพิ่ม ${WDNEW.length} ครั้งเข้าทะเบียน` : WDP.rows.length ? "มีครบแล้ว" : "วางตารางก่อน"}</button>
+          <span class="hint">${WDP.rows.length ? `อ่านได้ ${WDP.rows.length} บรรทัด ยอดรวม ${B(r2(WDP.rows.reduce((u, w) => u + w.wd, 0)))} บาท${WDP.bad.length ? ` · <b style="color:var(--danger)">อ่านไม่ได้ ${WDP.bad.length} บรรทัด</b>` : ""}${WDP.rows.length - WDNEW.length ? ` · ซ้ำกับที่มีแล้ว ${WDP.rows.length - WDNEW.length} (ข้าม)` : ""}` : "อ่านวันที่ได้ทั้งแบบ 7 ม.ค. 69 · 7 มกราคม 2569 · 2026-01-07"}</span></div></details></div>
     <div class="card"><div class="eyebrow">สรุปรายเดือน ปี ${yr} — ดอกเบี้ยรับ − ค่าใช้จ่าย = ดอกเบี้ยสุทธิ</div>
       <div style="display:flex;gap:14px;font-size:13px;margin:0 0 4px"><span><i style="display:inline-block;width:11px;height:11px;background:#1BAF7A;margin-right:5px"></i>ดอกเบี้ยรับ (จางคือคาดการณ์)</span><span><i style="display:inline-block;width:11px;height:11px;background:#EB6834;margin-right:5px"></i>ค่าใช้จ่าย</span></div>
       ${nwExpBars(rows)}
@@ -5691,6 +5847,23 @@ function drawNWExp(){
       <p class="hint" style="margin:8px 0 0">ดอกเบี้ยที่หักในใบสรุป + ปันผล ใช้เฉพาะเดือนในช่วงที่เลือกไว้ที่แท็บนั้น</p></div></div><div class="nwdoc" id="nwdoc"></div>`;
   const redraw = () => { const y = window.scrollY; drawNWExp(); window.scrollTo(0, y); };
   const go = q => { S.exm = q; drawNWExp(); };
+  const wdCfgSet = (k, v) => { S.nw.wdCfg = Object.assign({}, S.nw.wdCfg || {}, {[k]:v}); save(); redraw(); };
+  if($("wd_rate")) $("wd_rate").onchange = e => wdCfgSet("rate", Math.max(0, +e.target.value || 0));
+  if($("wd_n")) $("wd_n").onchange = e => wdCfgSet("n", Math.max(1, Math.round(+e.target.value || 1)));
+  if($("wd_mode")) $("wd_mode").onchange = e => wdCfgSet("mode", e.target.value);
+  if($("wd_add")) $("wd_add").onclick = () => { const d = $("wd_d").value, a = +$("wd_a").value; if(!d || !(a > 0)){ toast("ใส่วันที่และจำนวนเงินที่ถอนก่อน"); return; }
+    const w = {id:"WD" + Math.random().toString(36).slice(2, 8), d, amt:r2(a), br:$("wd_b").value.trim(), purpose:$("wd_p").value.trim(), n:CFG.n, fee:nwWdFee(CFG)}; nwWds().push(w); nwWdSync(w); save(); redraw(); toast(`บันทึกการถอนเงิน ${B(a)} บาท · ค่าเดินทาง ${B(w.fee)} บาท`); };
+  el.querySelectorAll("[data-wdf]").forEach(i => i.addEventListener("change", () => { const [id, f] = i.dataset.wdf.split("|"), w = nwWds().find(q => q.id === id); if(!w) return;
+    w[f] = ["amt", "fee"].includes(f) ? r2(Math.max(0, +i.value || 0)) : f === "n" ? Math.max(1, Math.round(+i.value || 1)) : i.value; nwWdSync(w); save(); redraw(); }));
+  el.querySelectorAll("[data-wdd]").forEach(b => b.onclick = () => { const w = nwWds().find(q => q.id === b.dataset.wdd); if(!w || !confirm(`ลบการถอนเงิน ${thDayS(w.d)} ${B(w.amt)} บาท และค่าเดินทางที่ผูกไว้?`)) return;
+    S.nw.wd = nwWds().filter(q => q.id !== w.id); S.nw.exp = nwExps().filter(e => e.wdId !== w.id); save(); redraw(); });
+  if($("wd_apply")) $("wd_apply").onclick = () => { if(!confirm(`ตั้งค่าเดินทาง ${B(nwWdFee(CFG))} บาท/ครั้ง (${CFG.n} คน) ให้ทุกครั้งที่ถอนในปี ${yr} (${WD.length} ครั้ง)?`)) return;
+    WD.forEach(w => { w.fee = nwWdFee(CFG); w.n = CFG.n; nwWdSync(w); }); save(); redraw(); toast(`ปรับค่าเดินทาง ${WD.length} ครั้งแล้ว`); };
+  if($("wd_txt")) $("wd_txt").onchange = e => { S.exWdTxt = e.target.value; redraw(); };
+  if($("wd_paste")) $("wd_paste").onclick = () => { if(!WDNEW.length) return; if(!confirm(`เพิ่มการถอนเงิน ${WDNEW.length} ครั้ง ยอดถอนรวม ${B(r2(WDNEW.reduce((u, w) => u + w.wd, 0)))} บาท\nค่าเดินทางครั้งละ ${B(nwWdFee(CFG))} บาท (${CFG.n} คน) รวม ${B(r2(nwWdFee(CFG) * WDNEW.length))} บาท\n\nดำเนินการหรือไม่?`)) return;
+    WDNEW.forEach(r => { const w = {id:"WD" + Math.random().toString(36).slice(2, 8), d:r.iso, amt:r.wd, br:r.br || "", purpose:"", n:CFG.n, fee:nwWdFee(CFG)}; nwWds().push(w); nwWdSync(w); }); S.exWdTxt = ""; save(); redraw(); toast(`เพิ่มการถอนเงิน ${WDNEW.length} ครั้งแล้ว`); };
+  if($("wd_print")) $("wd_print").onclick = () => nwPrint(nwWdDoc(+yr), "ถอนเงินสด-" + yr);
+  if($("wd_word")) $("wd_word").onclick = () => nwxRun("ทะเบียนถอนเงิน → Word", () => nwxDocx(nwWdDoc(+yr), "ถอนเงินสด-" + yr, NWX_ONE));
   $("ex_m").onchange = e => go(e.target.value);
   $("ex_prev").onclick = () => { if(pNum(pSel) > pNum("2568-05")) go(pFrom(pNum(pSel) - 1)); };
   $("ex_next").onclick = () => { if(pNum(pSel) <= pNum(cur)) go(pFrom(pNum(pSel) + 1)); };
