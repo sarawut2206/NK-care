@@ -76,10 +76,22 @@ button.cta{background:var(--accent);color:var(--brand);font-weight:700}
 button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 button:disabled{opacity:.4;cursor:default}
 
-nav{display:flex;gap:5px;margin:0 0 18px;flex-wrap:wrap;
-  background:#fff;border-bottom:1px solid var(--rule);padding:7px 16px 0;
-  position:sticky;top:0;z-index:20;box-shadow:0 2px 10px rgba(11,44,107,.05)}
-nav .wrap{display:flex;gap:5px;flex-wrap:wrap;padding:0}
+nav{display:block;margin:0 0 18px;background:#fff;border-bottom:1px solid var(--rule);padding:8px 16px 0;position:sticky;top:0;z-index:20;box-shadow:0 2px 10px rgba(11,44,107,.05)}
+nav .navtop{display:flex;gap:7px;flex-wrap:wrap;align-items:center;padding:0 0 7px}
+nav b.ng{font-size:15px;padding:8px 15px;border:1px solid var(--rule);border-radius:999px;background:var(--faint);color:var(--ink);margin:0;box-shadow:none}
+nav b.ng:hover{border-color:var(--brand);color:var(--brand);background:#fff}
+nav b.ng.on{background:var(--brand);border-color:var(--brand);color:#fff;box-shadow:0 2px 6px rgba(11,44,107,.25)}
+nav b.ng.on .grp-ic{opacity:1}
+nav .navsub{display:flex;padding:0;border-top:1px solid var(--rule);margin-top:0}
+nav .ngs{display:flex;gap:4px;flex-wrap:wrap;padding-top:5px}nav .ngs[hidden]{display:none}
+nav .navsub[hidden]{display:none}
+nav .oldbtn{margin-left:auto}
+@media(max-width:700px){nav{padding:6px 8px 0}nav b{padding:9px 11px;font-size:13.5px}nav b.ng{padding:7px 11px;font-size:13.5px}nav .ngs{flex-wrap:nowrap;overflow-x:auto}nav .navtop{gap:5px}}
+.ds-chips{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 14px}
+.ds-chip{font-family:"Bai Jamjuree",sans-serif;font-weight:600;font-size:14px;padding:8px 15px;border:1px solid var(--rule);border-radius:999px;background:#fff;color:var(--ink);cursor:pointer}
+.ds-chip:hover{border-color:var(--brand);color:var(--brand)}.ds-chip.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.ds-sec[hidden]{display:none}
+nav .wrap{padding:0}
 nav b{font-family:"Bai Jamjuree",sans-serif;font-weight:600;font-size:14.5px;padding:11px 17px;cursor:pointer;
 color:var(--soft);border:1px solid transparent;border-bottom:none;border-radius:9px 9px 0 0;
 margin-bottom:-1px;white-space:nowrap;display:flex;align-items:center;gap:7px;transition:color .12s,background .12s}
@@ -513,7 +525,6 @@ tr.prow .ce,tr.grow .ce{opacity:.85}
 .nwr .signbox{min-width:280px;text-align:center;font-size:12px;color:#374151}
 .nwr .signline{border-bottom:1px solid #9ca3af;margin:34px 0 6px}
 .pill.amb{background:#FFF4DC;color:#8A5A00;border-color:#F2D48A}
-nav .oldbtn{margin-left:auto}
 nav .oldnav{flex-basis:100%;display:flex;flex-wrap:wrap;gap:5px;align-items:center;
   border-top:1px dashed var(--rule);padding:4px 0 0;margin-top:2px}
 nav .oldnav[hidden]{display:none!important}
@@ -699,7 +710,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-160</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-161</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -713,21 +724,23 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
 </div>
 </div>
 
-<nav><div class="wrap">
-  <span class="ngrp">เว็บใหม่</span>
-  <b data-t="23" class="on"><span class="grp-ic">📊</span>แดชบอร์ด</b>
-  <b data-t="20"><span class="grp-ic">📗</span>ทะเบียนผู้กู้</b>
-  <b data-t="21"><span class="grp-ic">📘</span>ทะเบียนผู้ฝาก</b>
-  <b data-t="22"><span class="grp-ic">🧾</span>ใบสรุป + ปันผล</b>
-  <b data-t="24"><span class="grp-ic">🖨</span>ใบเสร็จรายเดือน</b>
-  <b data-t="25"><span class="grp-ic">🏦</span>กู้ยืม + ติดตามหนี้</b>
-  <b data-t="26"><span class="grp-ic">📄</span>สรุปภาพรวม ๑ หน้า</b>
-  <b data-t="27"><span class="grp-ic">👥</span>ฐานข้อมูลสมาชิก</b>
-  <b data-t="28"><span class="grp-ic">🛡️</span>ทะเบียนคุมผู้ค้ำ</b>
-  <b data-t="30"><span class="grp-ic">📑</span>ทะเบียนสัญญากู้</b>
-  <b data-t="31"><span class="grp-ic">💸</span>ค่าใช้จ่ายดำเนินงาน</b>
-  <b data-t="29"><span class="grp-ic">⚖️</span>ชุดฟ้องร้อง</b>
+<nav>
+<div class="wrap navtop" id="navtop">
+  <b class="ng on" data-g="ov" title="แดชบอร์ด · สรุปภาพรวม ๑ หน้า"><span class="grp-ic">📊</span>ภาพรวม</b>
+  <b class="ng" data-g="mo" title="ทะเบียนผู้กู้ · ผู้ฝาก · ใบเสร็จรายเดือน"><span class="grp-ic">📒</span>รับชำระรายเดือน</b>
+  <b class="ng" data-g="ln" title="กู้ยืม + ติดตามหนี้ · ทะเบียนสัญญา · ผู้ค้ำ · ชุดฟ้องร้อง"><span class="grp-ic">🏦</span>สินเชื่อและหนี้</b>
+  <b class="ng" data-g="ac" title="ใบสรุป + ปันผล · ค่าใช้จ่ายดำเนินงาน"><span class="grp-ic">🧮</span>บัญชีและปันผล</b>
+  <b class="ng" data-g="mb" title="ฐานข้อมูลสมาชิก"><span class="grp-ic">👥</span>สมาชิก</b>
   <b id="oldbtn" class="oldbtn" title="เมนูทั้งหมดของระบบเดิม"><span class="grp-ic">🗂️</span>ระบบเก่า <span id="oldar">▾</span></b>
+</div>
+<div class="wrap navsub" id="navsub">
+  <div class="ngs" data-g="ov"><b data-t="23" class="on"><span class="grp-ic">📊</span>แดชบอร์ด</b><b data-t="26"><span class="grp-ic">📄</span>สรุปภาพรวม ๑ หน้า</b></div>
+  <div class="ngs" data-g="mo" hidden><b data-t="20"><span class="grp-ic">📗</span>ทะเบียนผู้กู้</b><b data-t="21"><span class="grp-ic">📘</span>ทะเบียนผู้ฝาก</b><b data-t="24"><span class="grp-ic">🖨</span>ใบเสร็จรายเดือน</b></div>
+  <div class="ngs" data-g="ln" hidden><b data-t="25"><span class="grp-ic">🏦</span>กู้ยืม + ติดตามหนี้</b><b data-t="30"><span class="grp-ic">📑</span>ทะเบียนสัญญากู้</b><b data-t="28"><span class="grp-ic">🛡️</span>ทะเบียนคุมผู้ค้ำ</b><b data-t="29"><span class="grp-ic">⚖️</span>ชุดฟ้องร้อง</b></div>
+  <div class="ngs" data-g="ac" hidden><b data-t="22"><span class="grp-ic">🧾</span>ใบสรุป + ปันผล</b><b data-t="31"><span class="grp-ic">💸</span>ค่าใช้จ่ายดำเนินงาน</b></div>
+  <div class="ngs" data-g="mb" hidden><b data-t="27"><span class="grp-ic">👥</span>ฐานข้อมูลสมาชิก</b></div>
+</div>
+<div class="wrap">
   <div class="oldnav" id="oldnav" hidden>
     <span class="ngrp">ระบบเก่า</span>
     <b data-t="10"><span class="grp-ic">📝</span>กรอกรับชำระ</b>
@@ -742,7 +755,8 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
     <b data-t="6"><span class="grp-ic">🧮</span>คำนวณวงเงิน</b>
     <b data-t="4"><span class="grp-ic">✔️</span>ตรวจสอบ <span class="dot" id="ndot">0</span></b>
   </div>
-</div></nav>
+</div>
+</nav>
 
 <div class="wrap">
 <div id="bnr" style="display:none;padding:10px 13px;border-radius:0 6px 6px 0;margin:0 0 14px"></div>
@@ -3910,6 +3924,7 @@ function nwGoalHTML(){
 }
 function drawNWDash(){
   const el = $("tab23"); if(!el) return;
+  const dsSec = S.dsSec || "ov";
   if(tab !== 23){ el.innerHTML = ""; return; }
   ["tab20", "tab21", "tab22", "tab24", "tab25", "tab26"].forEach(id => { const e = $(id); if(e) e.innerHTML = ""; });
   if(!NW.on()){ el.innerHTML = nwStartHTML("แดชบอร์ด"); bindNwImport(); return; }
@@ -3934,16 +3949,23 @@ function drawNWDash(){
       <div class="s">หนี้คงเหลือ ${B0(D.toT.dbt)} บาท · ${chg(D.toT.sh, D.shNow)} หุ้น / ${chg(D.toT.dbt, D.dbNow)} หนี้ จากปัจจุบัน</div></div>` : ""}
   </div>
 
+  <div class="ds-chips" id="ds_chips">${[["ov", "📈", "ภาพรวมทุนและหนี้"], ["goal", "🎯", "เป้าหมายทุน"], ["int", "💰", "ดอกเบี้ยและปันผล"], ["fc", "🔮", "คาดการณ์ล่วงหน้า"], ["top", "🏆", "อันดับสมาชิก"], ["all", "☰", "ดูทั้งหมด"]].map(([k, i, t]) => `<button class="ds-chip${dsSec === k ? " on" : ""}" data-sec="${k}">${i} ${t}</button>`).join("")}</div>
+
+  <div class="ds-sec" data-sec="ov"${dsSec === "ov" || dsSec === "all" ? "" : " hidden"}>
   <div class="card"><div class="ds-ttl">ภาพรวมรายเดือน <span class="hint">หุ้นสะสม เทียบ หนี้คงเหลือ (รวมทุกคน)${D.fcEnd !== D.end ? " · ช่วงสีฟ้าเส้นประ = คาดการณ์ถึง " + thPer(D.fcEnd) : ""}</span>
       <span class="ds-lg"><i style="background:${DSH.sh}"></i>ทุนเรือนหุ้นสะสม <i style="background:${DSH.dbt}"></i>หนี้คงเหลือ</span></div>${dashLine(D.tot)}</div>
-
-  ${nwGoalHTML()}
 
   <div class="ds-g2">
     <div class="card"><div class="ds-ttl">① หุ้นสะสมแยกตามประเภท</div>${dashDonut([{l:NW_ACCS.sam, v:D.shBy.sam, c:DSH.sam}, {l:NW_ACCS.dk, v:D.shBy.dk, c:DSH.dk}, {l:NW_ACCS.free, v:D.shBy.free, c:DSH.free}], "หุ้นรวม")}</div>
     <div class="card"><div class="ds-ttl">② เงินกู้คงเหลือแยกตามประเภท</div>${dashDonut([{l:NW_ACCS.sam, v:D.dbBy.sam, c:DSH.sam}, {l:NW_ACCS.dk, v:D.dbBy.dk, c:DSH.dk}], "เงินกู้รวม")}</div>
   </div>
+  </div>
 
+  <div class="ds-sec" data-sec="goal"${dsSec === "goal" || dsSec === "all" ? "" : " hidden"}>
+  ${nwGoalHTML()}
+  </div>
+
+  <div class="ds-sec" data-sec="int"${dsSec === "int" || dsSec === "all" ? "" : " hidden"}>
   <div class="card"><div class="ds-ttl">③ ดอกเบี้ยรับรายเดือน <span class="hint">รวมทั้งกลุ่ม · ${thPer(D.from)} – ${thPer(D.to)} · รวม ${B0(D.intY)} บาท</span></div>${dashBars(D.rng)}</div>
 
   <div class="card"><div class="ds-ttl">④ ประมาณการปันผลหุ้น และเฉลี่ยคืนดอกเบี้ย <span class="hint">เติม % เองได้ — คิดจากตัวเลข ① และ ③ ด้านบน</span></div>
@@ -3957,14 +3979,21 @@ function drawNWDash(){
       <div class="ds-dr tot"><span>รวมคาดการณ์เงินคืนสมาชิก (ถึง ${thPer(D.to)})</span><div class="ds-bar2"><i style="width:${(divTot / mx * 100).toFixed(1)}%;background:#0B2C6B"></i></div><b>${B0(divTot)}</b></div>
       <div class="ds-dr est"><span>ประมาณทั้งปี (ถ้ายอดหุ้นคงที่ และดอกเบี้ยรายเดือนเท่าเดิม) : หุ้น ${B0(D.divSY)} + เฉลี่ยคืน ${B0(D.divIY)}</span><div class="ds-bar2"><i style="width:${(divY / mx * 100).toFixed(1)}%;background:#9AA6BC"></i></div><b>${B0(divY)}</b></div></div>
     <p class="hint" style="margin:6px 0 0">เป็นตัวเลขประมาณการจากที่กรอกไว้ ณ ตอนนี้ — ตัวเลขจริงขึ้นกับมติที่ประชุมและยอดสิ้นปี · ตรงกับผลรวมของแท็บ «ใบสรุป + ปันผล» เมื่อเลือกช่วงและอัตราเดียวกัน</p></div>
+  </div>
 
+  <div class="ds-sec" data-sec="fc"${dsSec === "fc" || dsSec === "all" ? "" : " hidden"}>
   ${nwFcstHTML()}
+  </div>
 
+  <div class="ds-sec" data-sec="top"${dsSec === "top" || dsSec === "all" ? "" : " hidden"}>
   <div class="ds-g2">
     <div class="card"><div class="ds-ttl">10 อันดับ ทุนเรือนหุ้นสะสมสูงสุด</div>${dashTop(D.ser, "shares", DSH.sh)}</div>
     <div class="card"><div class="ds-ttl">10 อันดับ เงินกู้คงเหลือสูงสุด</div>${dashTop(D.ser, "debt", DSH.dbt)}</div>
+  </div>
   </div></div>`;
 
+  el.querySelectorAll(".ds-chip").forEach(b => b.onclick = () => { S.dsSec = b.dataset.sec;
+    el.querySelectorAll(".ds-chip").forEach(x => x.classList.toggle("on", x === b)); el.querySelectorAll(".ds-sec").forEach(x => x.hidden = !(S.dsSec === "all" || x.dataset.sec === S.dsSec)); });
   const set = patch => { S.nw.dash = Object.assign({}, S.nw.dash || {}, patch); save(); drawNWDash(); };
   $("ds_from").onchange = e => set({from:e.target.value, to:pNum(e.target.value) > pNum(D.to) ? e.target.value : D.to});
   $("ds_to").onchange = e => set({to:e.target.value, from:pNum(e.target.value) < pNum(D.from) ? e.target.value : D.from});
@@ -10710,8 +10739,16 @@ $("oldbtn").onclick = () => {
   const o = $("oldnav"); o.hidden = !o.hidden; $("oldar").textContent = o.hidden ? "▾" : "▴";
   if(!o.hidden && !OLD_TABS.includes(tab)) goTab(10);
 };
+const NAV_LAST = {};
+function navShow(g){
+  document.querySelectorAll("#navtop .ng").forEach(x => x.classList.toggle("on", x.dataset.g === g));
+  document.querySelectorAll("#navsub .ngs").forEach(x => x.hidden = x.dataset.g !== g);
+  $("navsub").hidden = g === "old";
+}
+document.querySelectorAll("#navtop .ng").forEach(b => b.onclick = () => { const g = b.dataset.g, first = document.querySelector(`#navsub .ngs[data-g="${g}"] b[data-t]`); goTab(NAV_LAST[g] || (first && first.dataset.t)); });
 document.querySelectorAll("nav b[data-t]").forEach(b => b.onclick = () => {
   tab = +b.dataset.t;
+  const grp = b.closest(".ngs"); if(grp){ NAV_LAST[grp.dataset.g] = tab; navShow(grp.dataset.g); } else navShow("old");
   document.querySelectorAll("nav b[data-t]").forEach(x=>x.classList.toggle("on", x===b));
   $("oldbtn").classList.toggle("on", OLD_TABS.includes(tab));
   if(!OLD_TABS.includes(tab)){ $("oldnav").hidden = true; $("oldar").textContent = "▾"; }
