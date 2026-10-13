@@ -696,7 +696,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-150</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-151</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -4411,6 +4411,32 @@ function nwConStat(r){
   if(r.fut && !(st.debt > 0.005)) return '<span class="pill amb" title="ลงล่วงหน้าไว้ — ยังไม่ถึงงวดที่ 1">รอถึงงวด</span>';
   return st.missed ? `<span class="pill red">ค้าง ${st.missed} งวด</span>` : '<span class="pill grn">ปกติ</span>';
 }
+/* สรุปรายปี: จำนวนสัญญาที่ทำ และยอดเงินปล่อยสินเชื่อแต่ละประเภท
+   • กู้ใหม่ = ยอดเต็ม · กู้ทบ = เฉพาะเงินส่วนต่างที่ได้รับหลังหักหนี้เก่า (นับ ๑ สัญญา) · ปี = ปีของวันที่ส่งงวดที่ 1 ของสัญญานั้น
+   • สัญญาเดียวตั้งแต่ต้น (ไม่พบกู้ทบ) ใช้วันที่/วงเงินจากทะเบียนสัญญา · สัญญาก่อนกู้ทบครั้งแรกที่ไม่ทราบปี (ก่อน พ.ค.68) นับแยก ไม่รวมยอด */
+function nwConYearSum(R){
+  R = R || nwConRows(); const Y = {}, T = () => ({n:0, amt:0, refi:0, refiAmt:0, fut:0}), at = (y, k) => ((Y[y] = Y[y] || {sam:T(), dk:T()})[k]);
+  let unk = 0, est = 0;
+  const rowOf = (x, k) => R.find(r => r.x.no === x.no && r.k === k);
+  NW.people().forEach(x => ["sam", "dk"].forEach(k => { const a = nwAcctF(x, k), evs = nwLoanEvents(x, a), r = rowOf(x, k);
+    evs.forEach(e => { const t = at(nwConYear(nwDate5(e.p)), k), refi = e.D > 0.005; t.n++; t.amt = r2(t.amt + e.amt); if(refi){ t.refi++; t.refiAmt = r2(t.refiAmt + e.amt); } if(e.fut) t.fut++; });
+    if(evs.length){ if(evs[0].D > 0.005) unk++; }
+    else if(r){ const c = r.c, t = at(nwConYear((c && c.d) || r.d), k); t.n++; t.amt = r2(t.amt + (c && +c.amt ? +c.amt : r.g.amt || 0)); if(!c || c.conf !== "ok") est++; if(r.fut) t.fut++; } }));
+  const ys = Object.keys(Y).map(Number).sort(), z = () => ({n:0, amt:0, refi:0, refiAmt:0, fut:0}), tot = {sam:z(), dk:z()};
+  ys.forEach(y => ["sam", "dk"].forEach(k => { const t = Y[y][k], u = tot[k]; u.n += t.n; u.amt = r2(u.amt + t.amt); u.refi += t.refi; u.refiAmt = r2(u.refiAmt + t.refiAmt); u.fut += t.fut; }));
+  return {Y, ys, tot, unk, est};
+}
+function nwConYearHTML(S0){
+  const U = S0 || nwConYearSum(); if(!U.ys.length) return "";
+  const cell = t => `<td class="amt">${t.n || "—"}${t.refi ? `<div class="hint">กู้ทบ ${t.refi}</div>` : ""}</td><td class="amt">${t.n ? B(t.amt) : "—"}${t.refi ? `<div class="hint">ส่วนต่าง ${B0(t.refiAmt)}</div>` : ""}</td>`;
+  const both = t => ({n:t.sam.n + t.dk.n, amt:r2(t.sam.amt + t.dk.amt), refi:t.sam.refi + t.dk.refi, refiAmt:r2(t.sam.refiAmt + t.dk.refiAmt), fut:t.sam.fut + t.dk.fut});
+  return `<div class="card"><div class="eyebrow">สรุปรายปี — สัญญาที่ทำและยอดปล่อยสินเชื่อ</div>
+    <p class="hint" style="margin:0 0 6px">นับทุกสัญญาที่ทำในปีนั้น (ปี = ปีของวันที่ส่งงวดที่ 1) · <b>ยอดปล่อย</b>: กู้ใหม่ = ยอดเต็ม · <b>กู้ทบ = เฉพาะเงินส่วนต่างที่ได้รับหลังหักหนี้เก่า</b> · ตรวจกู้ทบจากหนี้ที่เพิ่มขึ้น${U.est ? ` · สัญญาเดียวตั้งแต่ต้นที่ยังไม่มีสัญญาจริง ${U.est} ฉบับใช้วันที่/วงเงินประมาณ` : ""}${U.unk ? ` · ไม่รวมสัญญาก่อนกู้ทบครั้งแรกที่ไม่ทราบปี (ก่อน พ.ค.68) ${U.unk} ฉบับ` : ""}</p>
+    <div class="tbl"><table><thead><tr><th rowspan="2" class="l">ปี</th><th colspan="2">สินเชื่อสามัญ</th><th colspan="2">สินเชื่อดูแลกัน</th><th colspan="2">รวม</th></tr>
+      <tr><th>สัญญา</th><th>ยอดปล่อย (บาท)</th><th>สัญญา</th><th>ยอดปล่อย (บาท)</th><th>สัญญา</th><th>ยอดปล่อย (บาท)</th></tr></thead><tbody>
+      ${U.ys.map(y => `<tr><td class="l"><b>${y}</b>${U.Y[y].sam.fut + U.Y[y].dk.fut ? ` <span class="pill amb" title="รวมที่ลงล่วงหน้า ${U.Y[y].sam.fut + U.Y[y].dk.fut} สัญญา">ล่วงหน้า ${U.Y[y].sam.fut + U.Y[y].dk.fut}</span>` : ""}</td>${cell(U.Y[y].sam)}${cell(U.Y[y].dk)}${cell(both(U.Y[y]))}</tr>`).join("")}
+      <tr class="tot"><td class="l"><b>รวมทุกปี</b></td>${cell(U.tot.sam)}${cell(U.tot.dk)}${cell(both(U.tot))}</tr></tbody></table></div></div>`;
+}
 function nwConDashHTML(){
   const f = S.ncf || "all", fy = S.ncy || "all", q = (S.ncq || "").trim().toLowerCase(), all = nwConRows();
   all.forEach(r => { r.yy = nwConYear((r.c && r.c.d) || r.d); });
@@ -4423,15 +4449,13 @@ function nwConDashHTML(){
   const old = r => { if(!r.c || !r.c.d) return false; return pNum(nwIsoPer(r.fd)) - pNum(nwIsoPer(r.c.d)) > 1; };
   const srcPill = r => { const t = nwConDSrc(r); return t === "user" ? '<span class="pill amb" title="วันที่ที่คุณกรอกเอง ไม่ตามงวดที่ 1">กำหนดเอง</span>' : t === "app" ? '<span class="pill" title="วันที่จากคำขอกู้ที่อนุมัติ">ตามคำขอกู้</span>'
     : t === "old" ? '<span class="pill" title="สัญญาจากระบบเก่า">สัญญาเดิม</span>' : '<span class="pill grn" title="วันที่ทำสัญญา = วันที่ส่งงวดที่ 1 จากระบบ">ตามงวดที่ 1</span>'; };
-  const yr = years.map(y => { const L = all.filter(r => r.yy === y), cs = L.map(r => (r.c && r.c.code) || "").filter(Boolean).sort();
-    return `<div class="stat" style="border-top-color:var(--blue)"><div class="k">ปี ${y}</div><div class="v">${L.length} <small>ฉบับ</small></div><div class="hint">${cs.length ? `${esc(cs[0])} – ${esc(cs[cs.length - 1])}` : "ยังไม่มีเลข"} · ${B0(r2(L.reduce((u, r) => u + (r.c ? +r.c.amt || 0 : 0), 0)))} บาท</div></div>`; }).join("");
   return `<div class="stats" style="margin:0 0 10px">
       <div class="stat"><div class="k">สัญญาทั้งหมด</div><div class="v">${all.length}</div><div class="hint">สามัญ ${nS} · ดูแลกัน ${nD}${nF ? ` · ลงล่วงหน้า ${nF}` : ""}</div></div>
       <div class="stat" style="border-top-color:${noCode ? "var(--red)" : "var(--green)"}"><div class="k">ยังไม่มีเลขที่สัญญา</div><div class="v" style="color:${noCode ? "var(--red)" : "var(--green)"}">${noCode}</div>${noCon ? `<div class="hint">ยังไม่มีสัญญา ${noCon} ฉบับ</div>` : ""}</div>
       <div class="stat"><div class="k">วงเงินตามสัญญารวม</div><div class="v">${B0(sumAmt)} <small>บาท</small></div></div>
       <div class="stat"><div class="k">หนี้คงเหลือรวม</div><div class="v">${B0(sumDebt)} <small>บาท</small></div></div>
       <div class="stat" style="border-top-color:${nLate ? "var(--red)" : "var(--green)"}"><div class="k">ค้างชำระ</div><div class="v" style="color:${nLate ? "var(--red)" : "var(--green)"}">${nLate} <small>สัญญา</small></div></div></div>
-    ${years.length ? `<div class="stats" style="margin:0 0 10px">${yr}</div>` : ""}
+    ${nwConYearHTML()}
     <div class="card">
     <div class="bar" style="margin:0 0 8px;flex-wrap:wrap"><select id="nc_f" style="width:auto"><option value="all">ทุกประเภท</option><option value="sam" ${f === "sam" ? "selected" : ""}>สามัญ</option><option value="dk" ${f === "dk" ? "selected" : ""}>ดูแลกัน</option><option value="fut" ${f === "fut" ? "selected" : ""}>เฉพาะที่ลงล่วงหน้า</option></select>
       <select id="nc_y" style="width:auto"><option value="all">ทุกปี</option>${years.map(y => `<option value="${y}" ${fy === String(y) ? "selected" : ""}>ปี ${y}</option>`).join("")}</select>
@@ -4454,6 +4478,15 @@ function nwConDashHTML(){
         || '<tr><td colspan="13" class="hint" style="text-align:left">ไม่มีผู้กู้ที่ยังมีหนี้</td></tr>'}</tbody></table></div></div>`;
 }
 /* เอกสารทะเบียนสัญญา (พิมพ์) — ๒๒ แถวต่อหน้า */
+function nwConYearPrint(){
+  const U = nwConYearSum(); if(!U.ys.length) return "";
+  const c = t => `<td class="n">${t.n || "—"}${t.refi ? ` (กู้ทบ ${t.refi})` : ""}</td><td class="n">${t.n ? B(t.amt) : "—"}</td>`, both = t => ({n:t.sam.n + t.dk.n, amt:r2(t.sam.amt + t.dk.amt), refi:t.sam.refi + t.dk.refi});
+  return `<div class="kt1" style="margin-top:12px;font-size:1.05em">สรุปรายปี — สัญญาที่ทำและยอดปล่อยสินเชื่อ</div>
+    <table class="kt"><thead><tr><th rowspan="2" class="l">ปี</th><th colspan="2">สินเชื่อสามัญ</th><th colspan="2">สินเชื่อดูแลกัน</th><th colspan="2">รวม</th></tr><tr><th>สัญญา</th><th>ยอดปล่อย</th><th>สัญญา</th><th>ยอดปล่อย</th><th>สัญญา</th><th>ยอดปล่อย</th></tr></thead><tbody>
+    ${U.ys.map(y => `<tr><td class="l">${y}</td>${c(U.Y[y].sam)}${c(U.Y[y].dk)}${c(both(U.Y[y]))}</tr>`).join("")}
+    <tr class="hl"><td class="l"><b>รวม</b></td>${c(U.tot.sam)}${c(U.tot.dk)}${c(both(U.tot))}</tr></tbody></table>
+    <p class="kh">ยอดปล่อย: กู้ใหม่ = ยอดเต็ม · กู้ทบ = เฉพาะเงินส่วนต่างที่ได้รับหลังหักหนี้เก่า</p>`;
+}
 function nwConRegDoc(){ return nwLand(nwConRegDoc0()); }
 function nwConRegDoc0(){
   const R = nwConRows(), per = 999, pages = Math.max(1, Math.ceil(R.length / per)), today = nwToday();
@@ -4466,6 +4499,7 @@ function nwConRegDoc0(){
         <td class="l">${(c && c.d) || r.d ? thDayS((c && c.d) || r.d) : "—"}${r.fut ? " (ล่วงหน้า)" : ""}</td><td class="l">${fd ? thDayS(fd) : "—"}</td><td class="n">${c ? B(c.amt) : "—"}</td><td class="n">${c ? c.terms : "—"}</td><td class="n">${r.a.inst ? B(r.a.inst) : c ? B(c.inst) : "—"}</td>
         <td class="l">${c ? [c.g1, c.g2].filter(Boolean).map(g => esc(nwNmOf(g))).join(", ") || "—" : "—"}</td><td class="n">${B(r.st.debt)}</td></tr>`; }).join("")}
       ${i === pages - 1 ? `<tr class="hl"><td></td><td class="l" colspan="5"><b>รวม ${R.length} ฉบับ</b></td><td class="n"><b>${B(r2(R.reduce((u, r) => u + (r.c ? +r.c.amt || 0 : 0), 0)))}</b></td><td></td><td></td><td></td><td class="n"><b>${B(r2(R.reduce((u, r) => u + r.st.debt, 0)))}</b></td></tr>` : ""}</tbody></table>
+      ${i === pages - 1 ? nwConYearPrint() : ""}
       ${i === pages - 1 ? `<div class="ksigs" style="grid-template-columns:1fr 1fr;max-width:420px;margin:14px auto 0">${sigOf("กรรมการฝ่ายติดตามหนี้", DEBT())}${sigOf("ประธานคณะกรรมการ", CHAIR())}</div>` : ""}`, "ผู้จัดทำ"); }).join("");
 }
 
@@ -4483,19 +4517,19 @@ function nwAcctF(x, k){                                   // บัญชีร�
   const A = x.acc && x.acc[k]; if(!nwFutPend(x, k)) return nwAcct(x, k);
   return nwAcct(Object.assign({}, x, {acc:Object.assign({}, x.acc, {[k]:Object.assign({}, A, A.pend.set, {pend:undefined})})}), k);
 }
-function nwLastLoanEvent(x, a){
-  let ev = null, d = a.debt0;
+function nwLoanEvents(x, a){                                  // ทุกครั้งที่กู้ใหม่/กู้ทบ เรียงตามเวลา — amt = เงินที่ได้รับจริง (กู้ทบ = ยอดใหม่ − หนี้เก่า) · D = หนี้เดิมก่อนกู้
+  const out = [], debtAcc = nwAccts(x).filter(q => q.prod !== "free" && q.debt0 > 0.005);
+  if(debtAcc.length === 1 && debtAcc[0].prod === a.prod){
+    const H = (x.hist || []).slice().sort((u, v) => String(u.ym).localeCompare(String(v.ym)));
+    for(let i = 1; i < H.length; i++){ const h = H[i], pv = H[i - 1], pri = Math.max(0, (+h.pay || 0) - (+h.int || 0) - (+h.sh || 0)), loan = r2((+h.debt || 0) - (+pv.debt || 0) + pri);
+      if(loan >= 1) out.push({p:ymToP(h.ym), N:r2((+h.debt || 0) + pri), src:"hist", amt:loan, D:r2(+pv.debt || 0), fut:false}); } }
+  let d = a.debt0;
   NW.rowsAll(a).slice().sort((u, v) => pNum(u.p) - pNum(v.p)).forEach(r => { const d1 = nwStep(d, r), imp = r2(d1 - (d - num(r.pri)));      // รวมรายการที่ลงล่วงหน้า
-    if(num(r.loan) > 0.005 || r.refi || imp > 1) ev = {p:r.p, N:r2(d1 + num(r.pri)), src:"row", amt:r2(Math.max(num(r.loan), imp)), fut:pNum(r.p) > pNum(nwCurP())};
+    if(num(r.loan) > 0.005 || r.refi || imp > 1) out.push({p:r.p, N:r2(d1 + num(r.pri)), src:"row", amt:r2(Math.max(num(r.loan), imp)), D:r2(d), fut:pNum(r.p) > pNum(nwCurP())});
     d = d1; });
-  if(ev) return ev;
-  const debtAcc = nwAccts(x).filter(q => q.prod !== "free" && q.debt0 > 0.005);
-  if(debtAcc.length !== 1 || debtAcc[0].prod !== a.prod) return null;
-  const H = (x.hist || []).slice().sort((u, v) => String(u.ym).localeCompare(String(v.ym)));
-  for(let i = 1; i < H.length; i++){ const h = H[i], pv = H[i - 1], pri = Math.max(0, (+h.pay || 0) - (+h.int || 0) - (+h.sh || 0)), loan = r2((+h.debt || 0) - (+pv.debt || 0) + pri);
-    if(loan >= 1) ev = {p:ymToP(h.ym), N:r2((+h.debt || 0) + pri), src:"hist", amt:loan}; }
-  return ev;
+  return out;
 }
+function nwLastLoanEvent(x, a){ const L = nwLoanEvents(x, a); const rows = L.filter(e => e.src === "row"); return rows.length ? rows[rows.length - 1] : L.length ? L[L.length - 1] : null; }
 function nwConGuess(x, k){
   const a = nwAcctF(x, k), pl = nwPlan(a, true), PK = NLP[k], P = PROD[PK], st = nwStateA(nwAcct(x, k));
   const rfRow = NW.rowsAll(a).filter(r => r.refi).pop(), ss = nwStarts(a), ev = rfRow ? null : nwLastLoanEvent(x, a), userSt = !!(a.starts && a.starts.length);
@@ -5405,7 +5439,9 @@ function drawNWCon(){
   if($("nc_prw")) $("nc_prw").onclick = () => nwxRun("ทะเบียนสัญญา → Word", () => nwxDocx(nwConRegDoc(), "ทะเบียนสัญญา", {K:1.1}));
   if($("nc_csv")) $("nc_csv").onclick = () => { const R = nwConRows();
     csvOut("kbk-ทะเบียนสัญญา.csv", [["ทะเบียนสัญญา", ["ลำดับ", "เลขที่สัญญา", "เลขสมาชิก", "ผู้กู้", "ประเภท", "วันที่ส่งงวดที่ 1", "วันที่ทำสัญญา", "วงเงิน", "งวด", "งวดละ", "ผู้ค้ำ 1", "ผู้ค้ำ 2", "หนี้คงเหลือ", "ค้าง (งวด)"],
-      R.map((r, i) => { const c = r.c || {}; return [i + 1, c.code || "", r.x.no, r.x.name, NLP[r.k], r.fd, c.d || r.d || "", c.amt ? f2(c.amt) : "", c.terms || "", f2(r.a.inst || c.inst || 0), c.g1 ? c.g1 + " " + nwNmOf(c.g1) : "", c.g2 ? c.g2 + " " + nwNmOf(c.g2) : "", f2(r.st.debt), r.st.missed || 0]; })]]); };
+      R.map((r, i) => { const c = r.c || {}; return [i + 1, c.code || "", r.x.no, r.x.name, NLP[r.k], r.fd, c.d || r.d || "", c.amt ? f2(c.amt) : "", c.terms || "", f2(r.a.inst || c.inst || 0), c.g1 ? c.g1 + " " + nwNmOf(c.g1) : "", c.g2 ? c.g2 + " " + nwNmOf(c.g2) : "", f2(r.st.debt), r.st.missed || 0]; })],
+      ["สรุปรายปี (ยอดปล่อย: กู้ทบ = เฉพาะเงินส่วนต่างที่ได้รับ)", ["ปี", "สามัญ สัญญา", "สามัญ ยอดปล่อย", "ดูแลกัน สัญญา", "ดูแลกัน ยอดปล่อย", "รวม สัญญา", "รวม ยอดปล่อย", "กู้ทบ (สัญญา)", "กู้ทบ (เงินส่วนต่าง)"],
+        (() => { const U = nwConYearSum(R); return U.ys.map(y => { const t = U.Y[y]; return [y, t.sam.n, f2(t.sam.amt), t.dk.n, f2(t.dk.amt), t.sam.n + t.dk.n, f2(t.sam.amt + t.dk.amt), t.sam.refi + t.dk.refi, f2(t.sam.refiAmt + t.dk.refiAmt)]; }); })()]]); };
 }
 
 /* ============ เว็บใหม่: สรุปภาพรวม กบข.นข. สำหรับสมาชิก — ๑ หน้า A4 ============
