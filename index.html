@@ -109,6 +109,10 @@ details.shx-d>summary{cursor:pointer;padding:11px 14px;font-weight:700;font-size
 details.shx-d>summary::-webkit-details-marker{display:none}
 details.shx-d>summary:before{content:"▸ ";color:var(--brand)}details.shx-d[open]>summary:before{content:"▾ "}
 details.shx-d>.in{padding:0 14px 13px}
+.shx-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:12px;margin:0 0 12px}
+.shx-grid .card{margin:0}.shx-dn{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.shx-dn svg{flex:none}
+.shx-lg{display:flex;flex-direction:column;gap:6px;font-size:13px;flex:1;min-width:140px}.shx-lg i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.shx-cap{font-size:14px;margin:8px 0 0;line-height:1.5}
 .ds-chips{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 14px}
 .ds-chip{font-family:"Bai Jamjuree",sans-serif;font-weight:600;font-size:14px;padding:8px 15px;border:1px solid var(--rule);border-radius:999px;background:#fff;color:var(--ink);cursor:pointer}
 .ds-chip:hover{border-color:var(--brand);color:var(--brand)}.ds-chip.on{background:var(--brand);border-color:var(--brand);color:#fff}
@@ -732,7 +736,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-170</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-171</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -5874,6 +5878,22 @@ function nwShCap(M, N, tgt, o){                              // ผู้กู�
   for(let q = 0; q < 50; q++){ const mid = (lo + hi) / 2; if(cv(mid).c.cover < tgt) lo = mid; else hi = mid; }
   let B = Math.ceil(hi / 50) * 50, r = cv(B); while(r.c.cover < tgt && B < M){ B += 50; r = cv(B); } return {B, P:Math.floor(r.P / 100) * 100, c:r.c};
 }
+function shxDonut(parts, ctr, sub){
+  const R = 52, C = 2 * Math.PI * R, tot = parts.reduce((u, q) => u + q.v, 0) || 1; let off = 0;
+  const arcs = parts.filter(q => q.v > 0).map(q => { const len = q.v / tot * C, a = `<circle cx="70" cy="70" r="${R}" fill="none" stroke="${q.c}" stroke-width="24" stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}" transform="rotate(-90 70 70)"/>`; off += len; return a; }).join("");
+  return `<svg viewBox="0 0 140 140" width="150" height="150" role="img"><circle cx="70" cy="70" r="${R}" fill="none" stroke="#EEF2F8" stroke-width="24"/>${arcs}<text x="70" y="70" text-anchor="middle" font-size="23" font-weight="800" fill="#0B2C6B">${ctr}</text><text x="70" y="87" text-anchor="middle" font-size="10" fill="#6B7A99">${sub}</text></svg>`;
+}
+function shxBars(gr, o){
+  o = o || {}; const W = 520, H = 244, L = 44, R = 10, T = 28, Bm = 46, n = gr.length, gw = (W - L - R) / n, fm = o.fmt || dshK;
+  const vals = gr.flatMap(g => g.bars.map(b => b.v)).concat(o.line ? [o.line.v] : []), mx = Math.max(1, ...vals) * 1.15, Y = v => T + (1 - v / mx) * (H - T - Bm);
+  const grid = [0, 1, 2, 3].map(i => { const v = mx * i / 3, y = Y(v); return `<line x1="${L}" x2="${W - R}" y1="${y}" y2="${y}" stroke="#E4EAF4"/><text x="${L - 6}" y="${y + 4}" text-anchor="end" font-size="10" fill="#6B7A99">${fm(v)}</text>`; }).join("");
+  const bars = gr.map((g, i) => { const k = g.bars.length, bw = Math.min(46, gw * 0.78 / k), x0 = L + i * gw + (gw - bw * k) / 2;
+    return (g.hi ? `<rect x="${L + i * gw + 2}" y="${T - 16}" width="${gw - 4}" height="${H - T - Bm + 16}" rx="8" fill="#FFF4DC" opacity=".8"/>` : "")
+      + g.bars.map((b, j) => `<rect x="${(x0 + j * bw).toFixed(1)}" y="${Y(b.v).toFixed(1)}" width="${bw - 3}" height="${Math.max(0, H - Bm - Y(b.v)).toFixed(1)}" rx="4" fill="${b.c}"/><text x="${(x0 + j * bw + (bw - 3) / 2).toFixed(1)}" y="${(Y(b.v) - 5).toFixed(1)}" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1F2D4D">${b.t !== undefined ? b.t : fm(b.v)}</text>`).join("")
+      + `<text x="${L + i * gw + gw / 2}" y="${H - Bm + 16}" text-anchor="middle" font-size="11.5" font-weight="${g.hi ? 700 : 400}" fill="#344">${g.lb}</text>` + (g.sub ? `<text x="${L + i * gw + gw / 2}" y="${H - Bm + 30}" text-anchor="middle" font-size="10" fill="#6B7A99">${g.sub}</text>` : ""); }).join("");
+  const ln = o.line ? `<line x1="${L}" x2="${W - R}" y1="${Y(o.line.v)}" y2="${Y(o.line.v)}" stroke="#0B2C6B" stroke-width="2" stroke-dasharray="6 4"/><text x="${W - R}" y="${Y(o.line.v) - 5}" text-anchor="end" font-size="11" font-weight="700" fill="#0B2C6B">${o.line.lb}</text>` : "";
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" style="display:block">${grid}${bars}${ln}</svg>`;
+}
 function drawNWShc(){
   const el = $("tab32"); if(!el) return;
   if(tab !== 32){ el.innerHTML = ""; return; }
@@ -5891,17 +5911,19 @@ function drawNWShc(){
   const sel = (k, v, list) => `<select data-shc="${k}">${list.map(q => `<option value="${q[0]}" ${String(q[0]) === String(v) ? "selected" : ""}>${q[1]}</option>`).join("")}</select>`;
   const keyRows = [1, 3, 6, 12, 18, 24, 36, 48, 60, 72].filter(m => m <= N).concat([rec.k, rec.be].filter(Boolean)).filter((m, i, a) => a.indexOf(m) === i).sort((a, b) => a - b);
   const rule = (P / N), rl = Math.round(0.27 * rule / 50) * 50, rh = Math.round(0.31 * rule / 50) * 50;
-  const kk = cur.rk, bal = kk.bal, cum = kk.cum, mxb = Math.max(bal, cum, 1), back = r2(cum - bal), cvp = Math.round(cur.cover * 100), tgp = Math.round(tgt * 100);
-  const beT = cur.be, zoneW = Math.min(100, ((beT ? beT - 1 : N) / N) * 100), kPos = Math.min(100, (cur.k / N) * 100), sc = 2.5;
+  const kk = cur.rk, bal = kk.bal, cum = kk.cum, back = r2(cum - bal), cvp = Math.round(cur.cover * 100), tgp = Math.round(tgt * 100);
+  const beT = cur.be, zoneW = Math.min(100, ((beT ? beT - 1 : N) / N) * 100), kPos = Math.min(100, (cur.k / N) * 100);
   const lvl = pass ? "ok" : (cur.cover >= 1 ? "warn" : "bad"), ico = lvl === "ok" ? "✅" : lvl === "warn" ? "🟡" : "⚠️";
   const open = o => (S.shcOpen && S.shcOpen[o]) ? " open" : "";
   const rlo = Math.round(0.27 * rule), rhi = Math.round(0.31 * rule);
+  const totPri = P, totInt = cur.totInt, totSh = cur.end - D0;
+  const dn1 = shxDonut([{v:Math.min(cum, bal), c:"#3DBE8B"}, {v:Math.max(0, bal - cum), c:"#E0626C"}], cvp + "%", "ครอบคลุม");
+  const dn2 = shxDonut([{v:totPri, c:"#2F6FDE"}, {v:totInt, c:"#F2B01E"}, {v:totSh, c:"#3DBE8B"}], B0(cur.M), "บาท/เดือน");
+  const barA = shxBars(reqRow.map(r => ({lb:r.n + " งวด", hi:r.n === N, bars:[{v:r.bb === null ? 0 : r.bb, c:r.bb !== null && B0v >= r.bb ? "#3DBE8B" : "#E0626C", t:r.bb === null ? "—" : B0(r.bb)}]})), {line:{v:B0v, lb:"ส่งอยู่ " + B0(B0v)}, fmt:v => B0(Math.round(v))});
+  const ms = [...new Set([0.25, 0.5, pct / 100, 0.9].map(f => Math.min(N, Math.max(1, Math.ceil(f * N)))))].sort((u, v) => u - v);
+  const barB = shxBars(ms.map(m => { const r = cur.rows[m - 1]; return {lb:"งวด " + m, sub:Math.round(m / N * 100) + "%" + (m === cur.k ? " 📍" : ""), hi:m === cur.k, bars:[{v:r.bal, c:"#E0626C"}, {v:r.cum, c:"#3DBE8B"}]}; }));
   el.innerHTML = `<div class="nwscreen"><div class="ds-head"><div><div class="eyebrow" style="margin:0">🛡️ จำลองหุ้นค้ำกู้ — ผู้กู้ต้องส่งหุ้นเท่าไร กลุ่มถึงปลอดภัย</div>
-      <div class="hint">ใส่ยอดกู้กับจำนวนงวด โปรแกรมบอกทันทีว่า ปลอดภัยไหม และควรให้ผู้กู้ส่งหุ้นประจำเดือนละเท่าไร</div></div></div>
-    <div class="shx-steps">
-      <div class="shx-step"><span class="e">💸</span><div><b>1) ผู้กู้ผ่อนทุกเดือน</b>จ่ายต้น + ดอก + <b>หุ้น</b> รวมเป็นยอดเดียว</div></div>
-      <div class="shx-step"><span class="e">📈</span><div><b>2) หุ้นสะสมขึ้นเรื่อยๆ</b>เป็นหลักประกันของกลุ่ม ส่วนหนี้ค่อยๆ ลดลง</div></div>
-      <div class="shx-step"><span class="e">🛡️</span><div><b>3) ถึง ${pct}% ของสัญญา</b>หุ้นต้อง <b>มากกว่าหนี้ที่เหลือ</b> ถ้าผู้กู้หยุดจ่าย กลุ่มยึดหุ้นมาหักหนี้ ไม่ขาดทุน</div></div></div>
+      <div class="hint">ใส่ยอดกู้กับจำนวนงวด ดูผลจากกราฟด้านล่างได้เลย · กฎ: ผ่อนถึง ${pct}% ของสัญญา หุ้นที่สะสมต้องมากกว่าหนี้ที่เหลือ</div></div></div>
     <div class="card"><div class="ds-ttl">✏️ ใส่ข้อมูลผู้กู้</div><div class="pf">
       <div><label>💰 วงเงินที่จะกู้ (บาท)</label><input type="number" step="1000" min="1000" data-shc="P" value="${P}"></div>
       <div><label>📅 ผ่อนกี่งวด (3–72 เดือน)</label><input type="number" min="3" max="72" data-shc="N" value="${N}"></div>
@@ -5912,38 +5934,40 @@ function drawNWShc(){
         <div><label>🧮 หุ้นต้องมากกว่าหนี้อย่างน้อย</label>${sel("tgt", tgt, [[1, "100% (พอดี)"], [1.1, "110% (เผื่อ — แนะนำ)"], [1.2, "120%"]])}</div>
         <div><label>🎟️ หุ้นแรกเข้า หักตอนทำสัญญา (บาท)</label><input type="number" step="500" min="0" data-shc="D0" value="${D0}"></div></div></div></details></div>
     <div class="shx-hero ${lvl}"><div class="big">${ico}</div><div style="flex:1;min-width:230px">
-      <div class="t">${lvl === "ok" ? "ปลอดภัย — ผ่านกฎ" : lvl === "warn" ? "เฉียดฉิว — ยังไม่ถึงเกณฑ์ที่ตั้งไว้" : "ยังไม่ปลอดภัย — หุ้นน้อยไป"}</div>
-      <div class="m">กู้ <b>${B0(P)}</b> · ผ่อน <b>${N}</b> งวด · ส่งหุ้นประจำ <b>${B0(B0v)}</b>/เดือน → ถึงงวดที่ ${cur.k} หุ้นสะสม <b>${B0(cum)}</b> เทียบกับหนี้ที่เหลือ <b>${B0(bal)}</b> = ครอบคลุม <b>${cvp}%</b> (ต้องการ ≥ ${tgp}%)</div>
-      <div class="shx-meter"><i style="width:${Math.min(100, cur.cover / sc * 100)}%"></i><u style="left:${100 / sc}%" title="100%"></u><u style="left:${tgt / sc * 100}%;background:#0F6B4A" title="เป้า"></u></div>
-      <div class="shx-ml"><span>0%</span><span>เส้นดำ = 100% (พอดี) · เส้นเขียว = เป้า ${tgp}%</span><span>250%</span></div></div>
-      ${solved && !pass ? `<div style="text-align:center"><div class="m" style="margin:0 0 6px">ควรเพิ่มหุ้นประจำเป็น<br><b style="font-size:26px">${B0(Bs)}</b> บาท/เดือน</div><button id="shc_use">👉 ใช้ค่านี้</button></div>` : ""}</div>
+      <div class="t">${lvl === "ok" ? "ปลอดภัย — ส่งหุ้นเท่านี้พอ" : lvl === "warn" ? "เฉียดฉิว — เกือบพอ" : "ยังไม่ปลอดภัย — หุ้นน้อยไป"}</div>
+      <div class="m">${solved ? (Bs > B0v ? `ควรส่งหุ้นประจำอย่างน้อย <b>${B0(Bs)}</b> บาท/เดือน (เพิ่ม ${B0(Bs - B0v)})` : `หุ้นประจำขั้นต่ำที่ปลอดภัยคือ <b>${B0(Bs)}</b> บาท/เดือน — ที่ส่งอยู่ (${B0(B0v)}) สูงกว่าแล้ว ✓`) : "หุ้นที่ต้องใช้สูงเกินไป — ลดวงเงิน ยืดงวด หรือเพิ่มหุ้นแรกเข้า"}</div></div>
+      ${solved && !pass ? `<button id="shc_use">👉 ใช้ ${B0(Bs)}</button>` : ""}</div>
     <div class="shx-cards">
-      <div class="shx-card" style="border-top-color:#2F6FDE"><div class="k">💵 ยอดส่งต่อเดือน</div><div class="v">${B0(cur.M)} <small>บาท</small></div><div class="h">ดอกเบี้ย ${B0(cur.first.int)} + ต้น ${B0(cur.first.pri)} + หุ้น ${B0(cur.first.sh)} (งวดแรก) · หุ้นเพิ่มขึ้นเองตามขั้นบันได</div></div>
-      <div class="shx-card" style="border-top-color:${solved ? "var(--brand)" : "var(--red)"}"><div class="k">🛡️ หุ้นประจำที่ควรใช้ (ขั้นต่ำ)</div><div class="v">${solved ? B0(Bs) : "สูงเกินไป"} <small>${solved ? "บาท/เดือน" : ""}</small></div><div class="h">${!solved ? "ลดวงเงิน ยืดงวด หรือเพิ่มหุ้นแรกเข้า" : Bs > B0v ? `เพิ่มจากเดิม +${B0(Bs - B0v)} · ผ่อนใหม่ ${B0(solved.M)}/เดือน` : `เดิม ${B0(B0v)} สูงกว่าขั้นต่ำแล้ว — คงไว้หรือเพิ่มได้ ไม่ต้องลด`}</div></div>
-      <div class="shx-card" style="border-top-color:#1BAF7A"><div class="k">🏁 เริ่มไม่ขาดทุนตั้งแต่งวดที่</div><div class="v">${beT || "—"} <small>${beT ? `(${Math.round(beT / N * 100)}% ของสัญญา)` : "ยังไม่ถึงตลอดสัญญา"}</small></div><div class="h">${beT ? "ผู้กู้หยุดจ่ายหลังงวดนี้ กลุ่มยึดหุ้นมาหักหนี้ได้ครบ" : "หุ้นไม่เกินหนี้เลย — เพิ่มหุ้นประจำ"}</div></div></div>
-    <div class="card"><div class="ds-ttl">👀 ดูให้เห็นภาพ</div>
-      <p class="hint" style="margin:0 0 4px"><b>ถ้าผู้กู้หยุดจ่ายตอนงวดที่ ${cur.k}</b> (${pct}% ของสัญญา):</p>
-      <div class="shx-row"><span class="lb">📉 หนี้ที่เหลือ</span><span class="tr"><i style="width:${bal / mxb * 100}%;background:#E0626C"></i></span><span class="nm">${B0(bal)}</span></div>
-      <div class="shx-row"><span class="lb">📈 หุ้นที่สะสม</span><span class="tr"><i style="width:${cum / mxb * 100}%;background:#3DBE8B"></i></span><span class="nm">${B0(cum)}</span></div>
-      <p style="margin:6px 0 2px;font-size:14px">${back >= 0 ? `✅ กลุ่มยึดหุ้นมาหักหนี้ได้ครบ แล้วยังเหลือคืนผู้กู้ <b>${B0(back)}</b> → <b>กลุ่มไม่ขาดทุนเงินต้น</b>` : `❌ หุ้นไม่พอหักหนี้ ขาดอีก <b>${B0(-back)}</b> → <b>กลุ่มเสี่ยงขาดทุน</b>`}</p>
-      <div class="hint" style="margin:12px 0 0"><b>🗺️ ตลอดสัญญา ${N} งวด</b> — แดง = ยังเสี่ยง (ต้องพึ่งผู้ค้ำ) · เขียว = หุ้นเกินหนี้แล้ว (ปลอดภัย)</div>
+      <div class="shx-card" style="border-top-color:#2F6FDE"><div class="k">💵 ผ่อนเดือนละ</div><div class="v">${B0(cur.M)} <small>บาท</small></div></div>
+      <div class="shx-card" style="border-top-color:${solved ? "var(--brand)" : "var(--red)"}"><div class="k">🛡️ หุ้นประจำขั้นต่ำ</div><div class="v">${solved ? B0(Bs) : "สูงเกินไป"} <small>${solved ? "บาท/เดือน" : ""}</small></div></div>
+      <div class="shx-card" style="border-top-color:#1BAF7A"><div class="k">🏁 เริ่มไม่ขาดทุนที่งวด</div><div class="v">${beT || "—"} <small>${beT ? `จาก ${N} (${Math.round(beT / N * 100)}%)` : ""}</small></div></div></div>
+    <div class="shx-grid">
+      <div class="card"><div class="ds-ttl">🍩 หนี้ที่เหลือ ถูกหุ้นครอบคลุมแค่ไหน <span class="hint">ถ้าหยุดจ่ายที่งวด ${cur.k} (${pct}%)</span></div>
+        <div class="shx-dn">${dn1}<div class="shx-lg"><span><i style="background:#3DBE8B"></i>หุ้นที่หักหนี้ได้ <b>${B0(Math.min(cum, bal))}</b></span><span><i style="background:#E0626C"></i>หนี้ที่หุ้นไม่พอ <b>${B0(Math.max(0, bal - cum))}</b></span><span class="hint">หนี้เหลือ ${B0(bal)} · หุ้นสะสม ${B0(cum)}</span></div></div>
+        <p class="shx-cap">${back >= 0 ? `✅ กลุ่มไม่ขาดทุน เหลือคืนผู้กู้ <b>${B0(back)}</b>` : `❌ กลุ่มเสี่ยงขาดทุน <b>${B0(-back)}</b>`}</p></div>
+      <div class="card"><div class="ds-ttl">🍩 เงินที่ผู้กู้ส่งตลอดสัญญา <span class="hint">ไม่ได้หายไปไหน หุ้นเป็นของผู้กู้</span></div>
+        <div class="shx-dn">${dn2}<div class="shx-lg"><span><i style="background:#2F6FDE"></i>เงินต้น <b>${B0(totPri)}</b></span><span><i style="background:#F2B01E"></i>ดอกเบี้ย <b>${B0(totInt)}</b></span><span><i style="background:#3DBE8B"></i>หุ้นสะสม <b>${B0(totSh)}</b></span></div></div>
+        <p class="shx-cap hint">ตัวเลขกลางวง = ยอดผ่อนต่อเดือน</p></div>
+      <div class="card"><div class="ds-ttl">📊 หุ้นประจำที่ต้องใช้ ตามจำนวนงวด <span class="hint">แท่ง = ที่ต้องใช้ · เส้นประ = ที่ส่งอยู่</span></div>
+        ${barA}<p class="shx-cap hint">🟩 พอ (ส่งอยู่ ≥ ที่ต้องใช้) · 🟥 ไม่พอ · พื้นเหลือง = งวดที่เลือก · ยิ่งผ่อนนาน ยิ่งใช้หุ้นน้อย</p></div>
+      <div class="card"><div class="ds-ttl">📊 หนี้เหลือ vs หุ้นสะสม ระหว่างทาง <span class="hint">หุ้นประจำ ${B0(B0v)}</span></div>
+        ${barB}<p class="shx-cap hint">🟥 หนี้ที่เหลือ · 🟩 หุ้นสะสม · พื้นเหลือง = จุดตรวจ ${pct}% · แท่งเขียวสูงกว่าแดง = ปลอดภัย</p></div></div>
+    <div class="card"><div class="ds-ttl">🗺️ ตลอดสัญญา ${N} งวด <span class="hint">แดง = ยังเสี่ยง (พึ่งผู้ค้ำ) · เขียว = หุ้นเกินหนี้แล้ว</span></div>
       <div class="shx-zone"><i style="width:${zoneW}%;background:#F2A3A8"></i><i style="width:${100 - zoneW}%;background:#8ED8B6"></i><span class="shx-pin" style="left:${kPos}%">📍 งวด ${cur.k} (${pct}%)</span></div>
       <div class="shx-zl"><span>งวด 1</span><span>${beT ? `🏁 งวด ${beT} เริ่มปลอดภัย` : ""}</span><span>งวด ${N}</span></div></div>
-    <div class="card"><div class="ds-ttl">📉📈 กราฟ: หนี้ลดลง vs หุ้นเพิ่มขึ้น <span class="hint">หุ้นประจำ ${B0(rec.B)} · ${N} งวด · ผ่อน ${B0(rec.M)}/เดือน · เส้นสีส้ม = จุดตรวจ ${pct}%</span>
-        <span class="ds-lg"><i style="background:#C0202E"></i>หนี้คงเหลือ <i style="background:#1BAF7A"></i>หุ้นสะสมในสัญญา</span></div>
-      ${nwShChart(rec)}
-      <p class="hint" style="margin:4px 0 0">เส้นเขียว (หุ้น) ตัดเส้นแดง (หนี้) ตรงไหน = จุดที่กลุ่มเริ่มปลอดภัย · ก่อนถึงจุดนั้นยังต้องพึ่งผู้ค้ำ</p></div>
-    <div class="card"><div class="ds-ttl">🧮 เลือกหุ้นประจำให้เหมาะกับจำนวนงวด <span class="hint">ตัวเลขในช่อง = หุ้นครอบคลุมหนี้กี่ % ตอนถึง ${pct}% ของงวด (ใต้ตัวเลข = ยอดผ่อนต่อเดือน) · 🟢 ≥ ${tgp}% ปลอดภัย · 🟡 100–${tgp}% เฉียดฉิว · 🔴 &lt; 100% เสี่ยง · กรอบน้ำเงิน = งวดที่เลือก${D0 ? ` · มีหุ้นแรกเข้า ${B0(D0)}` : ""}</span></div>
+    <details class="shx-d" data-shd="tbl"${open("tbl")}><summary>🔢 ตารางตัวเลขละเอียด (เปิดดูเมื่อต้องการ)</summary><div class="in">
+      <div class="ds-ttl" style="margin-top:6px">🧮 หุ้นประจำ × จำนวนงวด <span class="hint">ในช่อง = หุ้นครอบคลุมหนี้กี่ % ตอน ${pct}% ของงวด (ใต้ตัวเลข = ยอดผ่อน) · 🟢 ≥ ${tgp}% · 🟡 100–${tgp}% · 🔴 &lt; 100%</span></div>
       <div class="tbl"><table><thead><tr><th class="l">หุ้นประจำ/เดือน</th>${Nopts.map(n => `<th>${n} งวด</th>`).join("")}</tr></thead><tbody>${mat}${reqHtml}</tbody></table></div>
-      <p class="hint" style="margin:6px 0 0">💡 อ่านแถวล่างสุดได้เลย: <b>หุ้นประจำที่ต้องใช้</b> ของแต่ละจำนวนงวด — ยิ่งผ่อนนาน หุ้นที่ต้องใช้ยิ่งน้อย</p></div>
-    <div class="card"><div class="ds-ttl">🙋 ผู้กู้ส่งไหวเดือนละเท่าไร → กู้ได้สูงสุดเท่าไร <span class="hint">ตามกฎ ${tgp}% ที่ ${pct}% ของงวด</span></div>
-      <div class="bar" style="flex-wrap:wrap;margin:0 0 6px"><label><b>💳 ยอดส่งรวมต่อเดือนที่ผู้กู้ไหว (บาท)</b> <input type="number" step="500" min="500" data-shc="M" value="${Mcap}" style="width:130px"></label><span class="hint">รวมดอก + ต้น + หุ้น (ที่หักจากเงินเดือน)</span></div>
-      <div class="tbl"><table><thead><tr><th class="l">จำนวนงวด</th><th>💰 วงเงินสูงสุด</th><th>💎 หุ้นประจำที่ต้องใช้</th><th>ผ่อนจริง/เดือน</th><th>ครอบคลุม</th><th>🏁 ไม่ขาดทุนที่งวด</th></tr></thead><tbody>${capRows}</tbody></table></div></div>
-    <details class="shx-d" data-shd="tbl"${open("tbl")}><summary>📋 ดูรายงวด และข้อควรระวัง</summary><div class="in">
+      <div class="ds-ttl" style="margin-top:14px">🙋 ผู้กู้ส่งไหวเดือนละเท่าไร → กู้ได้สูงสุดเท่าไร</div>
+      <div class="bar" style="flex-wrap:wrap;margin:0 0 6px"><label><b>💳 ยอดส่งรวมต่อเดือนที่ไหว (บาท)</b> <input type="number" step="500" min="500" data-shc="M" value="${Mcap}" style="width:130px"></label><span class="hint">รวมดอก + ต้น + หุ้น</span></div>
+      <div class="tbl"><table><thead><tr><th class="l">จำนวนงวด</th><th>💰 วงเงินสูงสุด</th><th>💎 หุ้นประจำที่ต้องใช้</th><th>ผ่อนจริง/เดือน</th><th>ครอบคลุม</th><th>🏁 ไม่ขาดทุนที่งวด</th></tr></thead><tbody>${capRows}</tbody></table></div>
+      <div class="ds-ttl" style="margin-top:14px">📉📈 กราฟเส้น หนี้ลดลง vs หุ้นเพิ่มขึ้น <span class="ds-lg"><i style="background:#C0202E"></i>หนี้คงเหลือ <i style="background:#1BAF7A"></i>หุ้นสะสม</span></div>
+      ${nwShChart(rec)}
+      <div class="ds-ttl" style="margin-top:14px">📋 รายงวด</div>
       <div class="tbl"><table><thead><tr><th>งวด</th><th>% ของสัญญา</th><th>หนี้คงเหลือ</th><th>หุ้นสะสม</th><th>ครอบคลุม</th><th>ช่องว่างที่กลุ่มเสี่ยง</th></tr></thead><tbody>
         ${keyRows.map(m => { const r = rec.rows[m - 1]; if(!r) return ""; return `<tr${m === rec.k ? ' style="background:var(--faint);font-weight:700"' : ""}><td class="amt">${m}${m === rec.k ? " 📍ตรวจ" : m === rec.be ? " 🏁คุ้มทุน" : ""}</td><td class="amt">${Math.round(m / N * 100)}%</td><td class="amt">${B0(r.bal)}</td><td class="amt">${B0(r.cum)}</td><td class="amt" style="color:${r.cover >= 1 ? "#0F6B4A" : "#B4452B"}">${r.bal > 0.005 ? Math.round(r.cover * 100) + "%" : "ปิดแล้ว"}</td><td class="amt">${r.gap ? B0(r.gap) : "—"}</td></tr>`; }).join("")}</tbody></table></div>
       <div class="bar" style="margin-top:8px;flex-wrap:wrap"><button class="ghost sm" id="shc_csv">📥 ส่งออกตารางผ่อน CSV</button></div>
-      <p class="hint" style="margin:8px 0 0">💡 <b>ทางลัดคิดในใจ:</b> หุ้นประจำ ≈ 27–31% ของ (วงเงิน ÷ จำนวนงวด = ${B0(rule)}) ≈ ${B0(rlo)}–${B0(rhi)} บาท (ประมาณหยาบ ใช้ตัวเลขจริงด้านบนเป็นหลัก) · งวดสั้น (≤ 24) ต้องใช้หุ้นประจำสูงมาก ควรใช้หุ้นแรกเข้า ลดวงเงิน หรือเพิ่มผู้ค้ำ</p>
+      <p class="hint" style="margin:8px 0 0">💡 <b>ทางลัดคิดในใจ:</b> หุ้นประจำ ≈ 27–31% ของ (วงเงิน ÷ จำนวนงวด = ${B0(rule)}) ≈ ${B0(rlo)}–${B0(rhi)} บาท (ประมาณหยาบ ใช้ตัวเลขจริงเป็นหลัก) · งวดสั้น (≤ 24) ต้องใช้หุ้นประจำสูงมาก ควรใช้หุ้นแรกเข้า ลดวงเงิน หรือเพิ่มผู้ค้ำ</p>
       <p class="hint" style="margin:6px 0 0">⚠️ ช่วงก่อนถึง ${pct}% ยังไม่ปลอดภัยจากหุ้นอย่างเดียว ต้องพึ่งผู้ค้ำ (สามัญ 2 คน) · ยังไม่นับดอกเบี้ยค้าง · การหักหุ้นชำระหนี้ต้องมีข้อยินยอมเป็นหนังสือจากผู้กู้ (ให้ทนายตรวจ) · ยอดผ่อนใหม่ต้องผ่านเกณฑ์เงินเหลือในสลิป ≥ 30%</p></div></details></div><div class="nwdoc" id="nwdoc"></div>`;
   const set = (k, v) => { S.shc[k] = v; drawNWShc(); };
   el.querySelectorAll("[data-shc]").forEach(i => i.addEventListener("change", () => { const k = i.dataset.shc; set(k, k === "N" ? Math.min(72, Math.max(3, Math.round(+i.value) || 72)) : +i.value || 0); }));
