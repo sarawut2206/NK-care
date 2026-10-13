@@ -732,7 +732,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-169</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-170</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -3946,6 +3946,50 @@ function nwGoalHTML(){
     <p class="hint" style="margin:4px 0">เส้นเป้า = ทุนฐาน + หุ้นเข้าเท่ากันทุกเดือน (เป้าบริหารต้องเข้า ≈ <b>${B0(GD.x.target)}</b>/เดือน · ขั้นต่ำ ≈ <b>${B0(GD.x.floor)}</b>/เดือน) − คืนทุนตามแผน · ทุนจริงถึง ${thPer(GD.end)} หลังจากนั้นคาดการณ์ตามงวดผ่อนของสัญญาที่มีอยู่ (ไม่รวมสมาชิกใหม่ ผู้กู้ใหม่ หรือหุ้นสมัครใจที่ยังไม่ได้ลง) หักคืนทุนตามแผน · ตามเกณฑ์: ตามไม่ทัน 2 เดือนติด = หยุดขยายสินเชื่อวงเงินสูง + เปิดมาตรการเพิ่มหุ้น</p>
     <details class="opn"><summary><b>ตารางรายเดือน</b> (ทุน เทียบเส้นเป้า)</summary><div class="tbl" style="max-height:360px"><table><thead><tr><th class="l">เดือน</th><th>ทุน (จริง/คาดการณ์)</th><th>เส้นขั้นต่ำ</th><th>ผลต่าง</th><th>เส้นเป้าบริหาร</th><th>ผลต่าง</th></tr></thead><tbody>${tbl}</tbody></table></div></details></div>`;
 }
+/* ============ แผนปล่อยกู้เพื่อบรรลุเป้าทุน (ต่อท้ายแผนเป้าหมายทุน) ============
+   ปล่อยกู้ใหม่ L บาท/เดือน ด้วยสัญญามาตรฐาน (วงเงิน P · N งวด · หุ้นประจำตามโมเดลหุ้นค้ำกู้) → ผู้กู้ส่งหุ้นทุกงวด ทุนเรือนหุ้นเพิ่ม
+   สัญญาที่ปล่อยเดือน c (นับจากเดือนล่าสุด) ส่งงวดแรกเดือนถัดไป → ถึงสิ้นแผนส่งแล้ว H − c งวด  ·  S.nw.lend = {P, N, goal, L (กำหนดเอง)} */
+const nwLendCfg = () => { const g = (S.nw && S.nw.lend) || {}; return {P:g.P > 0 ? +g.P : 100000, N:g.N > 0 ? Math.min(72, Math.max(12, Math.round(+g.N))) : 60, goal:g.goal === "floor" ? "floor" : "target", L:has(g.L) && g.L !== "" && +g.L > 0 ? +g.L : null}; };
+function nwLendData(GD){
+  const Q = nwLendCfg(), H = GD.mRem, tgt = 1.1, B = nwShSolve(Q.P, Q.N, tgt, {pct:70, D0:0}), Bu = B === null ? 3000 : B, c = nwShCalc(Q.P, Bu, Q.N, {pct:70, D0:0});
+  const unit = t => { const r = c.rows[Math.min(t, Q.N) - 1]; return {sh:r.cum / Q.P, int:c.rows.slice(0, Math.min(t, Q.N)).reduce((u, x) => u + x.int, 0) / Q.P, bal:t >= Q.N ? 0 : r.bal / Q.P}; };
+  const U = [null]; for(let t = 1; t <= H; t++) U.push(unit(t));
+  const F = {sh:0, int:0, bal:0}; for(let k = 1; k < H; k++){ F.sh += U[k].sh; F.int += U[k].int; F.bal += U[H - k].bal; }          // ผลรวมต่อ 1 บาทที่ปล่อยทุกเดือน
+  const o = GD[Q.goal], need = Math.max(0, -o.gapEnd), Lreq = F.sh > 0 ? Math.ceil(need / F.sh / 1000) * 1000 : 0, L = Q.L !== null ? Q.L : Lreq;
+  const res = L => { const sh = r2(L * F.sh); return {L, sh, endCap:r2(GD.endCap + sh), int:r2(L * F.int), bal:r2(L * F.bal), tot:r2(L * (H - 1))}; };
+  const byP = {}; GD.rows.forEach(r => byP[r.p] = r);
+  const rowsAt = L => { const out = []; for(let j = 1; j <= H; j++){ let sh = 0; for(let k = 1; k < j; k++) sh += U[j - k].sh; const q = pFrom(pNum(GD.from) + j), b = byP[q]; if(b) out.push({p:q, j, lent:r2(L * Math.max(0, j - 1)), add:r2(L * sh), cap:r2(b.cap + L * sh), rt:b.rt, rf:b.rf, fc:b.fc}); } return out; };
+  let cash = null; try{ const FC = nwFcstData(H, pFrom(pNum(GD.from) + 1)); cash = r2(FC.tot.reduce((u, t) => u + t.pri + t.dep, 0) / H); }catch(e){}
+  return {Q, H, B:Bu, Bnull:B === null, c, F, need, Lreq, L, res, rowsAt, cash, o};
+}
+function nwLendHTML(){
+  const GD = nwGoalData(); if(GD.bad || !NW.on()) return "";
+  const G = GD.G; if(GD.mRem < 2) return "";
+  const D = nwLendData(GD), Q = D.Q, R = D.res(D.L), nm = Q.goal === "floor" ? "ขั้นต่ำ" : "เป้าบริหาร", ok = D.need <= 0, goalV = D.o.goal;
+  const ev = v => { const e = D.res(v); return {e, f:e.endCap >= GD.floor.goal, t:e.endCap >= GD.target.goal}; }, chk = b => b ? "✅" : "❌";
+  const sens = [...new Set([50000, 100000, 200000, 300000, 500000, D.Lreq].filter(v => v >= 0))].sort((a, b) => a - b).map(v => { const x = ev(v), e = x.e; return `<tr${v === D.L ? ' style="background:var(--faint);font-weight:700"' : ""}><td class="amt">${B0(v)}${v === D.Lreq && v > 0 ? ' <span class="pill">ที่ต้องใช้</span>' : ""}</td><td class="amt">${B0(e.tot)}</td><td class="amt">${B0(e.sh)}</td><td class="amt"><b>${B0(e.endCap)}</b></td><td class="amt">${chk(x.f)} ${(GD.floor.goal / 1e6).toFixed(2)}</td><td class="amt">${chk(x.t)} ${(GD.target.goal / 1e6).toFixed(2)}</td><td class="amt">${B0(e.int)}</td><td class="amt">${B0(e.bal)}</td></tr>`; }).join("");
+  const rows = D.rowsAt(D.L).filter((r, i, a) => r.j % 3 === 0 || r.j === 1 || i === a.length - 1);
+  const cashTxt = D.cash === null ? "" : D.L <= D.cash ? `✅ เงินเข้าเฉลี่ย ≈ ${B0(D.cash)}/เดือน (เงินต้นรับคืน + หุ้นเข้า) พอสำหรับปล่อยใหม่เดือนละ ${B0(D.L)}` : `⚠️ เงินเข้าเฉลี่ยแค่ ≈ ${B0(D.cash)}/เดือน แต่ต้องปล่อย ${B0(D.L)}/เดือน — ขาด ≈ ${B0(D.L - D.cash)}/เดือน ต้องใช้เงินที่ค้างในบัญชีหรือเลื่อนเป้า`;
+  return `<div class="card" id="ds_lend"><div class="ds-ttl">🏦 แผนปล่อยกู้ให้ถึงเป้าทุน <span class="hint">ผู้กู้ใหม่ส่งหุ้นทุกงวด → ทุนเรือนหุ้นโต · คำนวณจาก ${thPer(GD.from)} ถึง ${thPer(G.pE)} (${D.H} เดือน)</span></div>
+    <div class="shx-hero ${ok ? "ok" : "warn"}" style="margin-top:6px"><div class="big">${ok ? "✅" : "🎯"}</div><div style="flex:1;min-width:230px">
+      <div class="t">${ok ? `ถึง${nm}แล้วตามคาด ไม่ต้องปล่อยกู้เพิ่มเพื่อเป้านี้` : `ต้องปล่อยกู้ใหม่ ≈ ${B0(D.Lreq)} บาท/เดือน`}</div>
+      <div class="m">${ok ? `ทุนคาดการณ์สิ้น ${thPer(G.pE)} = ${B0(GD.endCap)} เกิน${nm} ${B0(-D.o.gapEnd)}` : `เพื่อให้ทุนถึง${nm} <b>${B0(goalV)}</b> ภายใน ${thPer(G.pE)} (ตอนนี้คาดว่าขาด ${B0(D.need)}) — รวมปล่อยทั้งแผน ≈ <b>${B0(D.res(D.Lreq).tot)}</b> บาท · ≈ <b>${(D.Lreq / Q.P).toFixed(1)}</b> สัญญา/เดือน (สัญญาละ ${B0(Q.P)})`}</div></div></div>
+    <div class="pf" style="margin:8px 0"><div><label>📑 ขนาดสัญญามาตรฐาน (บาท)</label><input type="number" step="10000" min="10000" data-ld="P" value="${Q.P}"></div>
+      <div><label>📅 ผ่อนกี่งวด (12–72)</label><input type="number" min="12" max="72" data-ld="N" value="${Q.N}"></div>
+      <div><label>🎯 เป้าที่ใช้คำนวณ</label><select data-ld="goal"><option value="target" ${Q.goal === "target" ? "selected" : ""}>เป้าบริหาร ${(GD.target.goal / 1e6).toFixed(2)} ล.</option><option value="floor" ${Q.goal === "floor" ? "selected" : ""}>ขั้นต่ำ ${(GD.floor.goal / 1e6).toFixed(2)} ล.</option></select></div>
+      <div><label>✏️ หรือกำหนดเอง: ปล่อยใหม่เดือนละ (บาท)</label><input type="number" step="10000" min="0" data-ld="L" value="${Q.L === null ? "" : Q.L}" placeholder="ว่าง = คำนวณให้"></div></div>
+    <div class="shx-cards">
+      <div class="shx-card" style="border-top-color:#2F6FDE"><div class="k">💰 ปล่อยใหม่ต่อเดือน</div><div class="v">${B0(D.L)} <small>บาท${Q.L !== null ? " (กำหนดเอง)" : ""}</small></div><div class="h">รวมทั้งแผน ≈ ${B0(R.tot)} · ≈ ${(D.L / Q.P).toFixed(1)} สัญญา/เดือน · หนี้ใหม่ค้างสิ้นแผน ≈ ${B0(R.bal)}</div></div>
+      <div class="shx-card" style="border-top-color:#1BAF7A"><div class="k">💎 ทุนเรือนหุ้นสิ้น ${thPer(G.pE)}</div><div class="v">${B0(R.endCap)} <small>บาท</small></div><div class="h">เดิมคาด ${B0(GD.endCap)} + หุ้นจากสัญญาใหม่ ${B0(R.sh)} · ${R.endCap >= GD.target.goal ? "✅ ถึงเป้าบริหาร" : R.endCap >= GD.floor.goal ? "🟡 ถึงขั้นต่ำ ยังไม่ถึงเป้าบริหาร" : "❌ ยังต่ำกว่าขั้นต่ำ"}</div></div>
+      <div class="shx-card" style="border-top-color:var(--brand)"><div class="k">🛡️ หุ้นประจำที่ผู้กู้ใหม่ต้องส่ง</div><div class="v">${B0(D.B)} <small>บาท/เดือน</small></div><div class="h">${D.Bnull ? "โมเดลหุ้นค้ำกู้หาค่าให้ไม่ได้ ใช้ค่าสมมติ — ลดขนาดสัญญาหรือยืดงวด" : `ตามกฎ 70% (ครอบคลุม ≥ 110%) · ผ่อน ${B0(D.c.M)}/เดือน`} · ดูละเอียดที่แท็บ 🧮</div></div>
+      <div class="shx-card" style="border-top-color:#C4570F"><div class="k">📈 ดอกเบี้ยที่ได้เพิ่มจากแผน</div><div class="v">${B0(R.int)} <small>บาท</small></div><div class="h">ตลอดช่วงแผน (ยังไม่หักหนี้เสีย/ค่าใช้จ่าย)</div></div></div>
+    ${cashTxt ? `<div class="keybox" style="margin:0 0 8px;font-size:13px">${cashTxt} · ยังไม่นับเงินที่ค้างในบัญชีตอนนี้</div>` : ""}
+    <div class="eyebrow" style="margin:8px 0 4px">ถ้าปล่อยใหม่เดือนละเท่านี้ ผลเป็นอย่างไร</div>
+    <div class="tbl"><table><thead><tr><th>ปล่อยใหม่/เดือน</th><th>รวมปล่อยทั้งแผน</th><th>หุ้นเพิ่มจากสัญญาใหม่</th><th>ทุนสิ้นแผน</th><th>ขั้นต่ำ</th><th>เป้าบริหาร</th><th>ดอกเบี้ยเพิ่ม</th><th>หนี้ใหม่ค้าง</th></tr></thead><tbody>${sens}</tbody></table></div>
+    <details class="shx-d" data-shd="lend" style="margin-top:10px"${S.shcOpen && S.shcOpen.lend ? " open" : ""}><summary>📅 ดูทุนรายไตรมาส (ถ้าปล่อยเดือนละ ${B0(D.L)})</summary><div class="in"><div class="tbl"><table><thead><tr><th class="l">เดือน</th><th>ปล่อยสะสม</th><th>หุ้นเพิ่มจากสัญญาใหม่</th><th>ทุนรวม</th><th>เส้นเป้าบริหาร</th><th>เทียบเส้น</th></tr></thead><tbody>
+      ${rows.map(r => `<tr><td class="l">${thPer(r.p)}${r.fc ? ' <span class="pill amb">คาดการณ์</span>' : ""}</td><td class="amt">${B0(r.lent)}</td><td class="amt">${B0(r.add)}</td><td class="amt"><b>${B0(r.cap)}</b></td><td class="amt">${B0(r.rt)}</td><td class="amt" style="color:${r.cap >= r.rt ? "#0F6B4A" : "#B4452B"}">${r.cap >= r.rt ? "+" : "−"}${B0(Math.abs(r.cap - r.rt))}</td></tr>`).join("")}</tbody></table></div></div></details>
+    <p class="hint" style="margin:8px 0 0">💡 <b>ปล่อยเร็ว ได้ผลเร็ว:</b> สัญญาที่ปล่อยทีหลังส่งหุ้นได้น้อยงวดก่อนสิ้นแผน (เดือนสุดท้ายได้ 0) · ⚠️ เงื่อนไข: ปล่อยได้เท่าที่เงินพอและผู้กู้ผ่านเกณฑ์ (เงินเหลือในสลิป ≥ 30%) ไม่เกินเพดานต่อคน · ยังไม่นับหนี้เสีย ผู้กู้ปิดก่อนกำหนด และคืนทุนตามแผน (หักจากฐานในแผนเป้าหมายทุนแล้ว) · เป็นประมาณการเพื่อวางแผน ไม่ใช่คำรับรอง</p></div>`;
+}
 function drawNWDash(){
   const el = $("tab23"); if(!el) return;
   const dsSec = S.dsSec || "ov";
@@ -3986,7 +4030,7 @@ function drawNWDash(){
   </div>
 
   <div class="ds-sec" data-sec="goal"${dsSec === "goal" || dsSec === "all" ? "" : " hidden"}>
-  ${nwGoalHTML()}
+  ${nwGoalHTML()}${nwLendHTML()}
   </div>
 
   <div class="ds-sec" data-sec="int"${dsSec === "int" || dsSec === "all" ? "" : " hidden"}>
@@ -4029,6 +4073,8 @@ function drawNWDash(){
   if($("gl_radd")) $("gl_radd").onclick = () => { const a = +$("gl_ra").value; if(!(a > 0)){ toast("ใส่ยอดคืนทุนก่อน"); return; } gset({ref:nwGoalCfg().ref.concat([{id:"GR" + Math.random().toString(36).slice(2, 7), p:$("gl_rm").value, amt:r2(a)}])}); };
   el.querySelectorAll("[data-glr]").forEach(b => b.onclick = () => gset({ref:nwGoalCfg().ref.filter(r => r.id !== b.dataset.glr)}));
   if($("ds_fh")) $("ds_fh").onchange = e => set({fh:+e.target.value});
+  el.querySelectorAll("[data-ld]").forEach(i => i.addEventListener("change", () => { const f = i.dataset.ld; S.nw.lend = Object.assign({}, nwLendCfg(), {[f]:f === "goal" ? i.value : f === "L" ? (i.value === "" ? null : Math.max(0, +i.value || 0)) : Math.max(0, +i.value || 0)}); save(); drawNWDash(); }));
+  el.querySelectorAll("#ds_lend details[data-shd]").forEach(d => d.addEventListener("toggle", () => { S.shcOpen = S.shcOpen || {}; S.shcOpen[d.dataset.shd] = d.open; }));
 }
 
 /* ============ เว็บใหม่: ใบสรุปชำระรายเดือน + สรุปปันผล ============
