@@ -710,7 +710,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-163</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-165</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -737,7 +737,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="ngs" data-g="ov"><b data-t="23" class="on"><span class="grp-ic">📊</span>แดชบอร์ด</b><b data-t="26"><span class="grp-ic">📄</span>สรุปภาพรวม ๑ หน้า</b></div>
   <div class="ngs" data-g="mo" hidden><b data-t="20"><span class="grp-ic">📗</span>ทะเบียนผู้กู้</b><b data-t="21"><span class="grp-ic">📘</span>ทะเบียนผู้ฝาก</b><b data-t="24"><span class="grp-ic">🖨</span>ใบเสร็จรายเดือน</b></div>
   <div class="ngs" data-g="ln" hidden><b data-t="25"><span class="grp-ic">🏦</span>กู้ยืม + ติดตามหนี้</b><b data-t="30"><span class="grp-ic">📑</span>ทะเบียนสัญญากู้</b><b data-t="28"><span class="grp-ic">🛡️</span>ทะเบียนคุมผู้ค้ำ</b><b data-t="29"><span class="grp-ic">⚖️</span>ชุดฟ้องร้อง</b><b data-t="32"><span class="grp-ic">🧮</span>จำลองหุ้นค้ำกู้</b></div>
-  <div class="ngs" data-g="ac" hidden><b data-t="22"><span class="grp-ic">🧾</span>ใบสรุป + ปันผล</b><b data-t="31"><span class="grp-ic">💸</span>ค่าใช้จ่ายดำเนินงาน</b></div>
+  <div class="ngs" data-g="ac" hidden><b data-t="22"><span class="grp-ic">🧾</span>ใบสรุป + ปันผล</b><b data-t="31"><span class="grp-ic">💸</span>ค่าใช้จ่ายดำเนินงาน</b><b data-t="33"><span class="grp-ic">🌱</span>จำลองหุ้นระยะยาว</b></div>
   <div class="ngs" data-g="mb" hidden><b data-t="27"><span class="grp-ic">👥</span>ฐานข้อมูลสมาชิก</b></div>
 </div>
 <div class="wrap">
@@ -773,6 +773,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
 <section id="tab30"></section>
 <section id="tab31"></section>
 <section id="tab32"></section>
+<section id="tab33"></section>
 <section id="tab10"></section>
 <section id="tab11"></section>
 <section id="tab12"></section>
@@ -5671,6 +5672,83 @@ function drawNWLoanDash(){
       .sort((u, v) => String(u.no).localeCompare(String(v.no), "th", {numeric:true}) || u.prod.localeCompare(v.prod)); if(!sel.length) return;
     if(!confirm(`บันทึกชุดสัญญา ${sel.length} ฉบับเป็นไฟล์ Word ไฟล์เดียว?\n(หลายหน้ามาก — ถ้าสะดวกให้ติ๊กเลือกเฉพาะบางคน)`)) return;
     const D = dopt(); nwxRun("ชุดสัญญา → Word", () => nwxDocx(sel.map(c => nwConDocs(c, D, D.mode)).join(""), `ชุดสัญญา-${sel.length}ฉบับ`)); };
+}
+
+/* ============ จำลองหุ้นระยะยาว (แท็บ 33) ============
+   ผู้ฝากสะสมรายเดือนตามสัญญา T ปี · ดอกเบี้ยแบบธรรมดา (เงินต้นที่ฝากแล้ว × อัตรา ÷ 12 ต่อเดือน ไม่ทบต้น) จ่ายพร้อมโบนัสเมื่อครบสัญญา
+   รายได้ = เงินต้นที่ฝากแล้ว × สัดส่วนที่ปล่อยกู้ × ดอกเบี้ยกู้ ÷ 12 (เดือนที่ไม่ปล่อยกู้ = ช่วงสำรองเงินก่อนครบ) · หักหนี้เสีย
+   แบบ «รับประกัน» กลุ่มจ่ายตามสัญญาเสมอ · แบบ «หุ้นระยะยาว» จ่ายผู้ถือไม่เกินสัดส่วนของรายได้สุทธิจากพูล (ส่วนเกินเป้าไม่จ่าย) */
+const NW_LT_DEF = () => ({yld:12, bad:0, dep:100, hold:0, share:85, rows:[
+  {id:"L1", T:3, r:6, D:1500, k:6, bp:0, bc:0}, {id:"L2", T:5, r:7, D:1500, k:6, bp:0, bc:0}, {id:"L3", T:7, r:8, D:1000, k:4, bp:0, bc:0}]});
+function nwLtSim(Q){
+  const rows = (Q.rows || []).filter(c => c.T > 0 && c.D > 0 && c.k > 0), Y = rows.length ? Math.max(...rows.map(c => Math.ceil(c.T))) : 0, yld = (+Q.yld || 0) / 100, bad = (+Q.bad || 0) / 100, dep = Math.min(1, Math.max(0, (+Q.dep || 0) / 100)), hold = Math.max(0, +Q.hold || 0), sh = Math.min(1, Math.max(0, (+Q.share || 0) / 100));
+  const out = [];
+  for(let yr = 1; yr <= Y; yr++){
+    const o = {yr, new:0, avg:0, end:0, inc:0, bd:0, ic:0, bn:0, pay:0};
+    rows.forEach(c => { const n = Math.round(c.T * 12), r = (+c.r || 0) / 100, bt = c.bp > 0 ? Math.min(c.bp / 100 * c.D * n, +c.bc || 1e12) * c.k : 0;
+      for(let m = 1; m <= 12; m++){ const t = (yr - 1) * 12 + m; if(t > n) break;
+        const pool = c.D * t * c.k, frac = t > n - hold ? 0 : dep;
+        o.ic += c.D * (t - 1) * c.k * r / 12; o.bn += bt / n; o.inc += pool * frac * yld / 12; o.bd += pool * frac * bad / 12; o.avg += pool / 12; o.new += c.D * c.k;
+        if(t === n){ o.pay += pool + c.D * c.k * r / 12 * ((n - 1) * n / 2) + bt; } }
+      if(yr * 12 <= n) o.end += c.D * yr * 12 * c.k; });
+    o.cost = o.ic + o.bn; o.incNet = o.inc - o.bd; o.netG = o.incNet - o.cost;
+    o.payS = Math.min(sh * Math.max(0, o.incNet), o.cost); o.netS = o.incNet - o.payS; out.push(o); }
+  let cg = 0, cs = 0; out.forEach(o => { cg += o.netG; cs += o.netS; o.cumG = cg; o.cumS = cs; });
+  return {rows, out, Y, tot:{inc:out.reduce((u, o) => u + o.inc, 0), cost:out.reduce((u, o) => u + o.cost, 0), netG:cg, netS:cs, paySr:out.reduce((u, o) => u + o.payS, 0)}};
+}
+function nwLtChart(out){
+  const W = 760, H = 250, L = 66, R = 16, T = 20, Bm = 34, n = out.length, mx = Math.max(1, ...out.map(o => Math.max(o.pay, o.end))) * 1.08, bw = Math.min(54, (W - L - R) / Math.max(1, n) * 0.5), X = i => L + (i + .5) * (W - L - R) / n, Y = v => T + (1 - v / mx) * (H - T - Bm);
+  const grid = [0, 1, 2, 3, 4].map(g => { const v = mx * g / 4, y = Y(v); return `<line x1="${L}" x2="${W - R}" y1="${y}" y2="${y}" stroke="#E4EAF4"/><text x="${L - 8}" y="${y + 4}" text-anchor="end" font-size="11" fill="#6B7A99">${dshK(v)}</text>`; }).join("");
+  const bars = out.map((o, i) => `<rect x="${X(i) - bw / 2}" y="${Y(o.pay)}" width="${bw}" height="${Math.max(0, Y(0) - Y(o.pay))}" rx="3" fill="#EB6834"><title>ปีที่ ${o.yr}: เงินสดจ่ายคืนครบสัญญา ${B0(o.pay)}</title></rect>${o.pay > 0 ? `<text x="${X(i)}" y="${Y(o.pay) - 5}" text-anchor="middle" font-size="11.5" font-weight="700" fill="#B4452B">${dshK(o.pay)}</text>` : ""}<text x="${X(i)}" y="${H - 12}" text-anchor="middle" font-size="12" fill="#6B7A99">ปีที่ ${o.yr}</text>`).join("");
+  const line = out.map((o, i) => `${i ? "L" : "M"}${X(i).toFixed(1)},${Y(o.end).toFixed(1)}`).join(" "), dots = out.map((o, i) => `<circle cx="${X(i)}" cy="${Y(o.end)}" r="4" fill="#fff" stroke="#1F3A68" stroke-width="2.4"><title>ปีที่ ${o.yr}: เงินต้นสะสมสิ้นปี ${B0(o.end)}</title></circle>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="กำแพงครบกำหนดและเงินต้นสะสม" style="display:block">${grid}${bars}<path d="${line}" fill="none" stroke="#1F3A68" stroke-width="2.6"/>${dots}</svg>`;
+}
+function drawNWLt(){
+  const el = $("tab33"); if(!el) return;
+  if(tab !== 33){ el.innerHTML = ""; return; }
+  const Q = S.ltp || (S.ltp = NW_LT_DEF()), sim = nwLtSim(Q), out = sim.out, T = sim.tot, mon = sim.rows.reduce((u, c) => u + c.D * c.k, 0), nP = sim.rows.reduce((u, c) => u + c.k, 0);
+  let shNow = 0, goal = null; try { if(NW.on()){ shNow = nwDashData().shNow; const g = nwGoalData(); if(!g.bad) goal = g; } }catch(e){}
+  const maxEnd = out.length ? Math.max(...out.map(o => o.end)) : 0, wall = out.length ? Math.max(...out.map(o => o.pay)) : 0, ratio = shNow > 0 ? maxEnd / shNow : 0;
+  const nin = (k, v, st) => `<input type="number" step="${st || 1}" min="0" data-ltq="${k}" value="${v}" style="width:100%">`;
+  const row = c => `<tr><td class="amt"><input class="ce" type="number" min="1" max="15" step="1" data-ltc="${c.id}|T" value="${c.T}" style="width:56px"></td><td class="amt"><input class="ce" type="number" min="0" step="0.25" data-ltc="${c.id}|r" value="${c.r}" style="width:66px"></td>
+    <td class="amt"><input class="ce" type="number" min="0" step="500" data-ltc="${c.id}|D" value="${c.D}" style="width:92px"></td><td class="amt"><input class="ce" type="number" min="0" step="1" data-ltc="${c.id}|k" value="${c.k}" style="width:56px"></td>
+    <td class="amt"><input class="ce" type="number" min="0" step="0.5" data-ltc="${c.id}|bp" value="${c.bp}" style="width:62px"></td><td class="amt"><input class="ce" type="number" min="0" step="500" data-ltc="${c.id}|bc" value="${c.bc}" style="width:84px"></td>
+    <td class="amt">${B0(c.D * c.k)}</td><td><button class="del" data-ltd="${c.id}" title="ลบ">×</button></td></tr>`;
+  const need = goal ? goal.floor.need : 0, needT = goal ? goal.target.need : 0;
+  el.innerHTML = `<div class="nwscreen"><div class="ds-head"><div><div class="eyebrow" style="margin:0">จำลองหุ้นระยะยาว (สะสมรายเดือน 3 / 5 / 7 ปี)</div>
+      <div class="hint">กรอกจำนวนคน ยอดฝาก อัตรา ดอกเบี้ยกู้ หนี้เสีย → ได้ผลตอบแทนที่กลุ่มได้/จ่าย/เหลือรายปี และกำแพงครบกำหนด · ดอกเบี้ยผู้ฝากแบบธรรมดา <b>ไม่ทบต้น</b> จ่ายพร้อมโบนัสเมื่อครบสัญญา · เป็นการจำลอง ไม่ใช่การรับประกันผล</div></div></div>
+    <div class="card"><div class="ds-ttl">กลุ่มผู้ฝาก <span class="hint">แต่ละแถว = ผู้ฝากกลุ่มหนึ่งที่เริ่มพร้อมกัน ฝากเท่ากัน</span></div>
+      <div class="tbl"><table><thead><tr><th>ระยะ (ปี)</th><th>ดอกเบี้ย %/ปี</th><th>ฝาก/เดือน/คน</th><th>จำนวนคน</th><th>โบนัส % ของเงินต้น</th><th>โบนัสไม่เกิน (บาท)</th><th>เงินเข้า/เดือน</th><th></th></tr></thead><tbody>${Q.rows.map(row).join("")}
+        <tr class="tot"><td colspan="3" class="l"><b>รวม ${nP} คน</b></td><td class="amt"><b>${nP}</b></td><td colspan="2"></td><td class="amt"><b>${B0(mon)}</b></td><td></td></tr></tbody></table></div>
+      <div class="bar" style="margin-top:6px;flex-wrap:wrap"><button class="ghost sm" id="lt_add">+ เพิ่มกลุ่ม</button><span class="hint">แผนสำเร็จรูป:</span><button class="ghost sm" id="lt_p1">แผนปรับปรุง 16 คน (ไม่มีโบนัส)</button><button class="ghost sm" id="lt_p2">แผนเดิม 9 คน (มีโบนัส)</button><button class="ghost sm" id="lt_p3">แผนเดิม 9 คน (ไม่มีโบนัส)</button></div>
+      <div class="pf" style="margin-top:8px"><div><label>ดอกเบี้ยกู้ที่กลุ่มได้ (%/ปี) — 1%/เดือน = 12</label>${nin("yld", +Q.yld, 0.1)}</div><div><label>หนี้เสีย (% ของเงินที่ปล่อยกู้ต่อปี)</label>${nin("bad", +Q.bad, 0.1)}</div>
+        <div><label>สัดส่วนที่ปล่อยกู้ได้ (%)</label>${nin("dep", +Q.dep, 5)}</div><div><label>สำรองเงินสดก่อนครบ (เดือน)</label>${nin("hold", +Q.hold, 1)}</div>
+        <div><label>แบบหุ้นระยะยาว: แบ่งให้ผู้ถือไม่เกิน (% ของรายได้)</label>${nin("share", +Q.share, 5)}</div></div></div>
+    <div class="stats" style="margin:0 0 10px">
+      <div class="stat"><div class="k">เงินเข้า/เดือน</div><div class="v">${B0(mon)} <small>บาท</small></div><div class="hint">${nP} คน · เฉลี่ย ${nP ? B0(mon / nP) : 0}/คน</div></div>
+      <div class="stat" style="border-top-color:var(--green)"><div class="k">กลุ่มเหลือรวม ${sim.Y} ปี (รับประกัน)</div><div class="v" style="color:${T.netG >= 0 ? "#0F6B4A" : "#B4452B"}">${T.netG >= 0 ? "+" : "−"}${B0(Math.abs(T.netG))} <small>บาท</small></div><div class="hint">ได้ ${B0(T.inc)} − หนี้เสีย − จ่ายผู้ฝาก ${B0(T.cost)}</div></div>
+      <div class="stat" style="border-top-color:var(--brand)"><div class="k">กลุ่มเหลือรวม (แบบหุ้นระยะยาว)</div><div class="v" style="color:var(--brand)">${T.netS >= 0 ? "+" : "−"}${B0(Math.abs(T.netS))} <small>บาท</small></div><div class="hint">ผู้ถือได้ ${B0(T.paySr)} (${T.cost ? Math.round(T.paySr / T.cost * 100) : 0}% ของเป้า)</div></div>
+      <div class="stat"><div class="k">เงินต้นสะสมสูงสุด (ทุนจากพูล)</div><div class="v">${B0(maxEnd)} <small>บาท</small></div><div class="hint">${shNow ? `${(ratio * 100).toFixed(0)}% ของทุนเรือนหุ้นปัจจุบัน` : ""}${ratio > 0.3 ? ' <span class="pill red">เกิน 30% ของทุน</span>' : ""}</div></div>
+      <div class="stat" style="border-top-color:var(--red)"><div class="k">กำแพงครบกำหนดสูงสุด (เงินสดต้องมี)</div><div class="v" style="color:#B4452B">${B0(wall)} <small>บาท</small></div><div class="hint">ปีที่ ${out.length ? out.find(o => o.pay === wall).yr : "—"}</div></div></div>
+    ${goal ? `<div class="keybox" style="margin:0 0 10px;font-size:13px"><b>เทียบแผนเป้าหมายทุน:</b> ต้องเพิ่มหุ้น <b>${B0(need)}</b>/เดือน (ขั้นต่ำ) · <b>${B0(needT)}</b>/เดือน (เป้าบริหาร) · แผนนี้เงินเข้า <b>${B0(mon)}</b>/เดือน = <b>${need > 0 ? Math.round(mon / need * 100) : 100}%</b> ของที่ต้องเพิ่มเพื่อถึงเป้าขั้นต่ำ ${mon >= need ? "✓" : ""}</div>` : ""}
+    <div class="card"><div class="ds-ttl">ผลตอบแทนที่ได้ vs ที่จ่าย รายปี <span class="hint">ดอกเบี้ยกู้ ${(+Q.yld).toFixed(1)}% · ปล่อยกู้ ${Q.dep}%${+Q.bad ? ` · หนี้เสีย ${Q.bad}%` : ""}${+Q.hold ? ` · สำรองก่อนครบ ${Q.hold} เดือน` : ""}</span></div>
+      <div class="tbl"><table><thead><tr><th class="l">ปี</th><th>เงินต้นสะสมสิ้นปี</th><th>พูลเฉลี่ย</th><th>① ได้ (ดอกเบี้ยกู้)</th><th>หนี้เสีย</th><th>② จ่ายผู้ฝาก (ดอกเบี้ย + โบนัส)</th><th>③ เหลือ — รับประกัน</th><th>③ เหลือ — หุ้นระยะยาว</th><th>เงินสดครบสัญญา</th></tr></thead><tbody>
+        ${out.map(o => `<tr><td class="l"><b>${o.yr}</b></td><td class="amt">${B0(o.end)}</td><td class="amt">${B0(o.avg)}</td><td class="amt">${B0(o.inc)}</td><td class="amt">${o.bd ? "−" + B0(o.bd) : "—"}</td><td class="amt">${B0(o.cost)}<div class="hint">${B0(o.ic)} + ${B0(o.bn)}</div></td>
+          <td class="amt" style="color:${o.netG >= 0 ? "#0F6B4A" : "#B4452B"}"><b>${o.netG >= 0 ? "" : "−"}${B0(Math.abs(o.netG))}</b><div class="hint">สะสม ${B0(o.cumG)}</div></td><td class="amt" style="color:${o.netS >= 0 ? "#0F6B4A" : "#B4452B"}"><b>${B0(o.netS)}</b><div class="hint">ผู้ถือ ${o.cost ? Math.round(o.payS / o.cost * 100) : 0}% ของเป้า · สะสม ${B0(o.cumS)}</div></td><td class="amt">${o.pay ? `<b>${B0(o.pay)}</b>` : "—"}</td></tr>`).join("")}
+        <tr class="tot"><td class="l"><b>รวม</b></td><td></td><td></td><td class="amt"><b>${B0(T.inc)}</b></td><td class="amt">${B0(out.reduce((u, o) => u + o.bd, 0))}</td><td class="amt"><b>${B0(T.cost)}</b></td><td class="amt"><b>${B0(T.netG)}</b></td><td class="amt"><b>${B0(T.netS)}</b></td><td class="amt"><b>${B0(out.reduce((u, o) => u + o.pay, 0))}</b></td></tr></tbody></table></div></div>
+    <div class="card"><div class="ds-ttl">กำแพงครบกำหนด และเงินต้นสะสม <span class="hint">แท่งส้ม = เงินสดที่ต้องมีจ่ายผู้ฝากเมื่อครบสัญญา (เงินต้น + ดอกเบี้ย + โบนัส) · เส้นน้ำเงิน = เงินต้นสะสมสิ้นปี (นับเป็นทุนช่วงที่ยังอยู่ในพูล)</span></div>${nwLtChart(out)}
+      <div class="bar" style="margin-top:6px"><button class="ghost sm" id="lt_csv">ส่งออก CSV</button><span class="hint">แบบรับประกัน = กลุ่มจ่ายตามสัญญาทุกกรณี · แบบหุ้นระยะยาว = จ่ายผู้ถือไม่เกิน ${Q.share}% ของรายได้สุทธิจากพูล · ยังไม่รวมค่าใช้จ่ายดำเนินงาน · ให้ทนายตรวจสถานะ (หุ้นหรือเงินฝาก) และผ่านมติประชุมใหญ่ก่อนใช้จริง</span></div></div></div><div class="nwdoc" id="nwdoc"></div>`;
+  const set = (k, v) => { S.ltp[k] = v; drawNWLt(); };
+  el.querySelectorAll("[data-ltq]").forEach(i => i.addEventListener("change", () => set(i.dataset.ltq, Math.max(0, +i.value || 0))));
+  el.querySelectorAll("[data-ltc]").forEach(i => i.addEventListener("change", () => { const [id, f] = i.dataset.ltc.split("|"), c = S.ltp.rows.find(q => q.id === id); if(c){ c[f] = Math.max(0, +i.value || 0); drawNWLt(); } }));
+  el.querySelectorAll("[data-ltd]").forEach(b => b.onclick = () => { S.ltp.rows = S.ltp.rows.filter(q => q.id !== b.dataset.ltd); drawNWLt(); });
+  $("lt_add").onclick = () => { S.ltp.rows.push({id:"L" + Math.random().toString(36).slice(2, 6), T:5, r:7, D:1000, k:1, bp:0, bc:0}); drawNWLt(); };
+  const preset = rows => () => { S.ltp.rows = rows.map((c, i) => Object.assign({id:"L" + i + Math.random().toString(36).slice(2, 4)}, c)); drawNWLt(); };
+  $("lt_p1").onclick = preset([{T:3, r:6, D:1500, k:6, bp:0, bc:0}, {T:5, r:7, D:1500, k:6, bp:0, bc:0}, {T:7, r:8, D:1000, k:4, bp:0, bc:0}]);
+  $("lt_p2").onclick = preset([{T:3, r:6, D:1000, k:5, bp:3, bc:1500}, {T:5, r:7, D:1000, k:4, bp:4, bc:2000}]);
+  $("lt_p3").onclick = preset([{T:3, r:6, D:1000, k:5, bp:0, bc:0}, {T:5, r:7, D:1000, k:4, bp:0, bc:0}]);
+  $("lt_csv").onclick = () => csvOut("kbk-จำลองหุ้นระยะยาว.csv", [["จำลองหุ้นระยะยาว", ["ปี", "เงินต้นสะสมสิ้นปี", "พูลเฉลี่ย", "ได้ (ดอกเบี้ยกู้)", "หนี้เสีย", "จ่ายดอกเบี้ย", "จ่ายโบนัส", "เหลือ รับประกัน", "เหลือ หุ้นระยะยาว", "เงินสดครบสัญญา"],
+    out.map(o => [o.yr, f2(o.end), f2(o.avg), f2(o.inc), f2(o.bd), f2(o.ic), f2(o.bn), f2(o.netG), f2(o.netS), f2(o.pay)])]]);
 }
 
 /* ============ จำลองหุ้นค้ำกู้ (แท็บ 32) ============
@@ -10782,7 +10860,7 @@ async function boot(){
 function draw(){
   rebuildPeriods();                     // ★ ช่วงงวดเดินตามข้อมูลจริง — ย้อนดูได้ทุกปี
   // แท็บไหนพัง ให้พังแค่แท็บนั้น อย่าลากทั้งหน้าจอลงไปด้วย
-  [["tab23",drawNWDash],["tab20",drawNWLoan],["tab21",drawNWSave],["tab22",drawNWDiv],["tab24",drawNWRc],["tab25",drawNWLoanDash],["tab26",drawNWOverview],["tab27",drawNWMdb],["tab28",drawNWGuar],["tab29",drawNWLit],["tab30",drawNWCon],["tab31",drawNWExp],["tab32",drawNWShc],["tab10",drawEntry],["tab11",drawOverview],["tab12",drawPeriods],["tab1",drawT1],["tab3",drawT3],
+  [["tab23",drawNWDash],["tab20",drawNWLoan],["tab21",drawNWSave],["tab22",drawNWDiv],["tab24",drawNWRc],["tab25",drawNWLoanDash],["tab26",drawNWOverview],["tab27",drawNWMdb],["tab28",drawNWGuar],["tab29",drawNWLit],["tab30",drawNWCon],["tab31",drawNWExp],["tab32",drawNWShc],["tab33",drawNWLt],["tab10",drawEntry],["tab11",drawOverview],["tab12",drawPeriods],["tab1",drawT1],["tab3",drawT3],
    ["tab4",drawT4],["tab5",drawT5],["tab6",drawT6],["tab7",drawT7],["tab8",drawT8],["tab9",drawT9]].forEach(([id,fn])=>{
     try{ fn(); }
     catch(err){ const el=$(id); if(el) el.innerHTML =
@@ -10819,7 +10897,7 @@ if($("saveNow")) $("saveNow").onclick = () => saveClick($("saveNow"), null);
 
 /* ============ เดินระบบ ============ */
 function all(){ draw(); save(); banner(); }
-const TABFN = {23:"drawNWDash",20:"drawNWLoan",21:"drawNWSave",22:"drawNWDiv",24:"drawNWRc",25:"drawNWLoanDash",26:"drawNWOverview",27:"drawNWMdb",28:"drawNWGuar",29:"drawNWLit",30:"drawNWCon",31:"drawNWExp",32:"drawNWShc",1:"drawT1",3:"drawT3",4:"drawT4",5:"drawT5",6:"drawT6",7:"drawT7",8:"drawT8",9:"drawT9",
+const TABFN = {23:"drawNWDash",20:"drawNWLoan",21:"drawNWSave",22:"drawNWDiv",24:"drawNWRc",25:"drawNWLoanDash",26:"drawNWOverview",27:"drawNWMdb",28:"drawNWGuar",29:"drawNWLit",30:"drawNWCon",31:"drawNWExp",32:"drawNWShc",33:"drawNWLt",1:"drawT1",3:"drawT3",4:"drawT4",5:"drawT5",6:"drawT6",7:"drawT7",8:"drawT8",9:"drawT9",
                10:"drawEntry",11:"drawOverview",12:"drawPeriods"};
 const OLD_TABS = [10,11,9,12,7,1,8,3,5,6,4];
 $("oldbtn").onclick = () => {
