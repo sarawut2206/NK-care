@@ -736,7 +736,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-179</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-181</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -6214,18 +6214,18 @@ function nwWdpDoc(d){
   return nwKd(pg(1, 1, `${logo()}<div class="kt1">สรุปยอดเงินที่ต้องเบิก</div>
     <div class="kt2">${ORG}<br>โรงเรียนมัธยมวัดหนองแขม (กบข.นข.)<br>สัญญาที่ทำในเดือน${nwPFull(d.p)}</div>
     <div class="kmeta2"><span>รายงาน ณ วันที่ ${nwThL(nwToday())}</span><span>${d.wdDate ? "วันที่เบิก " + nwThS(d.wdDate) + " · " : ""}ผู้กู้ ${n} ราย${d.items.length ? " · รายการอื่น " + d.items.length : ""}</span></div>
-    <p class="i2">เพื่อให้กลุ่มบุคคลมีเงินจ่ายตามสัญญาที่ทำไว้ในเดือน${nwPFull(d.p)}${d.items.length ? " และรายการเบิกอื่น" : ""} ต้องเบิกเงินจากบัญชีเงินฝาก รวม <b>${B(d.draw)}</b> บาท (${bahtText(d.draw)}) และมีค่าตอบแทนผู้ไปเบิก <b>${B(d.fee)}</b> บาท รวมเงินที่ออกจากบัญชี <b>${B(d.total)}</b> บาท รายละเอียดดังนี้</p>
-    <p class="i2" style="margin-top:4px"><b>๑. เบิกให้ผู้กู้ตามสัญญา</b></p>
-    <table class="kt"><colgroup><col style="width:5%"><col style="width:22%"><col style="width:8%"><col style="width:14%"><col style="width:14%"><col style="width:13%"><col style="width:12%"><col style="width:12%"></colgroup>
+    <p class="i2">ต้องเบิกเงินจากบัญชีเงินฝากเพื่อจ่ายตามสัญญาที่ทำในเดือน${nwPFull(d.p)}${d.items.length ? " และรายการเบิกอื่น" : ""} รวม <b>${B(d.draw)}</b> บาท และมีค่าตอบแทนผู้ไปเบิก <b>${B(d.fee)}</b> บาท รวมออกจากบัญชี <b>${B(d.total)}</b> บาท (${bahtText(d.total)})</p>
+    <p class="i2" style="margin:2px 0"><b>๑. เบิกให้ผู้กู้ตามสัญญา</b></p>
+    <table class="kt"><colgroup><col style="width:4%"><col style="width:27%"><col style="width:8%"><col style="width:13%"><col style="width:12%"><col style="width:12%"><col style="width:12%"><col style="width:12%"></colgroup>
       <thead><tr><th>ที่</th><th>ผู้กู้</th><th>ประเภท</th><th>เลขที่สัญญา</th><th>วันที่ทำสัญญา</th><th>หนี้ปัจจุบัน (บาท)</th><th>ยอดสัญญา (บาท)</th><th>ส่วนต่างที่ต้องเบิก (บาท)</th></tr></thead><tbody>
       ${d.list.map((e, i) => `<tr><td class="c">${i + 1}</td><td class="l">${esc(e.x.no)} ${esc(e.x.name)}</td><td class="c">${NLP[e.k]}</td><td class="c">${esc(e.code || "—")}</td><td class="c">${nwThS(e.d)}</td><td class="n">${e.D ? B(e.D) : "—"}</td><td class="n">${B(e.N)}</td><td class="n"><b>${B(e.amt)}</b></td></tr>`).join("") || '<tr><td colspan="8" class="c">ไม่มีสัญญาที่ทำในเดือนนี้</td></tr>'}
       <tr class="hl"><td colspan="5" class="c"><b>รวม ${n} ราย</b></td><td class="n"><b>${B(d.D)}</b></td><td class="n"><b>${B(d.N)}</b></td><td class="n"><b>${B(d.need)}</b></td></tr></tbody></table>
-    ${d.items.length ? `<p class="i2" style="margin-top:8px"><b>๒. รายการเบิกอื่น</b></p>
+    ${d.items.length ? `<p class="i2" style="margin:4px 0 2px"><b>๒. รายการเบิกอื่น</b></p>
     <table class="kt"><colgroup><col style="width:6%"><col style="width:34%"><col style="width:26%"><col style="width:20%"><col style="width:14%"></colgroup>
       <thead><tr><th>ที่</th><th>รายการ</th><th>สมาชิก</th><th>หมายเหตุ</th><th>จำนวนเงิน (บาท)</th></tr></thead><tbody>
       ${d.items.map((i, k) => `<tr><td class="c">${k + 1}</td><td class="l">${esc(i.cat)}</td><td class="l">${i.no ? esc(i.no) + " " + esc(nwNmOf(i.no)) : "—"}</td><td class="l">${esc(i.note || "—")}</td><td class="n">${B(i.amt)}</td></tr>`).join("")}
       <tr class="hl"><td colspan="4" class="c"><b>รวมรายการเบิกอื่น</b></td><td class="n"><b>${B(d.oth)}</b></td></tr></tbody></table>` : ""}
-    <p class="i2" style="margin-top:8px"><b>${d.items.length ? "๓" : "๒"}. สรุปเงินที่ต้องเบิกและค่าตอบแทนผู้ไปเบิก</b></p>
+    <p class="i2" style="margin:4px 0 2px"><b>${d.items.length ? "๓" : "๒"}. สรุปเงินที่ต้องเบิกและค่าตอบแทนผู้ไปเบิก</b></p>
     <table class="kt"><colgroup><col style="width:62%"><col style="width:38%"></colgroup><tbody>
       <tr><td class="l">เบิกให้ผู้กู้ตามสัญญา (ส่วนต่าง)</td><td class="n">${B(d.need)}</td></tr>
       ${d.items.length ? `<tr><td class="l">รายการเบิกอื่น (${Object.keys(d.byCat).map(k => esc(k)).join(" · ")})</td><td class="n">${B(d.oth)}</td></tr>` : ""}
@@ -6234,8 +6234,8 @@ function nwWdpDoc(d){
       ${d.other ? `<tr><td class="l">ค่าใช้จ่ายอื่นที่เกี่ยวกับการเบิก</td><td class="n">${B(d.other)}</td></tr>` : ""}
       <tr class="hl"><td class="l"><b>รวมค่าดำเนินการ${tn ? ` (เฉลี่ยรายการละ ${B(ps)} บาท)` : ""}</b></td><td class="n"><b>${B(d.fee)}</b></td></tr>
       <tr class="hl"><td class="l"><b>รวมเงินที่ออกจากบัญชีทั้งหมด</b></td><td class="n"><b>${B(d.total)}</b></td></tr></tbody></table>
-    <p class="kh" style="margin-top:8px">หมายเหตุ: ส่วนต่างที่ต้องเบิก = ยอดสัญญาใหม่ − หนี้เดิมที่ปิดในสัญญาเดิม (กรณีกู้ทบ) · นับสัญญาตามวันที่ทำสัญญา · ค่าตอบแทนผู้ไปเบิกบันทึกเป็นค่าใช้จ่ายในการดำเนินงาน</p>
-    <div class="ksigs" style="grid-template-columns:1fr 1fr 1fr;margin:16px auto 0">${sigOf("ผู้เบิกเงิน", FIN())}${sigOf("ผู้ร่วมเดินทาง", "")}${sigOf("ประธานคณะกรรมการ", CHAIR())}</div>`, ""));
+    <p class="kh" style="margin-top:4px">หมายเหตุ: ส่วนต่างที่ต้องเบิก = ยอดสัญญา − หนี้เดิมที่ปิด (กู้ทบ) · นับตามวันที่ทำสัญญา · ค่าตอบแทนบันทึกเป็นค่าใช้จ่ายดำเนินงาน</p>
+    <div class="ksigs" style="grid-template-columns:1fr 1fr 1fr;margin:6px auto 0">${sigOf("ผู้เบิกเงิน", FIN())}${sigOf("ผู้ร่วมเดินทาง", "")}${sigOf("ประธานคณะกรรมการ", CHAIR())}</div>`, ""));
 }
 function drawNWWdp(){
   const el = $("tab35"); if(!el) return;
@@ -6263,7 +6263,7 @@ function drawNWWdp(){
       <div class="shx-card" style="border-top-color:#C4570F"><div class="k">🧾 ค่าตอบแทนผู้ไปเบิก</div><div class="v">${B0(d.fee)} <small>บาท</small></div><div class="h">${nwWdpFeeTxt(d)}${d.other ? " + ค่าอื่น " + B0(d.other) : ""}</div></div>
       <div class="shx-card" style="border-top-color:var(--brand)"><div class="k">🏦 รวมที่ออกจากบัญชี</div><div class="v">${B0(d.total)} <small>บาท</small></div><div class="h">เบิก ${B0(d.draw)} + ค่าตอบแทน ${B0(d.fee)}</div></div></div>
     <div class="card"><div class="bar" style="margin:0 0 6px;flex-wrap:wrap"><div class="ds-ttl" style="margin:0">📋 ๑. สัญญาที่ทำเดือน${nwPFull(d.p)} — เบิกให้ผู้กู้</div>
-        <span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap"><button class="ghost sm" id="wp_print">🖨 พิมพ์</button><button class="ghost sm" id="wp_word">Word</button><button class="ghost sm" id="wp_csv">📥 CSV</button></span></div>
+        <span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap"><button class="ghost sm" id="wp_print" title="พิมพ์ หรือเลือกปลายทาง «บันทึกเป็น PDF» — ตั้งชื่อไฟล์ให้แล้ว">🖨 พิมพ์ / PDF</button><button class="ghost sm" id="wp_word">Word</button><button class="ghost sm" id="wp_csv">📥 CSV</button></span></div>
       <div class="tbl"><table><thead><tr><th>ที่</th><th class="l">ผู้กู้</th><th class="l">ประเภท</th><th class="l">เลขที่สัญญา</th><th class="l">วันที่ทำสัญญา</th><th>หนี้ปัจจุบัน</th><th>ยอดสัญญาใหม่</th><th>ส่วนต่างที่ต้องเบิก</th><th class="l">สถานะ</th></tr></thead><tbody>
         ${d.list.map((e, i) => `<tr><td class="amt">${i + 1}</td><td class="l"><span class="no">${esc(e.x.no)}</span><b>${esc(e.x.name)}</b></td><td class="l">${NLP[e.k]}</td><td class="l">${e.code ? esc(e.code) : "—"}</td><td class="l">${thDay(e.d)}</td><td class="amt">${e.D ? B(e.D) : "—"}</td><td class="amt">${B(e.N)}${e.want ? `<div class="hint" style="color:#B4452B">ขอ ${B0(e.want)}</div>` : ""}</td><td class="amt"><b>${B(e.amt)}</b></td><td class="l"><span class="pill ${NW_WST[e.st][1]}">${NW_WST[e.st][0]}</span></td></tr>`).join("") || '<tr><td colspan="9" class="hint" style="text-align:left">ไม่มีสัญญาที่ทำในเดือนนี้ — เลือกเดือนอื่น (เดือนที่มีรายการแสดงจำนวนราย)</td></tr>'}</tbody>
         <tfoot><tr><td class="l" colspan="5"><b>รวม ${n} ราย</b></td><td class="amt">${B(d.D)}</td><td class="amt">${B(d.N)}</td><td class="amt"><b>${B(d.need)}</b></td><td></td></tr></tfoot></table></div>
