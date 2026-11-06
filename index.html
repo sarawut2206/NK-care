@@ -736,7 +736,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-176</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-177</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -6177,33 +6177,40 @@ function nwWdDoc(y){
     <div class="ksigs" style="grid-template-columns:1fr 1fr 1fr;margin:16px auto 0">${sigOf("ผู้ถอนเงิน", FIN())}${sigOf("ผู้ร่วมเดินทาง", "")}${sigOf("ประธานคณะกรรมการ", CHAIR())}</div>`, ""));
 }
 /* ============ สรุปยอดเบิก (แท็บ 35) ============
-   รายการเบิกเงินให้ผู้กู้ในแต่ละเดือน = ครั้งที่กู้ใหม่/กู้ทบในเดือนนั้น (รวมที่ลงล่วงหน้า): ยอดสัญญา − หนี้เดิมที่หัก (กู้ทบ) = ส่วนต่างที่ต้องเบิก
-   ค่าดำเนินการ = ค่าเดินทางเบิกเงินตามอัตราที่ตั้งไว้ (nwWdCfg) × จำนวนครั้งที่ไปเบิก + ค่าอื่น ๆ  ·  S.wdp = {p, trips, other} */
+   ยอดเบิกของเดือน = สัญญาที่ทำ (ตาม «วันที่ทำสัญญา») ในเดือนนั้น — ทำสัญญา 1 พ.ย. = ไปเบิก 6 พ.ย. นับเป็นยอดเดือน พ.ย. ไม่ใช่เดือนที่ลงงวดในทะเบียน
+   แหล่งข้อมูล: ① สัญญาที่บันทึกแล้ว (มีวันที่ทำสัญญาจริง ไม่ใช่วันที่ตามงวดที่ 1 อัตโนมัติ) ② คำขอกู้ที่พิมพ์/บันทึกสัญญาฉบับเต็มแล้วแต่ยังไม่ลงทะเบียนครบ
+   ส่วนต่างที่ต้องเบิก = ยอดสัญญา − หนี้เดิมที่ปิด (กู้ทบ)  ·  ค่าดำเนินการ = ค่าเดินทางเบิกเงินตามอัตราที่ตั้งไว้ (nwWdCfg) × จำนวนครั้ง + ค่าอื่น ๆ  ·  S.wdp = {p, trips, other, dates} */
+const NW_WST = {rec:["ลงทะเบียนแล้ว", "grn"], con:["บันทึกสัญญาแล้ว", "grn"], save:["บันทึกสัญญาเต็มแล้ว", "grn"], print:["พิมพ์สัญญาเต็มแล้ว", "amb"]};
 function nwWdpAll(){
-  const out = [];
-  NW.people().forEach(x => nwAccts(x).forEach(a => { if(a.prod === "free") return; const st = nwStateA(a);
-    nwLoanEvents(x, a).forEach(e => out.push({x, k:a.prod, p:e.p, now:st.debt, N:e.N, D:e.D, amt:e.amt, fut:e.fut})); }));
-  return out.sort((u, v) => String(u.x.no).localeCompare(String(v.x.no)));
+  const out = [], kOf = (c, pk) => c.k || (pk === "ดูแลกัน" ? "dk" : "sam");
+  nwCons().forEach(c => { if(!c.d || nwConAutoD(c) || !(+c.amt > 0)) return; const x = NW.person(c.no); if(!x) return;
+    const k = kOf(c, c.prod), ev = nwLoanEvents(x, nwAcctF(x, k)).find(e => Math.abs(e.N - c.amt) < 1), own = nwStateA(nwAcct(x, k)).debt, D = ev ? ev.D : own, N = r2(+c.amt);
+    out.push({x, k, d:c.d, p:nwWdP(c.d), N, D:r2(D), amt:ev ? r2(ev.amt) : Math.max(0, r2(N - own)), code:c.code || "", st:ev && !ev.fut ? "rec" : "con"}); });
+  nwApps().filter(q => q.status === "ขอกู้" && q.dc && (q.savedFull || q.printedFull)).forEach(q => { const x = NW.person(q.no); if(!x) return;
+    const k = kOf(q, q.prod), own = nwStateA(nwAcct(x, k)).debt, N = r2(q.P0);
+    out.push({x, k, d:q.dc, p:nwWdP(q.dc), N, D:r2(own), amt:Math.max(0, r2(N - own)), code:q.code || "", st:q.savedFull ? "save" : "print", want:q.want > 0 && Math.abs(q.want - q.P0) > 0.5 ? q.want : 0}); });
+  return out.sort((u, v) => String(u.d).localeCompare(String(v.d)) || String(u.x.no).localeCompare(String(v.x.no), "th", {numeric:true}));
 }
 function nwWdpData(all){
-  const cur = nwCurP(), W = S.wdp || {}, has0 = all.filter(e => e.p === W.p).length || (W.p && pNum(W.p) >= pNum("2568-05") && pNum(W.p) <= pNum(cur) + 18);
-  const fut = all.filter(e => pNum(e.p) >= pNum(cur)).map(e => e.p).sort(), past = all.map(e => e.p).filter(q => pNum(q) < pNum(cur)).sort();
-  const p = has0 ? W.p : fut[0] || past[past.length - 1] || cur, list = all.filter(e => e.p === p), cfg = nwWdCfg();
+  const W = S.wdp || {}, tp = nwWdP(nwToday()), months = [...new Set(all.map(e => e.p))].sort();
+  const valid = W.p && (months.includes(W.p) || (pNum(W.p) >= pNum(tp) - 3 && pNum(W.p) <= pNum(tp) + 14));
+  const p = valid ? W.p : (months.includes(tp) ? tp : months.find(q => pNum(q) >= pNum(tp)) || months[months.length - 1] || tp), list = all.filter(e => e.p === p), cfg = nwWdCfg();
   const trips = has(W.trips) && W.trips !== "" ? Math.max(0, Math.round(+W.trips)) : (list.length ? 1 : 0), other = has(W.other) && W.other !== "" ? Math.max(0, +W.other) : 0;
   const travel = r2(trips * nwWdFee(cfg)), fee = r2(travel + other), sum = k => r2(list.reduce((u, e) => u + e[k], 0));
   const done = r2(nwWds().filter(w => nwWdP(w.d) === p).reduce((u, w) => u + num(w.amt), 0)), need = sum("amt");
-  return {p, list, cfg, trips, other, travel, fee, N:sum("N"), D:sum("D"), now:sum("now"), need, done, left:Math.max(0, r2(need - done)), total:r2(need + fee), cur};
+  const noDate = nwApps().filter(q => q.status === "ขอกู้" && !q.dc && (q.savedFull || q.printedFull)).length, wait = nwApps().filter(q => q.status === "ขอกู้" && !(q.savedFull || q.printedFull)).length;
+  return {p, list, cfg, trips, other, travel, fee, N:sum("N"), D:sum("D"), need, done, left:Math.max(0, r2(need - done)), total:r2(need + fee), tp, months, wdDate:(W.dates || {})[p] || "", noDate, wait};
 }
 function nwWdpDoc(d){
   const n = d.list.length, ps = d.fee && n ? r2(d.fee / n) : 0;
   return nwKd(pg(1, 1, `${logo()}<div class="kt1">สรุปยอดเงินที่ต้องเบิก</div>
-    <div class="kt2">${ORG}<br>โรงเรียนมัธยมวัดหนองแขม (กบข.นข.)<br>ประจำเดือน${nwPFull(d.p)}</div>
-    <div class="kmeta2"><span>รายงาน ณ วันที่ ${nwThL(nwToday())}</span><span>ผู้กู้ ${n} ราย</span></div>
-    <p class="i2">เพื่อให้กลุ่มบุคคลมีเงินจ่ายให้ผู้กู้ตามสัญญาที่ทำไว้แล้วประจำเดือน${nwPFull(d.p)} ต้องเบิกเงินจากบัญชีเงินฝาก รวม <b>${B(d.need)}</b> บาท (${bahtText(d.need)}) และมีค่าดำเนินการ <b>${B(d.fee)}</b> บาท รวมเงินที่ออกจากบัญชี <b>${B(d.total)}</b> บาท รายละเอียดดังนี้</p>
-    <table class="kt"><colgroup><col style="width:6%"><col style="width:26%"><col style="width:10%"><col style="width:14%"><col style="width:14%"><col style="width:14%"><col style="width:16%"></colgroup>
-      <thead><tr><th>ที่</th><th>ผู้กู้</th><th>ประเภท</th><th>หนี้ปัจจุบัน (บาท)</th><th>ยอดสัญญา (บาท)</th><th>หักหนี้เดิม (บาท)</th><th>ส่วนต่างที่ต้องเบิก (บาท)</th></tr></thead><tbody>
-      ${d.list.map((e, i) => `<tr><td class="c">${i + 1}</td><td class="l">${esc(e.x.no)} ${esc(e.x.name)}</td><td class="c">${NW_ACCS[e.k]}</td><td class="n">${B(e.now)}</td><td class="n">${B(e.N)}</td><td class="n">${e.D ? B(e.D) : "—"}</td><td class="n"><b>${B(e.amt)}</b></td></tr>`).join("") || '<tr><td colspan="7" class="c">ไม่มีรายการเบิกในเดือนนี้</td></tr>'}
-      <tr class="hl"><td colspan="3" class="c"><b>รวม ${n} ราย</b></td><td class="n"><b>${B(d.now)}</b></td><td class="n"><b>${B(d.N)}</b></td><td class="n"><b>${B(d.D)}</b></td><td class="n"><b>${B(d.need)}</b></td></tr></tbody></table>
+    <div class="kt2">${ORG}<br>โรงเรียนมัธยมวัดหนองแขม (กบข.นข.)<br>สัญญาที่ทำในเดือน${nwPFull(d.p)}</div>
+    <div class="kmeta2"><span>รายงาน ณ วันที่ ${nwThL(nwToday())}</span><span>${d.wdDate ? "วันที่เบิก " + nwThS(d.wdDate) + " · " : ""}ผู้กู้ ${n} ราย</span></div>
+    <p class="i2">เพื่อให้กลุ่มบุคคลมีเงินจ่ายให้ผู้กู้ตามสัญญาที่ทำไว้ในเดือน${nwPFull(d.p)} ต้องเบิกเงินจากบัญชีเงินฝาก รวม <b>${B(d.need)}</b> บาท (${bahtText(d.need)}) และมีค่าดำเนินการ <b>${B(d.fee)}</b> บาท รวมเงินที่ออกจากบัญชี <b>${B(d.total)}</b> บาท รายละเอียดดังนี้</p>
+    <table class="kt"><colgroup><col style="width:5%"><col style="width:22%"><col style="width:8%"><col style="width:14%"><col style="width:14%"><col style="width:13%"><col style="width:12%"><col style="width:12%"></colgroup>
+      <thead><tr><th>ที่</th><th>ผู้กู้</th><th>ประเภท</th><th>เลขที่สัญญา</th><th>วันที่ทำสัญญา</th><th>หนี้ปัจจุบัน (บาท)</th><th>ยอดสัญญา (บาท)</th><th>ส่วนต่างที่ต้องเบิก (บาท)</th></tr></thead><tbody>
+      ${d.list.map((e, i) => `<tr><td class="c">${i + 1}</td><td class="l">${esc(e.x.no)} ${esc(e.x.name)}</td><td class="c">${NLP[e.k]}</td><td class="c">${esc(e.code || "—")}</td><td class="c">${nwThS(e.d)}</td><td class="n">${e.D ? B(e.D) : "—"}</td><td class="n">${B(e.N)}</td><td class="n"><b>${B(e.amt)}</b></td></tr>`).join("") || '<tr><td colspan="8" class="c">ไม่มีสัญญาที่ทำในเดือนนี้</td></tr>'}
+      <tr class="hl"><td colspan="5" class="c"><b>รวม ${n} ราย</b></td><td class="n"><b>${B(d.D)}</b></td><td class="n"><b>${B(d.N)}</b></td><td class="n"><b>${B(d.need)}</b></td></tr></tbody></table>
     <p class="i2" style="margin-top:8px"><b>ค่าดำเนินการเบิกเงิน</b></p>
     <table class="kt"><colgroup><col style="width:62%"><col style="width:38%"></colgroup><tbody>
       <tr><td class="l">ค่าเดินทางเบิกเงิน (${d.cfg.mode === "head" ? `${B(d.cfg.rate)} บาท × ${d.cfg.n} คน` : `${B(d.cfg.rate)} บาท/ครั้ง`} × ${d.trips} ครั้ง)</td><td class="n">${B(d.travel)}</td></tr>
@@ -6211,34 +6218,35 @@ function nwWdpDoc(d){
       <tr class="hl"><td class="l"><b>รวมค่าดำเนินการ${n ? ` (เฉลี่ยรายละ ${B(ps)} บาท)` : ""}</b></td><td class="n"><b>${B(d.fee)}</b></td></tr>
       <tr><td class="l">เงินที่ต้องเบิกให้ผู้กู้ (ส่วนต่าง)</td><td class="n">${B(d.need)}</td></tr>
       <tr class="hl"><td class="l"><b>รวมเงินที่ออกจากบัญชี</b></td><td class="n"><b>${B(d.total)}</b></td></tr></tbody></table>
-    <p class="kh" style="margin-top:8px">หมายเหตุ: ส่วนต่างที่ต้องเบิก = ยอดสัญญาใหม่ − หนี้เดิมที่ปิดในสัญญาเดิม (กรณีกู้ทบ) · ค่าดำเนินการบันทึกเป็นค่าใช้จ่ายในการดำเนินงาน</p>
+    <p class="kh" style="margin-top:8px">หมายเหตุ: ส่วนต่างที่ต้องเบิก = ยอดสัญญาใหม่ − หนี้เดิมที่ปิดในสัญญาเดิม (กรณีกู้ทบ) · นับสัญญาตามวันที่ทำสัญญา · ค่าดำเนินการบันทึกเป็นค่าใช้จ่ายในการดำเนินงาน</p>
     <div class="ksigs" style="grid-template-columns:1fr 1fr 1fr;margin:16px auto 0">${sigOf("ผู้เบิกเงิน", FIN())}${sigOf("ผู้ร่วมเดินทาง", "")}${sigOf("ประธานคณะกรรมการ", CHAIR())}</div>`, ""));
 }
 function drawNWWdp(){
   const el = $("tab35"); if(!el) return;
   if(tab !== 35){ el.innerHTML = ""; return; }
   if(!NW.on()){ el.innerHTML = nwStartHTML("สรุปยอดเบิก"); bindNwImport(); return; }
-  const all = nwWdpAll(), d = nwWdpData(all), cur = d.cur, mx = {}; all.forEach(e => mx[e.p] = (mx[e.p] || 0) + 1);
-  const opts = []; for(let n = pNum(cur) - 3; n <= pNum(cur) + 14; n++){ const q = pFrom(n); if(n < pNum("2568-05")) continue; opts.push(`<option value="${q}" ${q === d.p ? "selected" : ""}>${thPer(q)}${q === cur ? " (งวดปัจจุบัน)" : ""}${mx[q] ? ` · ${mx[q]} ราย` : ""}</option>`); }
-  const groups = []; for(let n = pNum(cur); n <= pNum(cur) + 5; n++){ const q = pFrom(n), v = all.filter(e => e.p === q).reduce((u, e) => u + e.amt, 0); groups.push({lb:thPer(q).split(" ")[0], sub:String(q.split("-")[0]).slice(2), hi:q === d.p, bars:[{v:r2(v), c:q === d.p ? "#1F3A68" : "#8FA8D6", t:v ? dshK(v) : "—"}]}); }
+  const all = nwWdpAll(), d = nwWdpData(all), tp = d.tp, mx = {}; all.forEach(e => mx[e.p] = (mx[e.p] || 0) + 1);
+  const keys = [...new Set(d.months.concat([tp, pFrom(pNum(tp) + 1), pFrom(pNum(tp) + 2), d.p]))].sort(), opts = keys.map(q => `<option value="${q}" ${q === d.p ? "selected" : ""}>${thPer(q)}${q === tp ? " (เดือนนี้)" : ""}${mx[q] ? ` · ${mx[q]} ราย` : ""}</option>`);
+  const groups = []; for(let n = pNum(tp); n <= pNum(tp) + 5; n++){ const q = pFrom(n), v = all.filter(e => e.p === q).reduce((u, e) => u + e.amt, 0); groups.push({lb:thPer(q).split(" ")[0], sub:String(q.split("-")[0]).slice(2), hi:q === d.p, bars:[{v:r2(v), c:q === d.p ? "#1F3A68" : "#8FA8D6", t:v ? dshK(v) : "—"}]}); }
   const dn = shxDonut([{v:d.need, c:"#3DBE8B"}, {v:d.D, c:"#8FA8D6"}], dshK(d.N), "ยอดสัญญา"), n = d.list.length, ps = d.fee && n ? r2(d.fee / n) : 0;
   el.innerHTML = `<div class="nwscreen"><div class="ds-head"><div><div class="eyebrow" style="margin:0">💵 สรุปยอดเงินที่ต้องเบิก</div>
-      <div class="hint">เงินที่ต้องไปเบิกจากบัญชีเพื่อจ่ายผู้กู้ตามสัญญาที่ทำไว้แล้วในเดือนนั้น · ส่วนต่างที่ต้องเบิก = ยอดสัญญา − หนี้เดิมที่ปิด (กู้ทบ) · ดึงจากทะเบียน (รวมที่ลงล่วงหน้า)</div></div>
-      <div class="ds-ctl"><label>เดือนที่เบิก <select id="wp_p">${opts.join("")}</select></label></div></div>
+      <div class="hint">ยอดเบิกของแต่ละเดือน = สัญญาที่ <b>ทำ (วันที่ทำสัญญา) ในเดือนนั้น</b> เช่น ทำสัญญา 1 พ.ย. ไปเบิก 6 พ.ย. → ยอดเดือน พ.ย. · ส่วนต่างที่ต้องเบิก = ยอดสัญญา − หนี้เดิมที่ปิด (กู้ทบ) · ดึงจากสัญญาที่บันทึก และคำขอกู้ที่พิมพ์/บันทึกสัญญาฉบับเต็มแล้ว</div></div>
+      <div class="ds-ctl"><label>เดือนที่ทำสัญญา/เบิก <select id="wp_p">${opts.join("")}</select></label></div></div>
+    ${d.noDate || d.wait ? `<div class="keybox" style="margin:0 0 10px;font-size:13px">${d.noDate ? `⚠️ มีคำขอกู้ที่พิมพ์/บันทึกสัญญาเต็มแล้วแต่ <b>ยังไม่ได้ใส่วันที่ทำสัญญา ${d.noDate} ราย</b> — ใส่วันที่ในตารางคำขอกู้ (แท็บกู้ยืม) จึงจะนับในเดือนที่ถูกต้อง` : ""}${d.noDate && d.wait ? "<br>" : ""}${d.wait ? `ℹ️ คำขอที่ยังรออนุมัติ (ยังไม่พิมพ์/บันทึกสัญญาเต็ม) ${d.wait} ราย ยังไม่นับในยอดเบิก` : ""}</div>` : ""}
     <div class="shx-cards">
       <div class="shx-card" style="border-top-color:#2F6FDE"><div class="k">👥 ผู้กู้ที่ต้องจ่ายเงิน</div><div class="v">${n} <small>ราย</small></div><div class="h">ยอดสัญญารวม ${B0(d.N)} บาท</div></div>
       <div class="shx-card" style="border-top-color:#1BAF7A"><div class="k">💵 ต้องเบิก (ส่วนต่าง)</div><div class="v">${B0(d.need)} <small>บาท</small></div><div class="h">${d.done > 0 ? `ถอนไปแล้วเดือนนี้ ${B0(d.done)} · <b>ยังต้องเบิกอีก ${B0(d.left)}</b>` : "ยังไม่มีการถอนในทะเบียนถอนเงินของเดือนนี้"}</div></div>
       <div class="shx-card" style="border-top-color:#C4570F"><div class="k">🧾 ค่าดำเนินการ</div><div class="v">${B0(d.fee)} <small>บาท</small></div><div class="h">${n ? `เฉลี่ยรายละ ${B0(ps)}` : "—"} · ${d.trips} ครั้ง</div></div>
       <div class="shx-card" style="border-top-color:var(--brand)"><div class="k">🏦 รวมที่ออกจากบัญชี</div><div class="v">${B0(d.total)} <small>บาท</small></div><div class="h">เบิกให้ผู้กู้ ${B0(d.need)} + ค่าดำเนินการ ${B0(d.fee)}</div></div></div>
-    <div class="card"><div class="bar" style="margin:0 0 6px;flex-wrap:wrap"><div class="ds-ttl" style="margin:0">📋 รายการที่ต้องเบิก ${nwPFull(d.p)}</div>
+    <div class="card"><div class="bar" style="margin:0 0 6px;flex-wrap:wrap"><div class="ds-ttl" style="margin:0">📋 สัญญาที่ทำเดือน${nwPFull(d.p)} — รายการที่ต้องเบิก</div>
         <span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap"><button class="ghost sm" id="wp_print">🖨 พิมพ์</button><button class="ghost sm" id="wp_word">Word</button><button class="ghost sm" id="wp_csv">📥 CSV</button></span></div>
-      <div class="tbl"><table><thead><tr><th>ที่</th><th class="l">ผู้กู้</th><th class="l">ประเภท</th><th>หนี้ปัจจุบัน</th><th>ยอดสัญญาใหม่</th><th>หักหนี้เดิม</th><th>ส่วนต่างที่ต้องเบิก</th><th>ค่าดำเนินการ (เฉลี่ย)</th><th class="l">สถานะ</th></tr></thead><tbody>
-        ${d.list.map((e, i) => `<tr><td class="amt">${i + 1}</td><td class="l"><span class="no">${esc(e.x.no)}</span><b>${esc(e.x.name)}</b></td><td class="l">${NW_ACCS[e.k]}</td><td class="amt">${B(e.now)}</td><td class="amt">${B(e.N)}</td><td class="amt">${e.D ? B(e.D) : "—"}</td><td class="amt"><b>${B(e.amt)}</b></td><td class="amt">${ps ? B(ps) : "—"}</td><td class="l">${e.fut ? '<span class="pill amb">ลงล่วงหน้า</span>' : '<span class="pill grn">บันทึกแล้ว</span>'}</td></tr>`).join("") || '<tr><td colspan="9" class="hint" style="text-align:left">ไม่มีรายการกู้ใหม่/กู้ทบในเดือนนี้ — เลือกเดือนอื่น (เดือนที่มีรายการแสดงจำนวนราย)</td></tr>'}</tbody>
-        <tfoot><tr><td class="l" colspan="3"><b>รวม ${n} ราย</b></td><td class="amt">${B(d.now)}</td><td class="amt">${B(d.N)}</td><td class="amt">${B(d.D)}</td><td class="amt"><b>${B(d.need)}</b></td><td class="amt">${B(d.fee)}</td><td></td></tr></tfoot></table></div>
-      <p class="hint" style="margin:6px 0 0">หนี้ปัจจุบัน = หนี้คงเหลือล่าสุดที่บันทึกของบัญชีนั้น · หักหนี้เดิม = หนี้ ณ วันก่อนกู้ทบ (คาดการณ์ถ้าลงล่วงหน้า) · ผู้กู้ใหม่ไม่มีหนี้เดิม → ต้องเบิกเต็มยอดสัญญา</p></div>
+      <div class="tbl"><table><thead><tr><th>ที่</th><th class="l">ผู้กู้</th><th class="l">ประเภท</th><th class="l">เลขที่สัญญา</th><th class="l">วันที่ทำสัญญา</th><th>หนี้ปัจจุบัน</th><th>ยอดสัญญาใหม่</th><th>ส่วนต่างที่ต้องเบิก</th><th>ค่าดำเนินการ (เฉลี่ย)</th><th class="l">สถานะ</th></tr></thead><tbody>
+        ${d.list.map((e, i) => `<tr><td class="amt">${i + 1}</td><td class="l"><span class="no">${esc(e.x.no)}</span><b>${esc(e.x.name)}</b></td><td class="l">${NLP[e.k]}</td><td class="l">${e.code ? esc(e.code) : "—"}</td><td class="l">${thDay(e.d)}</td><td class="amt">${e.D ? B(e.D) : "—"}</td><td class="amt">${B(e.N)}${e.want ? `<div class="hint" style="color:#B4452B">ขอ ${B0(e.want)}</div>` : ""}</td><td class="amt"><b>${B(e.amt)}</b></td><td class="amt">${ps ? B(ps) : "—"}</td><td class="l"><span class="pill ${NW_WST[e.st][1]}">${NW_WST[e.st][0]}</span></td></tr>`).join("") || '<tr><td colspan="10" class="hint" style="text-align:left">ไม่มีสัญญาที่ทำในเดือนนี้ — เลือกเดือนอื่น (เดือนที่มีรายการแสดงจำนวนราย)</td></tr>'}</tbody>
+        <tfoot><tr><td class="l" colspan="5"><b>รวม ${n} ราย</b></td><td class="amt">${B(d.D)}</td><td class="amt">${B(d.N)}</td><td class="amt"><b>${B(d.need)}</b></td><td class="amt">${B(d.fee)}</td><td></td></tr></tfoot></table></div>
+      <p class="hint" style="margin:6px 0 0">หนี้ปัจจุบัน = หนี้เดิมที่ต้องปิดก่อนจ่ายเงินใหม่ (กู้ทบ) · ผู้กู้ใหม่ไม่มีหนี้เดิม → ต้องเบิกเต็มยอดสัญญา · ยอดสัญญาที่คณะกรรมการแก้ไข (ขอ X → อนุมัติ Y) ใช้ยอดที่อนุมัติ · สัญญาที่ทำเดือนก่อนหน้าถือว่าเบิกไปแล้ว ไม่นับในเดือนนี้</p></div>
     <div class="shx-grid">
       <div class="card"><div class="ds-ttl">🧾 รายละเอียดค่าดำเนินการ <span class="hint">อัตราตั้งที่แท็บ «ค่าใช้จ่ายดำเนินงาน»</span></div>
-        <div class="pf" style="margin-bottom:8px"><div><label>🚗 จำนวนครั้งที่ไปเบิก</label><input type="number" min="0" step="1" id="wp_trips" value="${d.trips}"></div>
+        <div class="pf" style="margin-bottom:8px"><div><label>📅 วันที่ไปเบิก</label><input type="date" id="wp_wd" value="${esc(d.wdDate)}"></div><div><label>🚗 จำนวนครั้งที่ไปเบิก</label><input type="number" min="0" step="1" id="wp_trips" value="${d.trips}"></div>
           <div><label>➕ ค่าอื่นที่เกี่ยวกับการเบิก (บาท)</label><input type="number" min="0" step="10" id="wp_other" value="${d.other || ""}" placeholder="0"></div></div>
         <div class="tbl"><table><tbody>
           <tr><td class="l">ค่าเดินทางเบิกเงิน<div class="hint">${d.cfg.mode === "head" ? `${B(d.cfg.rate)} บาท × ${d.cfg.n} คน` : `${B(d.cfg.rate)} บาท/ครั้ง`} × ${d.trips} ครั้ง</div></td><td class="amt">${B(d.travel)}</td></tr>
@@ -6249,77 +6257,16 @@ function drawNWWdp(){
         <p class="hint" style="margin:6px 0 0">ค่าเดินทางจะลงเป็นค่าใช้จ่ายจริงเมื่อบันทึกการถอนเงินในแท็บ «ค่าใช้จ่ายดำเนินงาน» (ทะเบียนถอนเงินสด)</p></div>
       <div class="card"><div class="ds-ttl">🍩 ยอดสัญญา แบ่งเป็น <span class="hint">เดือน ${nwPFull(d.p)}</span></div>
         <div class="shx-dn">${dn}<div class="shx-lg"><span><i style="background:#3DBE8B"></i>เงินที่เบิกให้ผู้กู้ <b>${B0(d.need)}</b></span><span><i style="background:#8FA8D6"></i>หักหนี้เดิม (กู้ทบ) <b>${B0(d.D)}</b></span><span class="hint">ยอดสัญญารวม ${B0(d.N)}</span></div></div></div>
-      <div class="card"><div class="ds-ttl">📊 ยอดที่ต้องเบิก 6 เดือนข้างหน้า <span class="hint">ส่วนต่างตามสัญญาที่ลงไว้</span></div>${shxBars(groups, {fmt:dshK})}<p class="shx-cap hint">แท่งเข้ม = เดือนที่เลือก · ใช้วางแผนว่าต้องมีเงินสดสำรองเดือนละเท่าไร</p></div></div></div><div class="nwdoc" id="nwdoc"></div>`;
+      <div class="card"><div class="ds-ttl">📊 ยอดที่ต้องเบิก 6 เดือนข้างหน้า <span class="hint">ตามวันที่ทำสัญญา</span></div>${shxBars(groups, {fmt:dshK})}<p class="shx-cap hint">แท่งเข้ม = เดือนที่เลือก · ใช้วางแผนว่าต้องมีเงินสดสำรองเดือนละเท่าไร</p></div></div></div><div class="nwdoc" id="nwdoc"></div>`;
   const set = patch => { S.wdp = Object.assign({}, S.wdp || {}, patch); drawNWWdp(); };
   $("wp_p").onchange = e => set({p:e.target.value});
   $("wp_trips").onchange = e => set({trips:e.target.value === "" ? "" : Math.max(0, Math.round(+e.target.value || 0))});
   $("wp_other").onchange = e => set({other:e.target.value === "" ? "" : Math.max(0, +e.target.value || 0)});
+  $("wp_wd").onchange = e => set({dates:Object.assign({}, (S.wdp || {}).dates || {}, {[d.p]:e.target.value})});
   $("wp_print").onclick = () => nwPrint(nwWdpDoc(d), "สรุปยอดเบิก-" + d.p);
   $("wp_word").onclick = () => nwxRun("สรุปยอดเบิก → Word", () => nwxDocx(nwWdpDoc(d), "สรุปยอดเบิก-" + d.p, NWX_ONE));
-  $("wp_csv").onclick = () => csvOut("kbk-สรุปยอดเบิก-" + d.p + ".csv", [[`สรุปยอดเบิก ${nwPFull(d.p)}`, ["ที่", "เลขสมาชิก", "ผู้กู้", "ประเภท", "หนี้ปัจจุบัน", "ยอดสัญญาใหม่", "หักหนี้เดิม", "ส่วนต่างที่ต้องเบิก", "ค่าดำเนินการเฉลี่ย", "สถานะ"],
-    d.list.map((e, i) => [i + 1, e.x.no, e.x.name, NW_ACCS[e.k], f2(e.now), f2(e.N), f2(e.D), f2(e.amt), ps ? f2(ps) : "", e.fut ? "ลงล่วงหน้า" : "บันทึกแล้ว"]).concat([["", "", "รวม", "", f2(d.now), f2(d.N), f2(d.D), f2(d.need), f2(d.fee), ""]])]]);
-}
-/* ============ สัญญาทั้งหมดตั้งแต่เปิด กบข.นข. (แท็บ 36) ============
-   ทุกครั้งที่กู้ใหม่/กู้ทบ/กู้เพิ่ม = ๑ สัญญา (จากทะเบียน พ.ค.68 เป็นต้นมา รวมที่ปิดแล้ว ถูกกู้ทบ และที่ลงล่วงหน้า) + คำขอกู้ที่รออนุมัติ
-   สถานะ: act = ใช้งานอยู่ · done = ปิดบัญชีแล้ว · sup = ถูกกู้ทบ/แทนที่ด้วยสัญญาใหม่ · pend = ลงล่วงหน้า รอถึงงวด · req = คำขอรออนุมัติ  ·  S.cal = {f, k, q, o} */
-const NW_CST = {act:["ใช้งานอยู่", "grn"], done:["ปิดบัญชีแล้ว", ""], sup:["ถูกกู้ทบ/แทนที่", ""], pend:["ลงล่วงหน้า", "amb"], req:["คำขอรออนุมัติ", "amb"]};
-function nwAllCons(){
-  const items = [];
-  NW.people().forEach(x => ["sam", "dk"].forEach(k => {
-    const a = nwAcctF(x, k), evs = nwLoanEvents(x, a), debt = nwStateA(nwAcct(x, k)).debt, c = nwCon(x.no, NLP[k]);
-    const info = it => { if(c){ it.code = c.code || ""; it.terms = +c.terms || 0; it.inst = +c.inst || 0; it.cd = c.d || ""; } return it; };
-    const done = evs.filter(e => !e.fut), lastI = evs.lastIndexOf(done[done.length - 1]);                 // สัญญาที่ลงล่วงหน้าไม่ทำให้สัญญาปัจจุบันถูกแทนที่จนกว่าจะถึงงวด
-    evs.forEach((e, i) => { const it = {x, k, p:e.p, d:nwDate5(e.p), N:e.N, D:e.D, amt:e.amt, kind:e.D > 0.005 ? "refi" : "new", st:e.fut ? "pend" : i < lastI ? "sup" : debt > 0.005 ? "act" : "done"}; items.push(i === lastI ? info(it) : it); });
-    if(done.length){ if(done[0].D > 0.005) items.push({x, k, p:"", d:"", N:0, D:0, amt:0, kind:"before", st:"sup"}); }
-    else if(debt > 0.005){ const it = info({x, k, p:"", d:(c && !nwConAutoD(c) && c.d) || "", N:c ? +c.amt || 0 : 0, D:0, amt:c ? +c.amt || 0 : 0, kind:"single", st:"act"}); items.push(it); } }));
-  nwApps().filter(q => q.status === "ขอกู้").forEach(q => { const x = NW.person(q.no) || {no:q.no, name:nwNmOf(q.no)}, k = q.k || (q.prod === "ดูแลกัน" ? "dk" : "sam"), own = NW.person(q.no) ? nwStateA(nwAcct(NW.person(q.no), k)).debt : 0;
-    items.push({x, k, p:"", d:q.dc || q.at || "", N:q.P0, D:own, amt:Math.max(0, r2(q.P0 - own)), kind:"app", st:"req", code:q.code, terms:q.N, inst:q.M}); });
-  items.sort((u, v) => (u.d ? 1 : 0) - (v.d ? 1 : 0) || String(u.d).localeCompare(String(v.d)) || String(u.x.no).localeCompare(String(v.x.no), "th", {numeric:true}));
-  items.forEach((it, i) => it.no = i + 1);
-  return items;
-}
-function drawNWAllCons(){
-  const el = $("tab36"); if(!el) return;
-  if(tab !== 36){ el.innerHTML = ""; return; }
-  if(!NW.on()){ el.innerHTML = nwStartHTML("สัญญาทั้งหมด"); bindNwImport(); return; }
-  const all = nwAllCons(), F = S.cal || (S.cal = {f:"all", k:"all", q:"", o:"new"}), q = (F.q || "").trim().toLowerCase();
-  const real = all.filter(it => it.st !== "req"), cnt = st => real.filter(it => it.st === st).length, sum = (L, f) => r2(L.reduce((u, it) => u + (+it[f] || 0), 0));
-  const act = real.filter(it => it.st === "act"), who = new Set(real.map(it => it.x.no)).size, req = all.filter(it => it.st === "req");
-  const fl = it => (F.f === "all" || (F.f === "act" && it.st === "act") || (F.f === "done" && (it.st === "done" || it.st === "sup")) || (F.f === "pend" && (it.st === "pend" || it.st === "req"))) && (F.k === "all" || it.k === F.k) && (!q || `${it.x.no} ${it.x.name} ${it.code || ""}`.toLowerCase().includes(q));
-  let list = all.filter(fl); if(F.o !== "old") list = list.slice().reverse();
-  const known = real.filter(it => it.p), kn = known.filter(it => it.st !== "pend"), mon = {}; known.forEach(it => { const o = mon[it.p] = mon[it.p] || {n:0, v:0}; o.n++; o.v = r2(o.v + it.amt); });
-  const ms = Object.keys(mon).sort().slice(-16), mm = k => ({lb:thPer(k).split(" ")[0], sub:mon[k].n + " ฉบับ", bars:[{v:mon[k].v, c:pNum(k) > pNum(nwCurP()) ? "#E8B766" : "#1F3A68", t:dshK(mon[k].v)}]});
-  const dnS = shxDonut([{v:cnt("act"), c:"#3DBE8B"}, {v:cnt("done"), c:"#9AA7BE"}, {v:cnt("sup"), c:"#C9D3E6"}, {v:cnt("pend"), c:"#F2B01E"}], String(real.length), "สัญญา");
-  const byK = k => kn.filter(it => it.k === k), dnK = shxDonut([{v:sum(byK("sam"), "amt"), c:"#2F6FDE"}, {v:sum(byK("dk"), "amt"), c:"#C4570F"}], dshK(sum(kn, "amt")), "เงินที่ปล่อย");
-  const chip = (k, t, n) => `<button class="${F.f === k ? "" : "ghost "}sm" data-cf="${k}">${t}${n !== undefined ? ` (${n})` : ""}</button>`;
-  const kindLbl = it => it.kind === "refi" ? "กู้ทบ/กู้เพิ่ม" : it.kind === "new" ? "กู้ใหม่" : it.kind === "before" ? "สัญญาเดิม (ก่อนกู้ทบครั้งแรก)" : it.kind === "single" ? "สัญญาเดียวตั้งแต่ต้น" : "คำขอกู้";
-  el.innerHTML = `<div class="nwscreen"><div class="ds-head"><div><div class="eyebrow" style="margin:0">🗂️ สัญญาทั้งหมดตั้งแต่เปิด กบข.นข.</div>
-      <div class="hint">รวมทุกสัญญา — ใช้งานอยู่ · ปิดบัญชีแล้ว · ถูกกู้ทบ/แทนที่ · ลงล่วงหน้า · คำขอรออนุมัติ · นับ ๑ ครั้งที่กู้ใหม่/กู้ทบ/กู้เพิ่ม = ๑ สัญญา (ข้อมูลตั้งแต่ พ.ค.68; สัญญาที่ทำก่อนนั้นไม่ทราบวันที่)</div></div></div>
-    <div class="shx-cards">
-      <div class="shx-card" style="border-top-color:#2F6FDE"><div class="k">📑 สัญญาทั้งหมด</div><div class="v">${real.length} <small>ฉบับ</small></div><div class="h">ผู้กู้ ${who} คน${req.length ? ` · คำขอรออนุมัติ ${req.length}` : ""}</div></div>
-      <div class="shx-card" style="border-top-color:#1BAF7A"><div class="k">✅ ใช้งานอยู่</div><div class="v">${act.length} <small>ฉบับ</small></div><div class="h">หนี้คงเหลือ ${B0(r2(act.reduce((u, it) => u + nwStateA(nwAcct(it.x, it.k)).debt, 0)))} บาท</div></div>
-      <div class="shx-card" style="border-top-color:#9AA7BE"><div class="k">📁 ปิดบัญชี / ถูกกู้ทบ</div><div class="v">${cnt("done") + cnt("sup")} <small>ฉบับ</small></div><div class="h">ปิดแล้ว ${cnt("done")} · ถูกกู้ทบ/แทนที่ ${cnt("sup")}</div></div>
-      <div class="shx-card" style="border-top-color:#C4570F"><div class="k">💰 เงินที่ปล่อยกู้รวม (ไม่รวมล่วงหน้า)</div><div class="v">${B0(sum(kn, "amt"))} <small>บาท</small></div><div class="h">ยอดสัญญารวม ${B0(sum(kn, "N"))} · กู้ทบหักหนี้เดิม ${B0(sum(kn, "D"))}</div></div></div>
-    <div class="shx-grid">
-      <div class="card"><div class="ds-ttl">🍩 สถานะสัญญา</div><div class="shx-dn">${dnS}<div class="shx-lg"><span><i style="background:#3DBE8B"></i>ใช้งานอยู่ <b>${cnt("act")}</b></span><span><i style="background:#9AA7BE"></i>ปิดบัญชีแล้ว <b>${cnt("done")}</b></span><span><i style="background:#C9D3E6"></i>ถูกกู้ทบ/แทนที่ <b>${cnt("sup")}</b></span><span><i style="background:#F2B01E"></i>ลงล่วงหน้า <b>${cnt("pend")}</b></span></div></div></div>
-      <div class="card"><div class="ds-ttl">🍩 เงินที่ปล่อย แยกประเภท <span class="hint">เฉพาะสัญญาที่ทราบวันที่ ไม่รวมที่ลงล่วงหน้า</span></div><div class="shx-dn">${dnK}<div class="shx-lg"><span><i style="background:#2F6FDE"></i>สามัญ <b>${B0(sum(byK("sam"), "amt"))}</b> (${byK("sam").length} ฉบับ)</span><span><i style="background:#C4570F"></i>ดูแลกัน <b>${B0(sum(byK("dk"), "amt"))}</b> (${byK("dk").length} ฉบับ)</span></div></div></div>
-      <div class="card" style="grid-column:1/-1"><div class="ds-ttl">📊 เงินที่ปล่อยกู้รายเดือน <span class="hint">ใต้ชื่อเดือน = จำนวนสัญญา · แท่งสีทอง = ลงล่วงหน้า</span></div>${ms.length ? shxBars(ms.map(mm), {fmt:dshK}) : '<p class="hint">ยังไม่มีสัญญาที่ทราบเดือน</p>'}</div></div>
-    <div class="card"><div class="bar" style="margin:0 0 8px;flex-wrap:wrap">${chip("all", "ทั้งหมด", all.length)}${chip("act", "ใช้งานอยู่", cnt("act"))}${chip("done", "ปิดแล้ว/ถูกกู้ทบ", cnt("done") + cnt("sup"))}${chip("pend", "ล่วงหน้า/คำขอ", cnt("pend") + req.length)}
-        <select id="ca_k" style="width:auto"><option value="all">ทุกประเภท</option><option value="sam" ${F.k === "sam" ? "selected" : ""}>สามัญ</option><option value="dk" ${F.k === "dk" ? "selected" : ""}>ดูแลกัน</option></select>
-        <input id="ca_q" placeholder="ค้นชื่อ / เลขสมาชิก / เลขที่สัญญา" value="${esc(F.q || "")}" style="max-width:260px">
-        <span style="margin-left:auto;display:flex;gap:6px"><button class="ghost sm" id="ca_o">${F.o === "old" ? "เรียง: เก่า → ใหม่" : "เรียง: ใหม่ → เก่า"}</button><button class="ghost sm" id="ca_csv">📥 CSV</button></span></div>
-      <div class="tbl" style="max-height:560px"><table><thead><tr><th>ที่</th><th class="l">เลขที่สัญญา</th><th class="l">ผู้กู้</th><th class="l">ประเภท</th><th class="l">เริ่ม</th><th class="l">ชนิด</th><th>ยอดสัญญา</th><th>หักหนี้เดิม</th><th>เงินที่ได้รับ</th><th>งวด</th><th>ผ่อน/เดือน</th><th class="l">สถานะ</th></tr></thead><tbody>
-        ${list.map(it => `<tr><td class="amt">${it.no}</td><td class="l">${it.code ? `<b>${esc(it.code)}</b>` : '<span class="hint">—</span>'}</td><td class="l"><span class="no">${esc(it.x.no)}</span><b>${esc(it.x.name)}</b></td><td class="l">${NLP[it.k]}</td>
-          <td class="l">${it.p ? thPer(it.p) : it.d ? thDay(it.d) : '<span class="hint">ก่อน พ.ค.68</span>'}</td><td class="l">${kindLbl(it)}</td><td class="amt">${it.N ? B(it.N) : "—"}</td><td class="amt">${it.D ? B(it.D) : "—"}</td><td class="amt">${it.amt ? `<b>${B(it.amt)}</b>` : "—"}</td>
-          <td class="amt">${it.terms || "—"}</td><td class="amt">${it.inst ? B(it.inst) : "—"}</td><td class="l"><span class="pill ${NW_CST[it.st][1]}">${NW_CST[it.st][0]}</span></td></tr>`).join("") || '<tr><td colspan="12" class="hint" style="text-align:left">ไม่พบรายการ</td></tr>'}</tbody></table></div>
-      <p class="hint" style="margin:6px 0 0">เงินที่ได้รับ: กู้ใหม่ = เต็มยอดสัญญา · กู้ทบ = ยอดสัญญา − หนี้เดิม · เลขที่สัญญา/งวด/ผ่อน แสดงเฉพาะสัญญาล่าสุดของแต่ละบัญชีที่มีเอกสารสัญญาในทะเบียน (สัญญาเก่าที่ถูกกู้ทบไม่เก็บรายละเอียดงวด) · ดูรายละเอียดและออกเลขที่ที่แท็บ «ทะเบียนสัญญากู้»</p></div></div>`;
-  const set = patch => { Object.assign(S.cal, patch); drawNWAllCons(); };
-  el.querySelectorAll("[data-cf]").forEach(b => b.onclick = () => set({f:b.dataset.cf}));
-  $("ca_k").onchange = e => set({k:e.target.value});
-  $("ca_o").onclick = () => set({o:F.o === "old" ? "new" : "old"});
-  $("ca_q").oninput = e => { S.cal.q = e.target.value; drawNWAllCons(); const i = $("ca_q"); i.focus(); i.setSelectionRange(i.value.length, i.value.length); };
-  $("ca_csv").onclick = () => csvOut("kbk-สัญญาทั้งหมด.csv", [["สัญญาทั้งหมดตั้งแต่เปิด กบข.นข.", ["ที่", "เลขที่สัญญา", "เลขสมาชิก", "ผู้กู้", "ประเภท", "เริ่ม", "ชนิด", "ยอดสัญญา", "หักหนี้เดิม", "เงินที่ได้รับ", "งวด", "ผ่อน/เดือน", "สถานะ"],
-    all.map(it => [it.no, it.code || "", it.x.no, it.x.name, NLP[it.k], it.p ? thPer(it.p) : it.d || "ก่อน พ.ค.68", kindLbl(it), it.N ? f2(it.N) : "", it.D ? f2(it.D) : "", it.amt ? f2(it.amt) : "", it.terms || "", it.inst ? f2(it.inst) : "", NW_CST[it.st][0]])]]);
+  $("wp_csv").onclick = () => csvOut("kbk-สรุปยอดเบิก-" + d.p + ".csv", [[`สรุปยอดเบิก สัญญาที่ทำเดือน ${nwPFull(d.p)}`, ["ที่", "เลขสมาชิก", "ผู้กู้", "ประเภท", "เลขที่สัญญา", "วันที่ทำสัญญา", "หนี้ปัจจุบัน", "ยอดสัญญาใหม่", "ส่วนต่างที่ต้องเบิก", "ค่าดำเนินการเฉลี่ย", "สถานะ"],
+    d.list.map((e, i) => [i + 1, e.x.no, e.x.name, NLP[e.k], e.code, e.d, f2(e.D), f2(e.N), f2(e.amt), ps ? f2(ps) : "", NW_WST[e.st][0]]).concat([["", "", "รวม", "", "", "", f2(d.D), f2(d.N), f2(d.need), f2(d.fee), ""]])]]);
 }
 function nwExpDoc(p){
   const L = nwExps().filter(e => e.p === p).sort((a, b) => String(a.d || "").localeCompare(String(b.d || ""))), tot = r2(L.reduce((u, e) => u + num(e.amt), 0)), today = nwToday();
