@@ -736,7 +736,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-182</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-183</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -3168,7 +3168,7 @@ let NWX_LAST = null;
 const nwxGuessName = html => { const a = html.indexOf('class="kt1">'); if(a < 0) return "เอกสาร"; const b = html.indexOf("</div>", a);
   return html.slice(a + 12, b).split("<").map(x => x.split(">").pop()).join("").trim() || "เอกสาร"; };
 function nwPrint(html, name){
-  const d = $("nwdoc"); if(!d) return;
+  const d = document.querySelector("section.on #nwdoc") || $("nwdoc"); if(!d) return;          // หลายแท็บมี #nwdoc — ใช้ของแท็บที่เปิดอยู่ (ไม่งั้นพิมพ์ลงแท็บที่ซ่อนอยู่ = หน้าว่าง)
   html = nwxFit(html); d.innerHTML = html; NWX_LAST = {html, name:name || nwxGuessName(html)};
   document.body.classList.add("nwprint"); const t0 = document.title; document.title = nwxName(NWX_LAST.name);          // ชื่อไฟล์เริ่มต้นเมื่อเลือก «บันทึกเป็น PDF»
   const land = html.indexOf("kpage kl") >= 0 && !/class="kpage(?![^"]*kl)/.test(html);            // ทะเบียนตารางกว้างล้วน → A4 แนวนอน (เบราว์เซอร์รุ่นเก่าที่ไม่รู้จักหน้าแบบมีชื่อ)
