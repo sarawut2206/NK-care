@@ -736,7 +736,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-187</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-188</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -766,7 +766,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="ngs" data-g="ln" hidden><b data-t="25"><span class="grp-ic">🏦</span>กู้ยืม + ติดตามหนี้</b><b data-t="30"><span class="grp-ic">📑</span>ทะเบียนสัญญากู้</b><b data-t="36"><span class="grp-ic">🗂️</span>สัญญาทั้งหมด</b><b data-t="28"><span class="grp-ic">🛡️</span>ทะเบียนคุมผู้ค้ำ</b><b data-t="29"><span class="grp-ic">⚖️</span>ชุดฟ้องร้อง</b><b data-t="35"><span class="grp-ic">💵</span>สรุปยอดเบิก</b></div>
   <div class="ngs" data-g="ac" hidden><b data-t="22"><span class="grp-ic">🧾</span>ใบสรุป + ปันผล</b><b data-t="31"><span class="grp-ic">💸</span>ค่าใช้จ่ายดำเนินงาน</b></div>
   <div class="ngs" data-g="sim" hidden><b data-t="34"><span class="grp-ic">🎯</span>แผนและจำลองให้ถึงเป้า</b></div>
-  <div class="ngs" data-g="mb" hidden><b data-t="27"><span class="grp-ic">👥</span>ฐานข้อมูลสมาชิก</b></div>
+  <div class="ngs" data-g="mb" hidden><b data-t="38"><span class="grp-ic">📝</span>สมัครสมาชิก</b><b data-t="27"><span class="grp-ic">👥</span>ฐานข้อมูลสมาชิก</b></div>
 </div>
 <div class="wrap">
   <div class="oldnav" id="oldnav" hidden>
@@ -804,6 +804,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
 <section id="tab35"></section>
 <section id="tab36"></section>
 <section id="tab37"></section>
+<section id="tab38"></section>
 <section id="tab10"></section>
 <section id="tab11"></section>
 <section id="tab12"></section>
@@ -6584,6 +6585,70 @@ function drawNWStmt(){
     R.rows.map(r => [r.x.no, r.x.name, f2(r.want), f2(r.tr), f2(r.diff), NW_STL[r.st][0], r.T.map(t => t.d).join(" ")])],
     ["รายการเงินโอนเข้า", ["วันที่", "เวลา", "ยอด", "บัญชี", "ชื่อในสเตทเมนท์", "สมาชิก"], R.tx.map(t => [t.d, t.t, f2(t.m), t.a, t.nm || "", memOf(t)])]]);
 }
+/* ============ สมัครสมาชิก (แท็บ 38) ============
+   กรอกใบสมัคร → เพิ่มสมาชิกเข้าทะเบียน (เลขที่สมาชิกถัดไปอัตโนมัติ) + ข้อมูลบุคคลในฐานข้อมูลสมาชิก + ฝากหุ้นแรกเข้า (ลงเป็นแถวฝากหุ้นในเดือนที่สมัคร) + ตั้งหุ้นประจำรายเดือน · พิมพ์ใบสมัครได้ (ฟอร์มเปล่าหรือกรอกแล้ว)  ·  S.njoin = ร่างฟอร์ม */
+const NW_PRE = ["นาย", "นาง", "นางสาว", "ว่าที่ ร.ต.", "อื่น ๆ"];
+const nwCidOk = v => { const d = String(v || "").replace(/\D/g, ""); if(d.length !== 13) return false; let t = 0; for(let i = 0; i < 12; i++) t += +d[i] * (13 - i); return (11 - t % 11) % 10 === +d[12]; };
+const nwJoinDef = () => { const mx = NW.everyone().reduce((m, q) => { const n = parseInt(q.no, 10); return isNaN(n) ? m : Math.max(m, n); }, 0); return {no:String(mx + 1).padStart(3, "0"), pre:"นาย", name:"", cid:"", dob:"", pos:"", svc:"", sal:"", tel:"", line:"", email:"", addr:"", bank:"", bno:"", bname:"", d:nwToday(), d0:"", shM:500, benName:"", benRel:"", benTel:"", ecName:"", ecTel:"", note:""}; };
+function nwJoinDoc(f){
+  const row = (a, b, c, d) => `<tr><td class="l" style="width:18%"><b>${a}</b></td><td class="l" style="width:32%">${b || "&nbsp;"}</td><td class="l" style="width:18%"><b>${c}</b></td><td class="l" style="width:32%">${d || "&nbsp;"}</td></tr>`, e = esc;
+  const full = ((f.pre && f.pre !== "อื่น ๆ" ? f.pre : "") + (f.name || "")).trim();
+  return nwKd(pg(1, 1, `${logo()}<div class="kt1">ใบสมัครสมาชิก</div><div class="kt2">${ORG}<br>โรงเรียนมัธยมวัดหนองแขม (กบข.นข.)</div>
+    <div class="kmeta2"><span>เลขที่สมาชิก ${e(f.no) || "........"}</span><span>วันที่สมัคร ${f.d ? nwThL(f.d) : "………………………"}</span></div>
+    <p class="i2" style="margin:4px 0">ข้าพเจ้ามีความประสงค์สมัครเป็นสมาชิกกลุ่มบุคคลเพื่อบริหารจัดการเงินของข้าราชการครูและบุคลากร โรงเรียนมัธยมวัดหนองแขม และขอให้ข้อมูลดังต่อไปนี้</p>
+    <table class="kt"><tbody>
+      ${row("ชื่อ–สกุล", e(full), "เลขบัตรประชาชน", e(mfCid(f.cid)))}${row("วัน/เดือน/ปีเกิด", f.dob ? nwThL(f.dob) : "", "ตำแหน่ง/วิทยฐานะ", e(f.pos))}
+      ${row("อายุราชการ (ปี)", e(f.svc), "เงินเดือน (บาท)", f.sal ? B(+f.sal) : "")}${row("โทรศัพท์", e(f.tel), "LINE ID / อีเมล", e([f.line, f.email].filter(Boolean).join(" / ")))}
+      <tr><td class="l"><b>ที่อยู่</b></td><td class="l" colspan="3">${e(f.addr) || "&nbsp;<br>&nbsp;"}</td></tr>
+      ${row("ธนาคาร", e(f.bank), "เลขที่บัญชี", e(f.bno))}<tr><td class="l"><b>ชื่อบัญชี</b></td><td class="l" colspan="3">${e(f.bname) || "&nbsp;"}</td></tr>
+      ${row("ผู้รับผลประโยชน์", e(f.benName), "ความสัมพันธ์/โทร", e([f.benRel, f.benTel].filter(Boolean).join(" · ")))}${row("ผู้ติดต่อฉุกเฉิน", e(f.ecName), "โทร", e(f.ecTel))}
+      ${row("หุ้นแรกเข้า (บาท)", f.d0 ? B(+f.d0) : "", "หุ้นประจำรายเดือน (บาท)", f.shM ? B(+f.shM) : "")}</tbody></table>
+    <p class="i2" style="margin:8px 0 2px">ข้าพเจ้าขอรับรองว่าข้อมูลข้างต้นเป็นความจริง และยอมรับปฏิบัติตามข้อตกลงกลุ่มบุคคลฯ ทุกประการ รวมถึงการส่งหุ้นรายเดือนและการชำระเงินตามกำหนด โดยยินยอมให้กลุ่มเก็บ ใช้ และเปิดเผยข้อมูลส่วนบุคคลนี้เท่าที่จำเป็นต่อการดำเนินงานของกลุ่ม</p>
+    <p class="kh" style="margin:2px 0 0">เอกสารที่แนบ: สำเนาบัตรประชาชน · สำเนาสมุดบัญชีธนาคาร · สลิปเงินเดือนล่าสุด</p>
+    <div class="ksigs" style="grid-template-columns:1fr 1fr 1fr;margin:14px auto 0">${sigOf("ผู้สมัคร", full)}${sigOf("กรรมการฝ่ายการเงิน (ผู้รับสมัคร)", FIN())}${sigOf("ประธานคณะกรรมการ (อนุมัติ)", CHAIR())}</div>`, ""));
+}
+function drawNWJoin(){
+  const el = $("tab38"); if(!el) return;
+  if(tab !== 38){ el.innerHTML = ""; return; }
+  if(!NW.on()){ el.innerHTML = nwStartHTML("สมัครสมาชิก"); bindNwImport(); return; }
+  const f = S.njoin || (S.njoin = nwJoinDef()), dup = f.no && NW.everyone().find(q => q.no === f.no), cidBad = f.cid && !nwCidOk(f.cid);
+  const inp = (k, lbl, o) => { o = o || {}; return `<div${o.span ? ` style="grid-column:span ${o.span}"` : ""}><label>${lbl}</label>${o.area ? `<textarea data-jf="${k}" rows="2" placeholder="${o.ph || ""}">${esc(f[k])}</textarea>` : `<input type="${o.t || "text"}" ${o.t === "number" ? 'step="' + (o.st || 1) + '" min="0"' : ""} data-jf="${k}" value="${esc(f[k])}" placeholder="${o.ph || ""}">`}${o.hint ? `<div class="hint" style="color:${o.bad ? "#B4452B" : "inherit"}">${o.hint}</div>` : ""}</div>`; };
+  const recent = NW.everyone().filter(q => q.join).sort((a, b) => String(b.join).localeCompare(String(a.join))).slice(0, 8);
+  el.innerHTML = `<div class="nwscreen"><div class="ds-head"><div><div class="eyebrow" style="margin:0">📝 สมัครสมาชิก — เพิ่มสมาชิกใหม่</div>
+      <div class="hint">กรอกข้อมูลผู้สมัครครั้งเดียว → ระบบเพิ่มเข้าทะเบียนสมาชิก/ฐานข้อมูลสมาชิก ลงหุ้นแรกเข้า และตั้งหุ้นประจำรายเดือนให้ · พิมพ์ใบสมัครให้ผู้สมัครลงนามได้ (กดพิมพ์ก่อนบันทึกก็ได้)</div></div></div>
+    <div class="card"><div class="ds-ttl">👤 ข้อมูลผู้สมัคร</div>
+      <div class="pf">${inp("no", "เลขที่สมาชิก (ถัดไปให้อัตโนมัติ)", {hint:dup ? `⚠ เลขที่นี้ใช้แล้ว (${esc(dup.name)})` : "", bad:true})}
+        <div><label>คำนำหน้า</label><select data-jf="pre">${NW_PRE.map(q => `<option ${f.pre === q ? "selected" : ""}>${q}</option>`).join("")}</select></div>${inp("name", "ชื่อ–สกุล (ไม่ต้องใส่คำนำหน้า)", {span:2})}
+        ${inp("cid", "เลขบัตรประชาชน (13 หลัก)", {ph:"x-xxxx-xxxxx-xx-x", hint:cidBad ? "⚠ เลขบัตรไม่ถูกต้อง ตรวจอีกครั้ง" : f.cid ? "✓ ถูกต้อง" : "", bad:cidBad})}${inp("dob", "วันเกิด", {t:"date"})}${inp("pos", "ตำแหน่ง / วิทยฐานะ", {span:2})}${inp("svc", "อายุราชการ (ปี)", {t:"number"})}${inp("sal", "เงินเดือนปัจจุบัน (บาท)", {t:"number", st:100})}</div>
+      <div class="pf" style="margin-top:6px">${inp("tel", "โทรศัพท์")}${inp("line", "LINE ID")}${inp("email", "อีเมล", {span:2})}${inp("addr", "ที่อยู่ตามทะเบียนบ้าน", {span:4, area:1, ph:"บ้านเลขที่ หมู่ ถนน ตำบล อำเภอ จังหวัด รหัสไปรษณีย์"})}</div>
+      <div class="ds-ttl" style="margin-top:12px">🏦 บัญชีธนาคาร · ผู้รับผลประโยชน์ · ผู้ติดต่อฉุกเฉิน</div>
+      <div class="pf">${inp("bank", "ธนาคาร")}${inp("bno", "เลขที่บัญชี")}${inp("bname", "ชื่อบัญชี", {span:2})}${inp("benName", "ผู้รับผลประโยชน์ (ชื่อ–สกุล)", {span:2})}${inp("benRel", "ความสัมพันธ์")}${inp("benTel", "โทร ผู้รับผลประโยชน์")}${inp("ecName", "ผู้ติดต่อฉุกเฉิน (ชื่อ)", {span:2})}${inp("ecTel", "โทร ผู้ติดต่อฉุกเฉิน")}${inp("note", "หมายเหตุ")}</div>
+      <div class="ds-ttl" style="margin-top:12px">💎 การสมัคร · หุ้น</div>
+      <div class="pf">${inp("d", "วันที่สมัคร", {t:"date"})}${inp("d0", "หุ้นแรกเข้า (บาท) — ลงเป็นการฝากหุ้นเดือนที่สมัคร", {t:"number", st:100, span:2})}${inp("shM", "หุ้นประจำรายเดือน (บาท)", {t:"number", st:50})}</div>
+      <div class="bar" style="margin-top:12px;flex-wrap:wrap"><button id="jn_save" ${dup || !(f.name || "").trim() ? "disabled" : ""}>✅ บันทึกสมาชิกใหม่</button><button class="ghost" id="jn_print">🖨 พิมพ์ใบสมัคร / PDF</button><button class="ghost" id="jn_word">Word</button><button class="ghost" id="jn_clear">ล้างฟอร์ม</button>
+        <span class="hint">${f.no ? `เลขที่ ${esc(f.no)}` : ""}${(f.name || "").trim() ? ` · ${esc(((f.pre !== "อื่น ๆ" ? f.pre : "") + f.name).trim())}` : " · ยังไม่ได้กรอกชื่อ"}</span></div></div>
+    ${recent.length ? `<div class="card"><div class="ds-ttl">🆕 สมัครล่าสุด</div><div class="tbl"><table><thead><tr><th class="l">เลขที่</th><th class="l">ชื่อ</th><th class="l">วันที่สมัคร</th><th>หุ้นประจำ/เดือน</th><th></th></tr></thead><tbody>
+      ${recent.map(q => `<tr><td class="l">${esc(q.no)}</td><td class="l"><b>${esc(q.name)}</b></td><td class="l">${thDay(q.join)}</td><td class="amt">${B(+((q.acc && q.acc.free && q.acc.free.shM) || 0))}</td><td><button class="ghost sm" data-jedit="${esc(q.no)}">แก้ข้อมูล</button></td></tr>`).join("")}</tbody></table></div></div>` : ""}</div><div class="nwdoc" id="nwdoc"></div>`;
+  el.querySelectorAll("[data-jf]").forEach(i => i.addEventListener("change", () => { f[i.dataset.jf] = i.value; if(["no", "name", "cid"].includes(i.dataset.jf)){ const y = window.scrollY; drawNWJoin(); window.scrollTo(0, y); } }));
+  $("jn_clear").onclick = () => { S.njoin = nwJoinDef(); drawNWJoin(); };
+  $("jn_print").onclick = () => nwPrint(nwJoinDoc(f), "ใบสมัครสมาชิก-" + ((f.name || "").trim() || f.no));
+  $("jn_word").onclick = () => nwxRun("ใบสมัคร → Word", () => nwxDocx(nwJoinDoc(f), "ใบสมัครสมาชิก-" + ((f.name || "").trim() || f.no), NWX_ONE));
+  el.querySelectorAll("[data-jedit]").forEach(b => b.onclick = () => { S.mdbSel = b.dataset.jedit; goTab(27); });
+  $("jn_save").onclick = () => {
+    const no = String(f.no || "").trim(), name = (f.name || "").trim();
+    if(!no || !name){ alert("ใส่เลขที่สมาชิกและชื่อ–สกุลก่อน"); return; } if(NW.everyone().some(q => q.no === no)){ alert(`เลขที่ ${no} ใช้แล้ว`); return; }
+    if(f.cid && cidBad && !confirm("เลขบัตรประชาชนไม่ผ่านการตรวจ บันทึกต่อหรือไม่?")) return;
+    const d0 = +f.d0 || 0, shM = +f.shM || 0, jd = f.d || nwToday();
+    if(!confirm(`บันทึกสมาชิกใหม่\n${no} ${((f.pre !== "อื่น ๆ" ? f.pre : "") + name).trim()}\nวันที่สมัคร ${thDay(jd)}\nหุ้นแรกเข้า ${B(d0)} บาท · หุ้นประจำ ${B(shM)} บาท/เดือน`)) return;
+    S.nw.people.push({no, name, share0:0, join:jd, acc:{sam:{}, dk:{}, free:{shM}}});
+    const pr = {name:((f.pre !== "อื่น ๆ" ? f.pre : "") + name).trim(), cid:String(f.cid || "").replace(/\D/g, ""), dob:f.dob || "", pos:f.pos || "", svc:f.svc || "", sal:f.sal || "", tel:f.tel || "", line:f.line || "", email:f.email || "", addr:f.addr || "", bank:f.bank || "", bno:f.bno || "", bname:f.bname || "", note:f.note || "",
+      ben:{name:f.benName || "", rel:f.benRel || "", tel:f.benTel || ""}, ec:{name:f.ecName || "", tel:f.ecTel || ""}};
+    Object.keys(pr).forEach(k => { if(pr[k] === "") delete pr[k]; }); (S.profile || (S.profile = {}))[no] = pr;
+    if(typeof DB !== "undefined" && DB.members && !DB.members.some(m => m.no === no)) DB.members.push({no, name, share:0});
+    if(d0 > 0) NW.set(no, nwPOfDate(jd), "free", {sh:d0, m:d0, d:jd, note:"หุ้นแรกเข้า (สมัครสมาชิก)"});
+    S.njoin = nwJoinDef(); save(); drawNWJoin(); toast(`เพิ่มสมาชิก ${no} ${name} แล้ว — ไปกรอกข้อมูลที่เหลือได้ที่ «ฐานข้อมูลสมาชิก»`);
+  };
+}
 function nwExpDoc(p){
   const L = nwExps().filter(e => e.p === p).sort((a, b) => String(a.d || "").localeCompare(String(b.d || ""))), tot = r2(L.reduce((u, e) => u + num(e.amt), 0)), today = nwToday();
   const D = nwDashData(), it = (D.tot.find(t => t.p === p) || {}).int || 0, byC = {}; L.forEach(e => byC[e.cat] = r2((byC[e.cat] || 0) + num(e.amt)));
@@ -11503,7 +11568,7 @@ async function boot(){
 function draw(){
   rebuildPeriods();                     // ★ ช่วงงวดเดินตามข้อมูลจริง — ย้อนดูได้ทุกปี
   // แท็บไหนพัง ให้พังแค่แท็บนั้น อย่าลากทั้งหน้าจอลงไปด้วย
-  [["tab23",drawNWDash],["tab20",drawNWLoan],["tab21",drawNWSave],["tab22",drawNWDiv],["tab24",drawNWRc],["tab25",drawNWLoanDash],["tab26",drawNWOverview],["tab27",drawNWMdb],["tab28",drawNWGuar],["tab29",drawNWLit],["tab30",drawNWCon],["tab31",drawNWExp],["tab34",drawNWSim],["tab35",drawNWWdp],["tab36",drawNWAllCons],["tab37",drawNWStmt],["tab10",drawEntry],["tab11",drawOverview],["tab12",drawPeriods],["tab1",drawT1],["tab3",drawT3],
+  [["tab23",drawNWDash],["tab20",drawNWLoan],["tab21",drawNWSave],["tab22",drawNWDiv],["tab24",drawNWRc],["tab25",drawNWLoanDash],["tab26",drawNWOverview],["tab27",drawNWMdb],["tab28",drawNWGuar],["tab29",drawNWLit],["tab30",drawNWCon],["tab31",drawNWExp],["tab34",drawNWSim],["tab35",drawNWWdp],["tab36",drawNWAllCons],["tab37",drawNWStmt],["tab38",drawNWJoin],["tab10",drawEntry],["tab11",drawOverview],["tab12",drawPeriods],["tab1",drawT1],["tab3",drawT3],
    ["tab4",drawT4],["tab5",drawT5],["tab6",drawT6],["tab7",drawT7],["tab8",drawT8],["tab9",drawT9]].forEach(([id,fn])=>{
     try{ fn(); }
     catch(err){ const el=$(id); if(el) el.innerHTML =
@@ -11540,7 +11605,7 @@ if($("saveNow")) $("saveNow").onclick = () => saveClick($("saveNow"), null);
 
 /* ============ เดินระบบ ============ */
 function all(){ draw(); save(); banner(); }
-const TABFN = {23:"drawNWDash",20:"drawNWLoan",21:"drawNWSave",22:"drawNWDiv",24:"drawNWRc",25:"drawNWLoanDash",26:"drawNWOverview",27:"drawNWMdb",28:"drawNWGuar",29:"drawNWLit",30:"drawNWCon",31:"drawNWExp",34:"drawNWSim",35:"drawNWWdp",36:"drawNWAllCons",37:"drawNWStmt",1:"drawT1",3:"drawT3",4:"drawT4",5:"drawT5",6:"drawT6",7:"drawT7",8:"drawT8",9:"drawT9",
+const TABFN = {23:"drawNWDash",20:"drawNWLoan",21:"drawNWSave",22:"drawNWDiv",24:"drawNWRc",25:"drawNWLoanDash",26:"drawNWOverview",27:"drawNWMdb",28:"drawNWGuar",29:"drawNWLit",30:"drawNWCon",31:"drawNWExp",34:"drawNWSim",35:"drawNWWdp",36:"drawNWAllCons",37:"drawNWStmt",38:"drawNWJoin",1:"drawT1",3:"drawT3",4:"drawT4",5:"drawT5",6:"drawT6",7:"drawT7",8:"drawT8",9:"drawT9",
                10:"drawEntry",11:"drawOverview",12:"drawPeriods"};
 const OLD_TABS = [10,11,9,12,7,1,8,3,5,6,4];
 $("oldbtn").onclick = () => {
