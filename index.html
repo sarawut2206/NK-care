@@ -736,7 +736,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-183</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-184</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -762,7 +762,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
 </div>
 <div class="wrap navsub" id="navsub">
   <div class="ngs" data-g="ov"><b data-t="23" class="on"><span class="grp-ic">📊</span>แดชบอร์ด</b><b data-t="26"><span class="grp-ic">📄</span>สรุปภาพรวม ๑ หน้า</b></div>
-  <div class="ngs" data-g="mo" hidden><b data-t="20"><span class="grp-ic">📗</span>ทะเบียนผู้กู้</b><b data-t="21"><span class="grp-ic">📘</span>ทะเบียนผู้ฝาก</b><b data-t="24"><span class="grp-ic">🖨</span>ใบเสร็จรายเดือน</b></div>
+  <div class="ngs" data-g="mo" hidden><b data-t="20"><span class="grp-ic">📗</span>ทะเบียนผู้กู้</b><b data-t="21"><span class="grp-ic">📘</span>ทะเบียนผู้ฝาก</b><b data-t="24"><span class="grp-ic">🖨</span>ใบเสร็จรายเดือน</b><b data-t="37"><span class="grp-ic">🏦</span>สเตทเมนท์ธนาคาร</b></div>
   <div class="ngs" data-g="ln" hidden><b data-t="25"><span class="grp-ic">🏦</span>กู้ยืม + ติดตามหนี้</b><b data-t="30"><span class="grp-ic">📑</span>ทะเบียนสัญญากู้</b><b data-t="36"><span class="grp-ic">🗂️</span>สัญญาทั้งหมด</b><b data-t="28"><span class="grp-ic">🛡️</span>ทะเบียนคุมผู้ค้ำ</b><b data-t="29"><span class="grp-ic">⚖️</span>ชุดฟ้องร้อง</b><b data-t="35"><span class="grp-ic">💵</span>สรุปยอดเบิก</b></div>
   <div class="ngs" data-g="ac" hidden><b data-t="22"><span class="grp-ic">🧾</span>ใบสรุป + ปันผล</b><b data-t="31"><span class="grp-ic">💸</span>ค่าใช้จ่ายดำเนินงาน</b></div>
   <div class="ngs" data-g="sim" hidden><b data-t="34"><span class="grp-ic">🎯</span>แผนและจำลองให้ถึงเป้า</b></div>
@@ -803,6 +803,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
 <section id="tab34"></section>
 <section id="tab35"></section>
 <section id="tab36"></section>
+<section id="tab37"></section>
 <section id="tab10"></section>
 <section id="tab11"></section>
 <section id="tab12"></section>
@@ -6420,6 +6421,121 @@ function drawNWAllCons(){
   $("ca_csv").onclick = () => csvOut("kbk-สัญญาทั้งหมด.csv", [["สัญญาทั้งหมดตั้งแต่เปิด กบข.นข.", ["ที่", "เลขที่สัญญา", "เลขสมาชิก", "ผู้กู้", "ประเภท", "เริ่ม", "ชนิด", "ยอดสัญญา", "หักหนี้เดิม", "เงินที่ได้รับ", "งวด", "ผ่อน/เดือน", "สถานะ"],
     all.map(it => [it.no, it.code || "", it.x.no, it.x.name, NLP[it.k], it.p ? thPer(it.p) : it.d || "ก่อน พ.ค.68", kindLbl(it), it.N ? f2(it.N) : "", it.D ? f2(it.D) : "", it.amt ? f2(it.amt) : "", it.terms || "", it.inst ? f2(it.inst) : "", NW_CST[it.st][0]])]]);
 }
+/* ============ สเตทเมนท์ธนาคาร (แท็บ 37) ============
+   อัปโหลด PDF สเตทเมนท์ (อ่านในเครื่อง ไม่ส่งออกไปไหน · ไฟล์ที่มีรหัสผ่านจะถามรหัส ไม่เก็บรหัส) → ดึงรายการรับโอน (ใช้ตัวอ่านเดียวกับระบบเก่า เก็บที่ S.tx ร่วมกัน) → จับคู่บัญชีกับสมาชิก
+   → เทียบกับยอดที่ต้องโอนของงวด (วันโอน 25–5): ตรงยอด / โอนขาด / โอนเกิน / ยังไม่โอน → ยืนยันรับเงินเข้าทะเบียน หรือส่งยอดโอนเกินไปรายการคืนเงินในแท็บสรุปยอดเบิก  ·  S.stm = {p, f} */
+async function nwPdfText(buf, name){
+  const task = pdfjsLib.getDocument({data:buf});
+  task.onPassword = (update, reason) => { const pw = prompt((reason === 2 ? "รหัสผ่านไม่ถูกต้อง — ลองใหม่\n\n" : "") + `ไฟล์ «${name}» มีรหัสผ่าน — ใส่รหัสเปิดไฟล์ (ระบบไม่เก็บรหัสนี้)`); if(pw === null){ task.destroy(); return; } update(pw); };
+  const pdf = await task.promise; let out = "";
+  for(let i = 1; i <= pdf.numPages; i++){
+    const tc = await (await pdf.getPage(i)).getTextContent();
+    const items = tc.items.filter(it => it.str && it.str.trim()).map(it => ({x:it.transform[4], y:it.transform[5], s:it.str})).sort((a, b) => (b.y - a.y) || (a.x - b.x));
+    const rows = []; let cur = null;
+    items.forEach(it => { if(!cur || Math.abs(cur.y - it.y) > 3){ cur = {y:it.y, items:[it]}; rows.push(cur); } else cur.items.push(it); });
+    rows.forEach(r => { out += r.items.sort((a, b) => a.x - b.x).map(o => o.s).join(" ").replace(/\s+/g, " ") + "\n"; });
+  }
+  return out;
+}
+function nwStExp(x, p){
+  const items = []; let exp = 0, rec = 0, pend = 0, done = 0;
+  ["sam", "dk", "free"].forEach(k => { const a = nwAcct(x, k), r = NW.row(x.no, p, k);
+    if(r){ const m = num(r.m) || nwSh(r); exp += m; if(r.exp){ items.push({k, a, act:"confirm", m}); pend++; } else { rec += m; done++; items.push({k, a, act:"have", m}); } return; }
+    if(k === "free" ? !(+a.shM || +a.shxM || +a.svM) : !(nwStateA(a).debt > 0.005)) return;
+    const o = nwTimeline(a, true).rows.find(q => q.p === p && q.proj);
+    if(o){ const m = num(o.proj.m); exp += m; items.push({k, a, act:"fill", m}); pend++; } });
+  return {exp:r2(exp), rec:r2(rec), items, pend, done};
+}
+function nwStRows(p){
+  const tx = (S.tx || []).filter(t => t.d && nwPOfDate(t.d) === p), by = {}, unk = {};
+  tx.forEach(t => { const no = memOf(t); if(no) (by[no] = by[no] || []).push(t); else (unk[t.a] = unk[t.a] || []).push(t); });
+  const rows = []; NW.people().forEach(x => { const E = nwStExp(x, p), T = by[x.no] || [], tr = r2(T.reduce((u, t) => u + t.m, 0)), recorded = E.pend === 0 && E.done > 0, want = recorded ? E.rec : E.exp, diff = r2(tr - want);
+    if(!(want > 0.005) && !T.length) return;
+    const st = !T.length ? "none" : !(want > 0.005) ? "extra" : Math.abs(diff) < 0.5 ? "ok" : diff > 0 ? "over" : "short";
+    rows.push({x, E, T, tr, recorded, want, diff, st, last:T.map(t => t.d).sort().pop() || ""}); });
+  const ord = {over:0, short:1, none:2, extra:3, ok:4};
+  rows.sort((u, v) => ord[u.st] - ord[v.st] || String(u.x.no).localeCompare(String(v.x.no), "th", {numeric:true}));
+  return {rows, tx, unk, mem:Object.keys(by).length};
+}
+const NW_STL = {ok:["ตรงยอด", "grn"], over:["โอนเกิน", "red"], short:["โอนไม่ครบ", "amb"], none:["ยังไม่พบเงินโอน", ""], extra:["ไม่มียอดตามตาราง", "amb"]};
+function drawNWStmt(){
+  const el = $("tab37"); if(!el) return;
+  if(tab !== 37){ el.innerHTML = ""; return; }
+  if(!NW.on()){ el.innerHTML = nwStartHTML("สเตทเมนท์ธนาคาร"); bindNwImport(); return; }
+  const nowP = nwCurP(), W = S.stm || (S.stm = {p:"", f:"all"}); let p = W.p; if(!p || pNum(p) > pNum(nowP) + 1 || pNum(p) < pNum(P_ANCHOR)) p = nowP;
+  const R = nwStRows(p), fut = pNum(p) > pNum(nowP), allTx = (S.tx || []).length;
+  const opts = []; for(let n = pNum(nowP) + 1; n >= pNum(P_ANCHOR); n--){ const q = pFrom(n); opts.push(`<option value="${q}" ${q === p ? "selected" : ""}>งวดที่ ${nwRound(q)} · ${thPer(q)}${n > pNum(nowP) ? " (ล่วงหน้า)" : ""} · ${nwWinLbl(q)}</option>`); }
+  const cnt = k => R.rows.filter(r => r.st === k).length, sumT = r2(R.tx.reduce((u, t) => u + t.m, 0)), sumW = r2(R.rows.reduce((u, r) => u + r.want, 0));
+  const okRows = R.rows.filter(r => r.st === "ok" && !r.recorded && !fut && r.E.items.some(i => i.act !== "have"));
+  const shown = R.rows.filter(r => W.f === "all" || r.st === W.f), unkA = Object.keys(R.unk);
+  const wdP = nwWdP(nwToday()), wdItems = ((nwWdpM(wdP).items) || []);
+  const chip = (k, t, n) => `<button class="${W.f === k ? "" : "ghost "}sm" data-sf="${k}">${t} (${n})</button>`;
+  const dayLbl = iso => thDay(iso).replace(/ 25(\d\d)$/, " $1");
+  el.innerHTML = `<div class="nwscreen"><div class="ds-head"><div><div class="eyebrow" style="margin:0">🏦 สเตทเมนท์ธนาคาร — อัปโหลดแล้วอ่านให้อัตโนมัติ</div>
+      <div class="hint">อัปโหลด PDF สเตทเมนท์รายเดือน → ระบบดึงรายการเงินเข้า จับคู่กับสมาชิก แล้วเทียบกับยอดที่ต้องโอนของแต่ละงวด · อ่านในเครื่องคุณเท่านั้น ไม่ส่งไฟล์ออกไปไหน</div></div></div>
+    <div class="card" id="st_drop" style="border:2px dashed var(--rule);text-align:center;padding:22px 14px">
+      <div style="font-size:34px;line-height:1">📄</div>
+      <div style="font-weight:700;margin:4px 0">ลากไฟล์ PDF สเตทเมนท์มาวางตรงนี้ หรือ</div>
+      <input type="file" id="st_in" accept="application/pdf" multiple hidden><button id="st_btn">เลือกไฟล์ PDF (หลายเดือนพร้อมกันได้)</button>
+      <div class="msg" id="st_msg" style="margin-top:8px"></div>
+      <p class="hint" style="margin:6px 0 0">ไฟล์ที่มีรหัสผ่านจะมีหน้าต่างให้ใส่รหัส (ไม่เก็บรหัสไว้) · รายการซ้ำไม่นับซ้ำ · มีข้อมูลในระบบแล้ว <b>${allTx}</b> รายการ${allTx ? ` · ล่าสุด ${dayLbl((S.tx || []).map(t => t.d).filter(Boolean).sort().pop() || "")}` : ""}</p></div>
+    <div class="bar" style="margin:0 0 8px;flex-wrap:wrap"><label class="hint" style="display:flex;align-items:center;gap:6px">เลือกงวด <select id="st_p" style="width:auto">${opts.join("")}</select></label>
+      <span class="hint">นับเงินโอนวันที่ ${nwWinLbl(p)}</span>
+      <button style="margin-left:auto" id="st_okall" ${okRows.length ? "" : "disabled"} title="ยืนยันรับเงินเข้าทะเบียนให้ทุกคนที่โอนตรงยอด">✓ ยืนยันรับเงินทุกคนที่ตรงยอด (${okRows.length})</button><button class="ghost sm" id="st_csv">📥 CSV</button></div>
+    <div class="shx-cards">
+      <div class="shx-card" style="border-top-color:#2F6FDE"><div class="k">💵 เงินโอนเข้าในงวดนี้</div><div class="v">${B0(sumT)} <small>บาท</small></div><div class="h">${R.tx.length} รายการ · จับคู่สมาชิกได้ ${R.mem} คน${unkA.length ? ` · <b style="color:#B4452B">ไม่รู้จัก ${unkA.length} บัญชี</b>` : ""}</div></div>
+      <div class="shx-card" style="border-top-color:#1BAF7A"><div class="k">✅ ตรงยอด</div><div class="v">${cnt("ok")} <small>คน</small></div><div class="h">ยอดที่ต้องโอนรวม ${B0(sumW)} บาท</div></div>
+      <div class="shx-card" style="border-top-color:#C0202E"><div class="k">↩️ โอนเกิน / ⚠ โอนไม่ครบ</div><div class="v">${cnt("over")} / ${cnt("short")} <small>คน</small></div><div class="h">โอนเกินรวม ${B0(r2(R.rows.filter(r => r.diff > 0.5 && r.want > 0.005).reduce((u, r) => u + r.diff, 0)))} · ขาดรวม ${B0(r2(-R.rows.filter(r => r.diff < -0.5 && r.tr > 0).reduce((u, r) => u + r.diff, 0)))}</div></div>
+      <div class="shx-card" style="border-top-color:#9AA7BE"><div class="k">⏳ ยังไม่พบเงินโอน</div><div class="v">${cnt("none")} <small>คน</small></div><div class="h">${fut ? "งวดล่วงหน้า" : nwDue(p) ? "เลยกำหนด 5 ของงวดแล้ว" : "ยังอยู่ในช่วงโอน"}</div></div></div>
+    ${unkA.length ? `<div class="card" style="border-left:4px solid var(--gold)"><div class="ds-ttl">❓ บัญชีที่ยังไม่รู้ว่าใคร — เลือกสมาชิกแล้วระบบจำไว้ใช้ครั้งต่อไป</div><div class="tbl"><table><thead><tr><th class="l">บัญชี</th><th class="l">ชื่อในสเตทเมนท์</th><th>ครั้ง</th><th>รวม</th><th class="l">เป็นของสมาชิก</th></tr></thead><tbody>
+      ${unkA.map(a => `<tr><td class="l"><code>${esc(a)}</code></td><td class="l">${esc((DB.anames && DB.anames[a]) || (R.unk[a].find(t => t.nm) || {}).nm || "—")}</td><td class="amt">${R.unk[a].length}</td><td class="amt">${B(r2(R.unk[a].reduce((u, t) => u + t.m, 0)))}</td>
+        <td class="l"><select data-sua="${esc(a)}" style="min-width:200px"><option value="">— เลือกสมาชิก —</option>${NW.people().map(q => `<option value="${esc(q.no)}">${esc(q.no)} · ${esc(q.name)}</option>`).join("")}</select></td></tr>`).join("")}</tbody></table></div></div>` : ""}
+    <div class="card"><div class="bar" style="margin:0 0 8px;flex-wrap:wrap"><div class="ds-ttl" style="margin:0">📋 เทียบยอดโอนกับยอดที่ต้องชำระ — งวดที่ ${nwRound(p)} (${thPer(p)})</div>
+        <span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">${chip("all", "ทั้งหมด", R.rows.length)}${chip("over", "โอนเกิน", cnt("over"))}${chip("short", "โอนไม่ครบ", cnt("short"))}${chip("none", "ยังไม่โอน", cnt("none"))}${chip("ok", "ตรงยอด", cnt("ok"))}</span></div>
+      <div class="tbl" style="max-height:520px"><table><thead><tr><th class="l">สมาชิก</th><th>ยอดที่ต้องชำระ</th><th>ยอดโอนตามสเตทเมนท์</th><th>ส่วนต่าง</th><th class="l">สถานะ</th><th class="l">วันที่โอน</th><th class="l">การทำ</th></tr></thead><tbody>
+        ${shown.map(r => { const sid = `st|${r.x.no}|${p}`, sent = wdItems.some(i => i.src === sid), can = !r.recorded && !fut && r.E.items.some(i => i.act !== "have") && r.tr > 0.005;
+          return `<tr><td class="l"><span class="no">${esc(r.x.no)}</span><b>${esc(r.x.name)}</b></td><td class="amt">${r.want ? B(r.want) : "—"}${r.recorded ? '<div class="hint">บันทึกแล้ว</div>' : ""}</td><td class="amt"><b>${r.tr ? B(r.tr) : "—"}</b>${r.T.length > 1 ? `<div class="hint">${r.T.length} ครั้ง</div>` : ""}</td>
+            <td class="amt" style="color:${r.diff > 0.5 ? "#B4452B" : r.diff < -0.5 && r.tr ? "#8A5A00" : "#0F6B4A"}">${r.tr || r.want ? (r.diff > 0 ? "+" : r.diff < 0 ? "−" : "") + B(Math.abs(r.diff)) : "—"}</td><td class="l"><span class="pill ${NW_STL[r.st][1]}">${NW_STL[r.st][0]}</span></td>
+            <td class="l">${r.T.map(t => dayLbl(t.d) + (t.t && t.t !== "--:--" ? " " + t.t : "")).join("<br>") || "—"}</td>
+            <td class="l" style="white-space:normal">${can && (r.st === "ok" || r.st === "over") ? `<button class="ghost sm" data-sc="${esc(r.x.no)}" title="ยืนยันรับเงินตามยอดที่ต้องชำระ ลงวันที่โอนตามสเตทเมนท์">✓ ยืนยันรับเงิน</button> ` : ""}${r.st === "over" && r.want > 0.005 ? (sent ? '<span class="pill grn">ส่งไปคืนเงินแล้ว</span>' : `<button class="ghost sm" data-sr="${esc(r.x.no)}|${r.diff}" title="เพิ่มเป็นรายการคืนเงินที่โอนเกินในแท็บสรุปยอดเบิก">↩ คืนส่วนเกิน ${B(r.diff)}</button>`) : ""}${r.st === "short" ? `<span class="hint">ขาด ${B(-r.diff)} — แก้ที่ทะเบียนผู้กู้/ผู้ฝาก</span>` : ""}${r.st === "extra" ? '<span class="hint">เช่น ฝากหุ้นเพิ่ม/ชำระแทน — ตรวจที่ทะเบียน</span>' : ""}</td></tr>`; }).join("") || '<tr><td colspan="7" class="hint" style="text-align:left">ไม่มีรายการ — อัปโหลดสเตทเมนท์ หรือเลือกงวดอื่น</td></tr>'}</tbody></table></div>
+      <p class="hint" style="margin:6px 0 0">ยอดที่ต้องชำระ = ยอดตามตาราง/คาดการณ์ของงวด (หรือยอดที่บันทึกแล้ว) · «ยืนยันรับเงิน» ลงรายการเข้าทะเบียนตามยอดที่ต้องชำระ ใช้วันที่โอนจริง · ส่วนที่โอนเกินให้กด «คืนส่วนเกิน» เพื่อส่งไปรายการเบิกคืนในแท็บสรุปยอดเบิก (เดือน ${nwPFull(wdP)}) · ไม่ปรับยอดทะเบียนให้อัตโนมัติถ้าโอนไม่ตรง</p></div>
+    <details class="shx-d" data-shd="stx"${S.shcOpen && S.shcOpen.stx ? " open" : ""}><summary>🧾 รายการเงินโอนเข้าทั้งหมดในงวดนี้ (${R.tx.length})</summary><div class="in"><div class="tbl" style="max-height:340px"><table><thead><tr><th class="l">วันที่</th><th class="l">เวลา</th><th>ยอด</th><th class="l">บัญชี</th><th class="l">ชื่อในสเตทเมนท์</th><th class="l">สมาชิก</th></tr></thead><tbody>
+      ${R.tx.slice().sort((u, v) => String(u.d + u.t).localeCompare(v.d + v.t)).map(t => { const no = memOf(t); return `<tr><td class="l">${dayLbl(t.d)}</td><td class="l">${esc(t.t || "")}</td><td class="amt">${B(t.m)}</td><td class="l"><code>${esc(t.a)}</code></td><td class="l">${esc(t.nm || (DB.anames && DB.anames[t.a]) || "")}</td><td class="l">${no ? `<span class="no">${esc(no)}</span>${esc(nwNmOf(no))}` : '<span class="pill amb">ไม่รู้จัก</span>'}</td></tr>`; }).join("") || '<tr><td colspan="6" class="hint" style="text-align:left">ไม่มีรายการ</td></tr>'}</tbody></table></div></div></details></div><div class="nwdoc" id="nwdoc"></div>`;
+  const redraw = () => { const y = window.scrollY; drawNWStmt(); window.scrollTo(0, y); };
+  $("st_p").onchange = e => { S.stm.p = e.target.value; redraw(); };
+  el.querySelectorAll("[data-sf]").forEach(b => b.onclick = () => { S.stm.f = b.dataset.sf; redraw(); });
+  el.querySelectorAll("details[data-shd]").forEach(d => d.addEventListener("toggle", () => { S.shcOpen = S.shcOpen || {}; S.shcOpen[d.dataset.shd] = d.open; }));
+  const msg = (t, bad) => { const m = $("st_msg"); m.className = "msg" + (bad === true ? " bad" : bad === false ? " ok" : ""); m.textContent = t; };
+  const readFiles = async fs => {
+    fs = [...fs].filter(f => /pdf$/i.test(f.type) || /\.pdf$/i.test(f.name)); if(!fs.length){ msg("เลือกได้เฉพาะไฟล์ PDF", true); return; }
+    if(typeof pdfjsLib === "undefined"){ msg("โหลดตัวอ่าน PDF ไม่สำเร็จ (ไม่มีเน็ต?) — ใช้ «วางข้อความ» หรือ «ให้ AI อ่าน» ในระบบเก่า (รับชำระ) แทนได้", true); return; }
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https:\/\/cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    let add = 0, dup = 0, ok = 0, named = 0, bad = []; const seen = new Set((S.tx || []).map(txKey)), unk = new Set();
+    for(const f of fs){ msg(`กำลังอ่าน ${f.name} …`);
+      try{ const txt = await nwPdfText(await f.arrayBuffer(), f.name), rows = parse(txt); if(!rows.length){ bad.push(`${f.name} (ไม่พบรายการรับโอน)`); continue; }
+        rows.forEach(x => { if(x.nm && DB.anames && !DB.anames[x.a]){ DB.anames[x.a] = x.nm; named++; } const k = txKey(x); if(seen.has(k)){ dup++; return; } seen.add(k); S.tx.push(x); add++; if(!S.acct[x.a]) unk.add(x.a); }); ok++;
+      }catch(err){ bad.push(`${f.name} (${/destroyed|cancel/i.test(String(err && err.message)) ? "ยกเลิกใส่รหัส" : (err && err.message) || err})`); } }
+    const auto = typeof autoMatch === "function" ? autoMatch() : 0; if(add || named || auto){ save(); }
+    const nm = [...new Set(S.tx.filter(t => !memOf(t)).map(t => t.a))].length;
+    redraw(); const m2 = $("st_msg"); if(m2){ m2.className = "msg " + (bad.length || nm ? "bad" : "ok"); m2.textContent = `อ่าน ${ok} ไฟล์ · เพิ่ม ${add} รายการ · ซ้ำ ${dup}${auto ? ` · จับคู่อัตโนมัติ ${auto} บัญชี` : ""}${nm ? ` · ⚠ ยังไม่รู้จัก ${nm} บัญชี` : ""}${bad.length ? " · ไม่สำเร็จ: " + bad.join(", ") : ""}`; }
+  };
+  $("st_btn").onclick = () => $("st_in").click();
+  $("st_in").onchange = e => readFiles(e.target.files);
+  const dz = $("st_drop"); ["dragenter", "dragover"].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.style.background = "var(--faint)"; })); ["dragleave", "drop"].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.style.background = ""; }));
+  dz.addEventListener("drop", e => readFiles(e.dataTransfer.files));
+  el.querySelectorAll("[data-sua]").forEach(i => i.addEventListener("change", () => { if(!i.value) return; S.acct[i.dataset.sua] = i.value; save(); redraw(); toast(`จับคู่บัญชี ${i.dataset.sua} กับ ${i.value} ${nwNmOf(i.value)} แล้ว`); }));
+  const confirmRow = r => { const d = r.last || nwDate5(p); r.E.items.forEach(q => { if(q.act === "confirm"){ const w = NW.row(r.x.no, p, q.k); if(w){ delete w.exp; w.d = d; w.ts = Date.now(); } } else if(q.act === "fill"){ ceFill(r.x, q.a, p); NW.set(r.x.no, p, q.k, {d}); } }); };
+  el.querySelectorAll("[data-sc]").forEach(b => b.onclick = () => { const r = R.rows.find(q => q.x.no === b.dataset.sc); if(!r) return;
+    if(!confirm(`ยืนยันรับเงิน ${r.x.no} ${r.x.name}\nงวดที่ ${nwRound(p)} (${thPer(p)}) ยอด ${B(r.want)} บาท · วันที่โอน ${thDay(r.last)}${r.diff > 0.5 ? `\n\nโอนมา ${B(r.tr)} บาท เกินไป ${B(r.diff)} บาท — ลงรับตามยอดที่ต้องชำระ ส่วนเกินกดคืนแยกต่างหาก` : ""}`)) return;
+    confirmRow(r); save(); redraw(); toast("ยืนยันรับเงินแล้ว"); });
+  $("st_okall").onclick = () => { if(!okRows.length) return; if(!confirm(`ยืนยันรับเงินงวดที่ ${nwRound(p)} (${thPer(p)}) ให้ ${okRows.length} คนที่โอนตรงยอด\nรวม ${B(r2(okRows.reduce((u, r) => u + r.want, 0)))} บาท\n\nลงวันที่ตามวันโอนจริงในสเตทเมนท์`)) return;
+    okRows.forEach(confirmRow); save(); redraw(); toast(`ยืนยันรับเงิน ${okRows.length} คนแล้ว`); };
+  el.querySelectorAll("[data-sr]").forEach(b => b.onclick = () => { const [no, amt] = b.dataset.sr.split("|"), sid = `st|${no}|${p}`, M = nwWdpM(wdP).items || [];
+    if(M.some(i => i.src === sid)) return; nwWdpPut(wdP, {items:M.concat([{id:"WX" + Math.random().toString(36).slice(2, 8), cat:NW_WDX[0], no, amt:+amt, note:`โอนเกินงวดที่ ${nwRound(p)} (จากสเตทเมนท์)`, src:sid}])}); save(); redraw(); toast(`ส่งไปรายการคืนเงินแล้ว — ดูที่แท็บสรุปยอดเบิก เดือน ${nwPFull(wdP)}`); });
+  $("st_csv").onclick = () => csvOut(`kbk-สเตทเมนท์-งวด${nwRound(p)}.csv`, [[`เทียบยอดโอนกับยอดที่ต้องชำระ งวดที่ ${nwRound(p)} (${thPer(p)})`, ["เลขสมาชิก", "ชื่อ", "ยอดที่ต้องชำระ", "ยอดโอน", "ส่วนต่าง", "สถานะ", "วันที่โอน"],
+    R.rows.map(r => [r.x.no, r.x.name, f2(r.want), f2(r.tr), f2(r.diff), NW_STL[r.st][0], r.T.map(t => t.d).join(" ")])],
+    ["รายการเงินโอนเข้า", ["วันที่", "เวลา", "ยอด", "บัญชี", "ชื่อในสเตทเมนท์", "สมาชิก"], R.tx.map(t => [t.d, t.t, f2(t.m), t.a, t.nm || "", memOf(t)])]]);
+}
 function nwExpDoc(p){
   const L = nwExps().filter(e => e.p === p).sort((a, b) => String(a.d || "").localeCompare(String(b.d || ""))), tot = r2(L.reduce((u, e) => u + num(e.amt), 0)), today = nwToday();
   const D = nwDashData(), it = (D.tot.find(t => t.p === p) || {}).int || 0, byC = {}; L.forEach(e => byC[e.cat] = r2((byC[e.cat] || 0) + num(e.amt)));
@@ -11339,7 +11455,7 @@ async function boot(){
 function draw(){
   rebuildPeriods();                     // ★ ช่วงงวดเดินตามข้อมูลจริง — ย้อนดูได้ทุกปี
   // แท็บไหนพัง ให้พังแค่แท็บนั้น อย่าลากทั้งหน้าจอลงไปด้วย
-  [["tab23",drawNWDash],["tab20",drawNWLoan],["tab21",drawNWSave],["tab22",drawNWDiv],["tab24",drawNWRc],["tab25",drawNWLoanDash],["tab26",drawNWOverview],["tab27",drawNWMdb],["tab28",drawNWGuar],["tab29",drawNWLit],["tab30",drawNWCon],["tab31",drawNWExp],["tab34",drawNWSim],["tab35",drawNWWdp],["tab36",drawNWAllCons],["tab10",drawEntry],["tab11",drawOverview],["tab12",drawPeriods],["tab1",drawT1],["tab3",drawT3],
+  [["tab23",drawNWDash],["tab20",drawNWLoan],["tab21",drawNWSave],["tab22",drawNWDiv],["tab24",drawNWRc],["tab25",drawNWLoanDash],["tab26",drawNWOverview],["tab27",drawNWMdb],["tab28",drawNWGuar],["tab29",drawNWLit],["tab30",drawNWCon],["tab31",drawNWExp],["tab34",drawNWSim],["tab35",drawNWWdp],["tab36",drawNWAllCons],["tab37",drawNWStmt],["tab10",drawEntry],["tab11",drawOverview],["tab12",drawPeriods],["tab1",drawT1],["tab3",drawT3],
    ["tab4",drawT4],["tab5",drawT5],["tab6",drawT6],["tab7",drawT7],["tab8",drawT8],["tab9",drawT9]].forEach(([id,fn])=>{
     try{ fn(); }
     catch(err){ const el=$(id); if(el) el.innerHTML =
@@ -11376,7 +11492,7 @@ if($("saveNow")) $("saveNow").onclick = () => saveClick($("saveNow"), null);
 
 /* ============ เดินระบบ ============ */
 function all(){ draw(); save(); banner(); }
-const TABFN = {23:"drawNWDash",20:"drawNWLoan",21:"drawNWSave",22:"drawNWDiv",24:"drawNWRc",25:"drawNWLoanDash",26:"drawNWOverview",27:"drawNWMdb",28:"drawNWGuar",29:"drawNWLit",30:"drawNWCon",31:"drawNWExp",34:"drawNWSim",35:"drawNWWdp",36:"drawNWAllCons",1:"drawT1",3:"drawT3",4:"drawT4",5:"drawT5",6:"drawT6",7:"drawT7",8:"drawT8",9:"drawT9",
+const TABFN = {23:"drawNWDash",20:"drawNWLoan",21:"drawNWSave",22:"drawNWDiv",24:"drawNWRc",25:"drawNWLoanDash",26:"drawNWOverview",27:"drawNWMdb",28:"drawNWGuar",29:"drawNWLit",30:"drawNWCon",31:"drawNWExp",34:"drawNWSim",35:"drawNWWdp",36:"drawNWAllCons",37:"drawNWStmt",1:"drawT1",3:"drawT3",4:"drawT4",5:"drawT5",6:"drawT6",7:"drawT7",8:"drawT8",9:"drawT9",
                10:"drawEntry",11:"drawOverview",12:"drawPeriods"};
 const OLD_TABS = [10,11,9,12,7,1,8,3,5,6,4];
 $("oldbtn").onclick = () => {
