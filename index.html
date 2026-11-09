@@ -736,7 +736,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-184</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-185</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -4433,6 +4433,30 @@ function nwAppFinalize(a){
   nwSetGuar(a.no, a.prod, 0, c.g1); if(c.g2) nwSetGuar(a.no, a.prod, 1, c.g2);
   a.status = "สำเร็จ"; a.cid = c.id; a.doneAt = nwToday();
 }
+/* บันทึกสัญญาฉบับเต็ม → ลงทะเบียนเงินกู้เข้าทะเบียนผู้กู้อัตโนมัติ (ผู้กู้ขึ้นเป็น «ผู้กู้» ทันที)
+   ลงแถวกู้ในเดือนก่อนงวดที่ 1 (เหมือนกู้ทับ: ได้รับเงิน + เริ่มสัญญาใหม่เดือนถัดไป) · ตั้งงวดละ/หุ้นประจำ/หุ้นเพิ่ม/งวดที่ 1 ของสัญญา · ลบแถวนี้ในทะเบียน = คืนค่าเดิม · a.reg = {p, k, prev, pend, p1} */
+function nwAppUnreg(a){
+  const r = a.reg, x = NW.person(a.no); delete a.reg; if(!r || !x) return;
+  const row = NW.row(x.no, r.p, r.k);
+  if(row && row.src === "app:" + a.id){ const pay = ["m", "int", "pri", "sh", "shx", "sv"].some(f => has(row[f]));
+    if(pay){ ["loan", "bal", "refi", "src", "note"].forEach(f => delete row[f]); } else NW.drop(x.no, r.p, r.k); }
+  const A = nwAccRef(x, r.k);
+  if(A.pend && A.pend.p === r.p1) delete A.pend;
+  else { ["starts", "inst", "shM", "shxM"].forEach(f => { if(r.prev[f] === undefined) delete A[f]; else A[f] = Array.isArray(r.prev[f]) ? r.prev[f].slice() : r.prev[f]; }); }
+}
+function nwAppRegister(a){
+  const x = NW.person(a.no); if(!x) return "ไม่พบสมาชิก " + a.no;
+  const k = a.k || (a.prod === "ดูแลกัน" ? "dk" : "sam"), p1 = a.p1 || firstDue(); if(a.reg) nwAppUnreg(a);
+  const acc = nwAcct(x, k), p0 = pFrom(pNum(p1) - 1), N = r2(a.P0), old = NW.row(x.no, p0, k), b = nwBefore(acc, p0), pri = old ? num(old.pri) : 0, rest = r2(b.debt - pri);
+  if(N <= rest + 0.005) return `ยอดสัญญา ${B(N)} ไม่มากกว่าหนี้คงเหลือเดิม ${B(rest)} — ลงทะเบียนเงินกู้ไม่ได้`;
+  const A = nwAccRef(x, k), prev = {starts:A.starts ? A.starts.slice() : undefined, inst:A.inst, shM:A.shM, shxM:A.shxM}, prevStarts = nwStarts(acc).slice();
+  const sc = schedule({prod:a.prod, mode:"calc", amt:N, terms:a.N, inst:a.M, shareM:a.B}), extra = sc.rows[0] ? r2(sc.rows[0].extra) : 0;
+  const row = NW.set(x.no, p0, k, {loan:r2(N - rest), bal:N, src:"app:" + a.id, note:`สัญญา ${a.code} ยอด ${B(N)}${rest > 0.005 ? " (กู้ทับ หักหนี้เดิม " + B(rest) + ")" : ""}`});
+  row.refi = {N, start:p1, prev:{starts:prevStarts, inst:A.inst, shM:A.shM, shxM:A.shxM}};
+  const nv = {starts:prevStarts.concat([p1]), inst:a.M, shM:a.B, shxM:extra}, pend = pNum(p1) > pNum(nwCurP());
+  if(pend) A.pend = {p:p1, set:nv}; else Object.assign(A, nv);
+  a.reg = {p:p0, k, prev, pend, p1}; return null;
+}
 function nwAppsHTML(){
   const list = nwApps().filter(a => a.status !== "ยกเลิก").slice().sort((u, v) => (u.status === "สำเร็จ" ? 1 : 0) - (v.status === "สำเร็จ" ? 1 : 0) || String(v.at).localeCompare(String(u.at)));
   const chip = (ok, t) => `<span class="pill ${ok ? "grn" : ""}">${ok ? "✓" : "○"} ${t}</span>`;
@@ -4443,10 +4467,10 @@ function nwAppsHTML(){
           <td class="amt"><input class="ce" type="number" min="3" max="72" data-napa="${esc(a.id)}|N" value="${a.N}" style="width:62px;text-align:right" title="แก้จำนวนงวด — คำนวณยอดผ่อนใหม่ให้อัตโนมัติ"></td><td class="amt"><b>${B(a.M)}</b>${a.Mmax && a.M > a.Mmax + 0.005 ? `<div class="hint" style="color:#B4452B">เกินที่หักได้ ${B0(a.Mmax)}</div>` : ""}</td>`}
           <td class="l" style="white-space:normal">${gs.map(g => `${esc(g)} ${esc(nwNmOf(g))}`).join("<br>") || '<span class="hint">ยังไม่เลือก</span>'}</td><td class="l">${thDay(a.at)}</td>
           <td class="l">${ok ? thDay(a.dc) : `<input class="ce ced" type="date" data-napd="${esc(a.id)}" value="${esc(a.dc || "")}">`}</td>
-          <td class="l" style="white-space:normal">${ok ? '<span class="pill grn">ลงทะเบียนสำเร็จ ' + thDay(a.doneAt) + "</span>" : chip(true, "คำขอ") + " " + chip(a.printedFull, "พิมพ์สัญญาเต็ม") + " " + chip(a.savedFull, "บันทึกสัญญาเต็ม")}</td>
+          <td class="l" style="white-space:normal">${ok ? '<span class="pill grn">ลงทะเบียนสำเร็จ ' + thDay(a.doneAt) + "</span>" : chip(true, "คำขอ") + " " + chip(a.printedFull, "พิมพ์สัญญาเต็ม") + " " + chip(a.savedFull, "บันทึกสัญญาเต็ม") + " " + chip(!!a.reg, "ลงทะเบียนเงินกู้")}</td>
           <td style="white-space:normal;min-width:250px">
             <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px"><b class="hint" style="width:62px">คำขอ</b><button class="ghost sm" data-nap="reapp|${esc(a.id)}" title="พิมพ์ หรือเลือกปลายทาง «บันทึกเป็น PDF» — แบบคำขอ + หนังสือยินยอมผู้ค้ำ">พิมพ์ / PDF</button><button class="ghost sm" data-nap="wapp|${esc(a.id)}" title="ดาวน์โหลดเป็น Word (.docx) ฝังฟอนต์ TH Sarabun New">Word</button></div>
-            <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px"><b class="hint" style="width:62px">สัญญาเต็ม</b><button class="ghost sm" data-nap="pfull|${esc(a.id)}" title="${ok ? "พิมพ์ หรือบันทึกเป็น PDF" : "พิมพ์ / PDF (ถือว่าอนุมัติแล้ว นับเป็นขั้นตอนพิมพ์สัญญาฉบับเต็ม)"}">พิมพ์ / PDF</button><button class="ghost sm" data-nap="wfull|${esc(a.id)}" title="ดาวน์โหลดเป็น Word (.docx) — ไม่นับเป็นขั้นตอนพิมพ์">Word</button>${ok ? "" : `<button class="ghost sm" data-nap="sfull|${esc(a.id)}">บันทึกสัญญาฉบับเต็ม</button> <button class="del" data-nap="can|${esc(a.id)}" title="ยกเลิกคำขอนี้ (เลขที่สัญญากลับไปให้ใช้ใหม่)">×</button>`}</div></td></tr>`; }).join("")}</tbody></table></div>` : '<p class="hint">ยังไม่มีคำขอกู้ — คำนวณที่การ์ดด้านบนแล้วกด «บันทึกคำขอกู้»</p>'}`;
+            <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px"><b class="hint" style="width:62px">สัญญาเต็ม</b><button class="ghost sm" data-nap="pfull|${esc(a.id)}" title="${ok ? "พิมพ์ หรือบันทึกเป็น PDF" : "พิมพ์ / PDF (ถือว่าอนุมัติแล้ว นับเป็นขั้นตอนพิมพ์สัญญาฉบับเต็ม)"}">พิมพ์ / PDF</button><button class="ghost sm" data-nap="wfull|${esc(a.id)}" title="ดาวน์โหลดเป็น Word (.docx) — ไม่นับเป็นขั้นตอนพิมพ์">Word</button>${ok ? "" : `<button class="ghost sm" data-nap="sfull|${esc(a.id)}">บันทึกสัญญาฉบับเต็ม</button> ${a.savedFull && !a.reg ? `<button class="ghost sm" data-nap="reg|${esc(a.id)}" title="ลงเงินกู้เข้าทะเบียนผู้กู้ ผู้กู้จะขึ้นเป็นผู้กู้ทันที">📥 ลงทะเบียนเงินกู้</button> ` : ""}<button class="del" data-nap="can|${esc(a.id)}" title="ยกเลิกคำขอนี้ (เลขที่สัญญากลับไปให้ใช้ใหม่)">×</button>`}</div></td></tr>`; }).join("")}</tbody></table></div>` : '<p class="hint">ยังไม่มีคำขอกู้ — คำนวณที่การ์ดด้านบนแล้วกด «บันทึกคำขอกู้»</p>'}`;
 }
 
 function nwLoanCardHTML(k){
@@ -5773,6 +5797,7 @@ function drawNWLoanDash(){
     if(!(a.want > 0)) a.want = a.P0;                                   // ยอดที่ผู้กู้ขอตามเอกสารคำขอเดิม (ถ้าไม่ได้ระบุ = ยอดที่ระบบเสนอครั้งแรก)
     a.P0 = C.P0; a.N = C.N; a.M = C.Mpay; a.cap = C.cap; a.edAt = nwToday();
     if(flags){ a.printedFull = false; a.savedFull = false; }
+    nwAppUnreg(a);                                                      // ยอดเปลี่ยน — ถอนรายการเงินกู้ที่ลงทะเบียนไว้เดิม (บันทึกสัญญาเต็มใหม่แล้วลงทะเบียนอีกครั้ง)
     save(); redraw(); toast(`คำนวณใหม่แล้ว — วงเงิน ${B(a.P0)} · ${a.N} งวด · ผ่อน ${B(a.M)}/เดือน`); }));
   el.querySelectorAll("[data-napd]").forEach(i => i.addEventListener("change", () => { const a = nwApps().find(q => q.id === i.dataset.napd); if(a){ a.dc = i.value; save(); redraw(); } }));
   el.querySelectorAll("[data-nap]").forEach(b => b.onclick = () => { const [act, id] = b.dataset.nap.split("|"), a = nwApps().find(q => q.id === id); if(!a) return;
@@ -5780,12 +5805,13 @@ function drawNWLoanDash(){
     if(act === "reapp"){ nwPrint(nwAppApplyDoc(a), nmA); return; }
     if(act === "wapp"){ nwxRun("แบบคำขอกู้ → Word", () => nwxDocx(nwAppApplyDoc(a), nmA)); return; }
     if(act === "wfull" && a.status === "สำเร็จ"){ nwxRun("สัญญาฉบับเต็ม → Word", () => nwxDocx(nwAppFullDoc(a), nmF)); return; }
-    if(act === "can"){ if(confirm(`ยกเลิกคำขอกู้ ${a.code} ของ ${nwNmOf(a.no)}?`)){ a.status = "ยกเลิก"; save(); redraw(); toast("ยกเลิกคำขอแล้ว"); } return; }
+    if(act === "can"){ if(confirm(`ยกเลิกคำขอกู้ ${a.code} ของ ${nwNmOf(a.no)}?${a.reg ? "\n\nรายการเงินกู้ที่ลงทะเบียนไว้จะถูกถอนออกด้วย" : ""}`)){ nwAppUnreg(a); a.status = "ยกเลิก"; save(); redraw(); toast("ยกเลิกคำขอแล้ว"); } return; }
+    if(act === "reg"){ if(!a.savedFull){ alert("ต้องกด «บันทึกสัญญาฉบับเต็ม» ก่อน"); return; } const w = nwAppRegister(a); if(w){ alert(w); return; } save(); redraw(); toast(`ลงทะเบียนเงินกู้ของ ${nwNmOf(a.no)} แล้ว — ขึ้นเป็นผู้กู้ในทะเบียนผู้กู้ (ยอด ${B(a.P0)} · งวดที่ 1 ${thPer(a.reg.p1)})`); return; }
     if(a.status === "สำเร็จ"){ if(act === "pfull") nwPrint(nwAppFullDoc(a), nmF); return; }
     const why = nwAppWhyNotFull(a); if(why.length){ alert("ยังทำสัญญาฉบับเต็มไม่ได้:\n• " + why.join("\n• ") + "\n\nแก้ที่รายการคำขอ (วันที่ทำสัญญา) หรือบันทึกคำขอใหม่พร้อมเลือกผู้ค้ำ"); return; }
     if(act === "wfull"){ nwxRun("สัญญาฉบับเต็ม → Word", () => nwxDocx(nwAppFullDoc(a), nmF)); return; }
     if(act === "pfull"){ if(!confirm(`พิมพ์สัญญาฉบับเต็ม ${a.code} ของ ${nwNmOf(a.no)}\n(ถือว่าอนุมัติแล้ว) ต่อไปกด «บันทึกสัญญาฉบับเต็ม» เพื่อลงทะเบียน`)) return; a.printedFull = true; save(); nwPrint(nwAppFullDoc(a), nmF); }
-    else if(act === "sfull"){ if(!confirm(`บันทึกสัญญาฉบับเต็ม ${a.code}\n${nwNmOf(a.no)} · สินเชื่อ${a.prod} ${B(a.P0)} บาท · ${a.N} งวด\nวันที่ทำสัญญา ${thDay(a.dc)}`)) return; a.savedFull = true; save(); }
+    else if(act === "sfull"){ if(!confirm(`บันทึกสัญญาฉบับเต็ม ${a.code}\n${nwNmOf(a.no)} · สินเชื่อ${a.prod} ${B(a.P0)} บาท · ${a.N} งวด\nวันที่ทำสัญญา ${thDay(a.dc)}\n\nระบบจะลงทะเบียนเงินกู้เข้าทะเบียนผู้กู้ให้ด้วย — ${nwNmOf(a.no)} จะขึ้นเป็นผู้กู้ทันที (งวดที่ 1 ${thPer(a.p1 || firstDue())})`)) return; const w = nwAppRegister(a); if(w){ alert(w); return; } a.savedFull = true; save(); }
     if(a.printedFull && a.savedFull){ nwAppFinalize(a); save(); toast(`ลงทะเบียนการกู้สำเร็จ — ${a.code} · ไปบันทึกการจ่ายเงินกู้ในทะเบียนผู้กู้ (กู้เพิ่ม/กู้ทับ)`); }
     else toast(act === "pfull" ? "พิมพ์สัญญาฉบับเต็มแล้ว — รอกด «บันทึกสัญญาฉบับเต็ม»" : "บันทึกสัญญาฉบับเต็มแล้ว — รอกด «พิมพ์สัญญาฉบับเต็ม»");
     redraw(); });
@@ -6372,7 +6398,8 @@ function nwAllCons(){
     evs.forEach((e, i) => { const it = {x, k, p:e.p, d:nwDate5(e.p), N:e.N, D:e.D, amt:e.amt, kind:e.D > 0.005 ? "refi" : "new", st:e.fut ? "pend" : i < lastI ? "sup" : debt > 0.005 ? "act" : "done"}; items.push(i === lastI ? info(it) : it); });
     if(done.length){ if(done[0].D > 0.005) items.push({x, k, p:"", d:"", N:0, D:0, amt:0, kind:"before", st:"sup"}); }
     else if(debt > 0.005){ const it = info({x, k, p:"", d:(c && !nwConAutoD(c) && c.d) || "", N:c ? +c.amt || 0 : 0, D:0, amt:c ? +c.amt || 0 : 0, kind:"single", st:"act"}); items.push(it); } }));
-  nwApps().filter(q => q.status === "ขอกู้").forEach(q => { const x = NW.person(q.no) || {no:q.no, name:nwNmOf(q.no)}, k = q.k || (q.prod === "ดูแลกัน" ? "dk" : "sam"), own = NW.person(q.no) ? nwStateA(nwAcct(NW.person(q.no), k)).debt : 0;
+  nwApps().filter(q => q.status === "ขอกู้" && q.reg).forEach(q => { const k = q.k || (q.prod === "ดูแลกัน" ? "dk" : "sam"), it = items.find(i => i.x.no === q.no && i.k === k && i.p === q.reg.p); if(it){ it.code = it.code || q.code; it.terms = it.terms || q.N; it.inst = it.inst || q.M; } });
+  nwApps().filter(q => q.status === "ขอกู้" && !q.reg).forEach(q => { const x = NW.person(q.no) || {no:q.no, name:nwNmOf(q.no)}, k = q.k || (q.prod === "ดูแลกัน" ? "dk" : "sam"), own = NW.person(q.no) ? nwStateA(nwAcct(NW.person(q.no), k)).debt : 0;
     items.push({x, k, p:"", d:q.dc || q.at || "", N:q.P0, D:own, amt:Math.max(0, r2(q.P0 - own)), kind:"app", st:"req", code:q.code, terms:q.N, inst:q.M}); });
   items.sort((u, v) => (u.d ? 1 : 0) - (v.d ? 1 : 0) || String(u.d).localeCompare(String(v.d)) || String(u.x.no).localeCompare(String(v.x.no), "th", {numeric:true}));
   items.forEach((it, i) => it.no = i + 1);
