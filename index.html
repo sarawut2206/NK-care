@@ -736,7 +736,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-188</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-189</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -3225,15 +3225,16 @@ function nwxStage(html, png){
 }
 
 /* ---------- รูปภาพ ---------- */
-async function nwxPng(html, base){
+async function nwxPng(html, base, names){
   await nwxLoad("h2c"); const st = nwxStage(html, true), cvs = [];
   try{ await (document.fonts && document.fonts.ready);
     for(const pg of [...st.children]) cvs.push(await html2canvas(pg, {scale:2 * (pg.classList.contains("kpage") ? (/(^| )(kc|kd|kl)( |$)/.test(pg.className) ? 1.58 : 1.808) : 1), backgroundColor:"#ffffff", logging:false, useCORS:true}));
   } finally { st.remove(); }
   const blobs = await Promise.all(cvs.map(c => new Promise(r => c.toBlob(r, "image/png"))));
-  if(blobs.length === 1){ nwxSave(blobs[0], nwxName(base) + ".png"); return 1; }
+  const own = Array.isArray(names) && names.length === blobs.length ? (() => { const u = {}; return names.map(n => { const b = nwxName(n); u[b] = (u[b] || 0) + 1; return u[b] > 1 ? `${b}-${u[b]}` : b; }); })() : null;   /* ชื่อไฟล์ตามชื่อแต่ละคน (ชื่อซ้ำต่อท้าย -2) */
+  if(blobs.length === 1){ nwxSave(blobs[0], (own ? own[0] : nwxName(base)) + ".png"); return 1; }
   await nwxLoad("jz"); const z = new JSZip(), w = String(blobs.length).length;
-  blobs.forEach((b, i) => z.file(`${nwxName(base)}-${String(i + 1).padStart(w, "0")}.png`, b));
+  blobs.forEach((b, i) => z.file(own ? own[i] + ".png" : `${nwxName(base)}-${String(i + 1).padStart(w, "0")}.png`, b));
   nwxSave(await z.generateAsync({type:"blob"}), nwxName(base) + ".zip"); return blobs.length;
 }
 
@@ -7295,11 +7296,11 @@ function drawNWRc(){
   const go = arr => nwPrint(arr.map(x => nwRcDoc(x, p)).join(""));
   if($("rc_p1")) $("rc_p1").onclick = () => go([cur]);
   if($("rc_p1w")) $("rc_p1w").onclick = () => nwxRun("ใบเสร็จ → Word", () => nwxDocx(nwRcDoc(cur, p), `ใบเสร็จ-${p}-${cur.no}-${cur.name}`, NWX_ONE));
-  if($("rc_p1i")) $("rc_p1i").onclick = () => nwxRun("ใบเสร็จ → รูป", () => nwxPng(nwRcDoc(cur, p), `ใบเสร็จ-${p}-${cur.no}-${cur.name}`));
+  if($("rc_p1i")) $("rc_p1i").onclick = () => nwxRun("ใบเสร็จ → รูป", () => nwxPng(nwRcDoc(cur, p), `ใบเสร็จ-${p}-${cur.no}-${cur.name}`, [cur.name]));
   $("rg_w").onclick = () => { if(withR.length) nwxRun("ทะเบียนคุมใบเสร็จ → Word", () => nwxDocx(nwRgDoc(p), `ทะเบียนคุมใบเสร็จ-${p}`, NWX_ONE)); };
   $("rg_i").onclick = () => { if(withR.length) nwxRun("ทะเบียนคุมใบเสร็จ → รูป", () => nwxPng(nwRgDoc(p), `ทะเบียนคุมใบเสร็จ-${p}`)); };
   $("rc_w").onclick = () => { if(chosen.length) nwxRun("ใบเสร็จ → Word", () => nwxDocx(chosen.map(a => nwRcDoc(a.x, p)).join(""), `ใบเสร็จ-${p}-${chosen.length}ใบ`, NWX_ONE)); };
-  $("rc_i").onclick = () => { if(chosen.length) nwxRun("ใบเสร็จ → รูป", () => nwxPng(chosen.map(a => nwRcDoc(a.x, p)).join(""), `ใบเสร็จ-${p}`)); };
+  $("rc_i").onclick = () => { if(chosen.length) nwxRun("ใบเสร็จ → รูป", () => nwxPng(chosen.map(a => nwRcDoc(a.x, p)).join(""), `ใบเสร็จ-${p}`, chosen.map(a => a.x.name))); };
   $("rc_print").onclick = () => { if(!chosen.length) return;
     if(!confirm(`พิมพ์ใบเสร็จเดือน ${nwPFull(p)} จำนวน ${chosen.length} ใบ (${pages} หน้า A4 · 1 คนต่อ 1 หน้า)?`)) return; go(chosen.map(a => a.x)); };
 }
