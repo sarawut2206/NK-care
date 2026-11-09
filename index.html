@@ -736,7 +736,7 @@ tr.orow td{background:var(--faint);border-top:1.5px solid var(--brand2);border-b
   <div class="mast"><div><h1>ระบบทะเบียนสัญญาและรับชำระ กบข.นข.</h1>
     <small>โรงเรียนมัธยมวัดหนองแขม · บัญชีกลุ่มบุคคล 206-2-63177-8 ·
       <b title="เวอร์ชันของไฟล์โปรแกรมที่กำลังเปิดอยู่ — ใช้เช็คว่าวางไฟล์ใหม่แล้วจริงไหม"
-         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-185</b></small></div></div>
+         style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0">v2569.10.05-187</b></small></div></div>
   <div class="tools">
     <span class="saved" id="saved"></span>
     <label title="พิมพ์เอกสารเป็นขาวดำ (ประหยัดหมึก) — ปกติพิมพ์สี" style="color:#fff;font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap"><input type="checkbox" id="bwTog" style="width:auto"> พิมพ์ขาวดำ</label>
@@ -2995,7 +2995,7 @@ function nwAcctView(x, kind, prod){
   const stOpts = (() => { const o = [`<option value="">ยังไม่กำหนด (นับตามงวดโอน — พ.ค.68 = งวดที่ 1)</option>`];
     for(let n = pNum(NW_R1) - 36; n <= pNum(nwCurP()) + 12; n++){ const q = pFrom(n); o.push(`<option value="${q}" ${a.starts[0]===q?"selected":""}>${thPer(q)}</option>`); } return o.join(""); })();
   const startBar = loanF ? `<div class="bar" style="margin:0 0 10px;flex-wrap:wrap"><label><b>งวดที่ 1 ของ${NW_ACCN[prod]} เริ่มเดือน</b> <select id="ac_start" style="width:auto">${stOpts}</select></label>
-    <span class="hint">กำหนดเอง แล้วงวดที่ 2, 3, … นับต่อให้ · ตอนนี้ ${thPer(nwCurP())} = ${nwNoLbl(a, nwCurP())}${a.starts.length > 1 ? ` · กู้ทับแล้ว ${a.starts.length - 1} ครั้ง` : ""}</span></div>` : "";
+    <span class="hint">กำหนดเอง แล้วงวดที่ 2, 3, … นับต่อให้ · ตอนนี้ ${thPer(nwCurP())} = ${nwNoLbl(a, nwCurP())}${a.starts.length > 1 ? ` · กู้ทับแล้ว ${a.starts.length - 1} ครั้ง` : ""}</span>${nwSchedSrc(x, prod) ? ` <button class="ghost sm" id="ac_fill" title="ใส่ตารางผ่อนทุกงวดตามสัญญาฉบับเต็มที่บันทึกไว้ เริ่มจากเดือนที่ 1 ของสัญญา">📋 ใส่ตารางผ่อนตามสัญญา</button>` : ""}</div>` : "";
   // กู้ทับ: ยอดกู้ใหม่ทบยอดเดิม ได้รับเงินส่วนต่าง เริ่มงวดที่ 1 ใหม่
   const rf = nf.refi || null;
   const rfOpts = (() => { const o = [], cur = (rf && rf.start) || pFrom(pNum(nf.p) + 1); for(let n = pNum(nf.p); n <= pNum(nf.p) + 12; n++){ const q = pFrom(n); o.push(`<option value="${q}" ${cur===q?"selected":""}>${thPer(q)}</option>`); } return o.join(""); })();
@@ -3657,9 +3657,13 @@ function drawNW(kind){
     i.addEventListener("keydown", ev => { if(ev.key==="Enter"){ ev.preventDefault(); $("nf_save").click(); } });
   });
   $("nf_p").onchange = e => { S.nf.p = e.target.value; nfLoad(); delete S.nf.refi; drawNW(kind); };
-  if($("ac_start")) $("ac_start").onchange = e => { const A = nwAccRef(x, a.prod), rest = (A.starts || []).slice(1);
-    A.starts = e.target.value ? [e.target.value].concat(rest) : rest; save(); drawNW(kind);
-    toast(e.target.value ? `งวดที่ 1 ของ${NW_ACCN[a.prod]} = ${thPer(e.target.value)}` : "ยกเลิกการกำหนดงวดที่ 1 — นับตามงวดโอน"); };
+  const fillBySrc = (p1, ask) => { const src = nwSchedSrc(x, a.prod); if(!src || !p1) return 0; nwClearSched(x, a.prod); return nwFillSched(x, a.prod, p1, src); };
+  if($("ac_start")) $("ac_start").onchange = e => { const A = nwAccRef(x, a.prod), v = e.target.value;
+    if(A.pend){ A.pend.p = v || A.pend.p; if(v) A.pend.set.starts = (A.pend.set.starts || []).slice(0, -1).concat([v]); }          // สัญญาที่ลงทะเบียนรอเริ่ม: ย้ายเดือนที่ 1 ตาม
+    else { const rest = (A.starts || []).slice(1); A.starts = v ? [v].concat(rest) : rest; }
+    const n = v ? fillBySrc(v) : 0; save(); drawNW(kind);
+    toast(v ? `งวดที่ 1 ของ${NW_ACCN[a.prod]} = ${thPer(v)}${n ? ` · ใส่ตารางผ่อนตามสัญญา ${n} งวดให้แล้ว (รอยืนยันรับเงินทีละงวด)` : ""}` : "ยกเลิกการกำหนดงวดที่ 1 — นับตามงวดโอน"); };
+  if($("ac_fill")) $("ac_fill").onclick = () => { const A = nwAccRef(x, a.prod), p1 = A.pend ? A.pend.p : (A.starts || []).slice(-1)[0]; const n = fillBySrc(p1); save(); drawNW(kind); toast(n ? `ใส่ตารางผ่อนตามสัญญา ${n} งวด เริ่ม ${thPer(p1)} แล้ว (รอยืนยันรับเงินทีละงวด)` : "ยังไม่มีสัญญาฉบับเต็มที่บันทึกไว้ของบัญชีนี้"); };
   // ---- ชำระโดยหักทุนเรือนหุ้นชดเชย ----
   if($("cv_box")){
     const g = S.ncv && S.ncv.no === x.no && S.ncv.prod === a.prod ? S.ncv : null;
@@ -4433,6 +4437,21 @@ function nwAppFinalize(a){
   nwSetGuar(a.no, a.prod, 0, c.g1); if(c.g2) nwSetGuar(a.no, a.prod, 1, c.g2);
   a.status = "สำเร็จ"; a.cid = c.id; a.doneAt = nwToday();
 }
+/* ตารางผ่อนตามสัญญาฉบับเต็ม → ใส่ลงทะเบียนผู้กู้ทุกงวด (สถานะ «ลงล่วงหน้า รอยืนยันรับเงิน» ยังไม่นับเป็นเงินรับจริง) เริ่มจากเดือนที่ 1 ของสัญญา
+   ที่มาของตาราง: คำขอกู้ที่บันทึกสัญญาเต็มแล้ว · หรือสัญญาที่ลงทะเบียนสำเร็จแล้ว (คำนวณแบบเครื่องคำนวณ) · แถวจริงที่ยืนยันแล้วไม่ถูกทับ */
+function nwSchedSrc(x, k){
+  const a = nwApps().find(q => q.no === x.no && (q.k || (q.prod === "ดูแลกัน" ? "dk" : "sam")) === k && q.status === "ขอกู้" && q.savedFull);
+  if(a) return {amt:a.P0, terms:a.N, inst:a.M, shareM:a.B, code:a.code};
+  const c = nwCons().find(q => q.no === x.no && q.prod === NLP[k] && q.fromNW && q.mode === "calc");
+  return c && +c.amt > 0 && +c.terms > 0 && +c.inst > 0 ? {amt:+c.amt, terms:+c.terms, inst:+c.inst, shareM:+c.shareM || 0, code:c.code || ""} : null;
+}
+function nwClearSched(x, k){ S.nw.rows = NW.raw().filter(r => !(r.no === x.no && r.prod === k && r.exp && r.src === "plan")); }
+function nwFillSched(x, k, p1, src){
+  const sc = schedule({prod:NLP[k], mode:"calc", amt:src.amt, terms:src.terms, inst:src.inst, shareM:src.shareM}); let n = 0;
+  sc.rows.forEach((r, i) => { const q = pFrom(pNum(p1) + i), ex = NW.row(x.no, q, k); if(ex && !ex.exp) return;                    // แถวจริงที่ยืนยันแล้ว ไม่ทับ
+    const w = NW.set(x.no, q, k, {m:r2(r.int + r.pri + r.sh), int:r.int, pri:r.pri, sh:r.base, shx:r.extra || "", bal:r.bal, src:"plan", note:src.code ? "ตามสัญญา " + src.code : ""}); w.exp = true; n++; });
+  return n;
+}
 /* บันทึกสัญญาฉบับเต็ม → ลงทะเบียนเงินกู้เข้าทะเบียนผู้กู้อัตโนมัติ (ผู้กู้ขึ้นเป็น «ผู้กู้» ทันที)
    ลงแถวกู้ในเดือนก่อนงวดที่ 1 (เหมือนกู้ทับ: ได้รับเงิน + เริ่มสัญญาใหม่เดือนถัดไป) · ตั้งงวดละ/หุ้นประจำ/หุ้นเพิ่ม/งวดที่ 1 ของสัญญา · ลบแถวนี้ในทะเบียน = คืนค่าเดิม · a.reg = {p, k, prev, pend, p1} */
 function nwAppUnreg(a){
@@ -4440,6 +4459,7 @@ function nwAppUnreg(a){
   const row = NW.row(x.no, r.p, r.k);
   if(row && row.src === "app:" + a.id){ const pay = ["m", "int", "pri", "sh", "shx", "sv"].some(f => has(row[f]));
     if(pay){ ["loan", "bal", "refi", "src", "note"].forEach(f => delete row[f]); } else NW.drop(x.no, r.p, r.k); }
+  nwClearSched(x, r.k);
   const A = nwAccRef(x, r.k);
   if(A.pend && A.pend.p === r.p1) delete A.pend;
   else { ["starts", "inst", "shM", "shxM"].forEach(f => { if(r.prev[f] === undefined) delete A[f]; else A[f] = Array.isArray(r.prev[f]) ? r.prev[f].slice() : r.prev[f]; }); }
@@ -4449,13 +4469,14 @@ function nwAppRegister(a){
   const k = a.k || (a.prod === "ดูแลกัน" ? "dk" : "sam"), p1 = a.p1 || firstDue(); if(a.reg) nwAppUnreg(a);
   const acc = nwAcct(x, k), p0 = pFrom(pNum(p1) - 1), N = r2(a.P0), old = NW.row(x.no, p0, k), b = nwBefore(acc, p0), pri = old ? num(old.pri) : 0, rest = r2(b.debt - pri);
   if(N <= rest + 0.005) return `ยอดสัญญา ${B(N)} ไม่มากกว่าหนี้คงเหลือเดิม ${B(rest)} — ลงทะเบียนเงินกู้ไม่ได้`;
-  const A = nwAccRef(x, k), prev = {starts:A.starts ? A.starts.slice() : undefined, inst:A.inst, shM:A.shM, shxM:A.shxM}, prevStarts = nwStarts(acc).slice();
+  const A = nwAccRef(x, k), prev = {starts:A.starts ? A.starts.slice() : undefined, inst:A.inst, shM:A.shM, shxM:A.shxM}, first = !(A.starts && A.starts.length) && !(acc.debt0 > 0) && !NW.rowsAll(acc).length, prevStarts = first ? [] : nwStarts(acc).slice();          // สัญญาแรกของบัญชี = «สัญญา 1» (ไม่นับงวดโอนเดิม)
   const sc = schedule({prod:a.prod, mode:"calc", amt:N, terms:a.N, inst:a.M, shareM:a.B}), extra = sc.rows[0] ? r2(sc.rows[0].extra) : 0;
   const row = NW.set(x.no, p0, k, {loan:r2(N - rest), bal:N, src:"app:" + a.id, note:`สัญญา ${a.code} ยอด ${B(N)}${rest > 0.005 ? " (กู้ทับ หักหนี้เดิม " + B(rest) + ")" : ""}`});
   row.refi = {N, start:p1, prev:{starts:prevStarts, inst:A.inst, shM:A.shM, shxM:A.shxM}};
   const nv = {starts:prevStarts.concat([p1]), inst:a.M, shM:a.B, shxM:extra}, pend = pNum(p1) > pNum(nwCurP());
   if(pend) A.pend = {p:p1, set:nv}; else Object.assign(A, nv);
-  a.reg = {p:p0, k, prev, pend, p1}; return null;
+  a.reg = {p:p0, k, prev, pend, p1};
+  nwClearSched(x, k); a.reg.n = nwFillSched(x, k, p1, {amt:N, terms:a.N, inst:a.M, shareM:a.B, code:a.code}); return null;
 }
 function nwAppsHTML(){
   const list = nwApps().filter(a => a.status !== "ยกเลิก").slice().sort((u, v) => (u.status === "สำเร็จ" ? 1 : 0) - (v.status === "สำเร็จ" ? 1 : 0) || String(v.at).localeCompare(String(u.at)));
